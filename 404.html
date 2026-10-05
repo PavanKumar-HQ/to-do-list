@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Kanso — Personal Life OS</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      // Single Page App fallback for GitHub Pages
+      var path = window.location.pathname;
+      var repoBase = '/to-do-list/';
+      if (path.startsWith(repoBase)) {
+        window.location.replace(repoBase);
+      } else {
+        window.location.replace('./');
+      }
+    </script>
+  </head>
+  <body>
+  </body>
+</html>
