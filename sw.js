@@ -1,5 +1,5 @@
-// Service Worker for Personal Life PWA - Offline First
-const CACHE_NAME = 'personal-life-cache-v3';
+// Service Worker for Kanso PWA - Offline First
+const CACHE_NAME = 'kanso-cache-v4';
 
 self.addEventListener('install', (event) => {
   // In development, skip caching
@@ -129,7 +129,7 @@ self.addEventListener('notificationclick', (event) => {
 
 // Mobile Push Notification Event Handler
 self.addEventListener('push', (event) => {
-  let data = { title: 'Life OS Reminder', body: 'You have a scheduled reminder.' };
+  let data = { title: 'Kanso Reminder', body: 'You have a scheduled reminder.' };
   if (event.data) {
     try {
       data = event.data.json();

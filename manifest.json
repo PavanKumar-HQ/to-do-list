@@ -1,7 +1,7 @@
 {
-  "name": "Personal Life OS",
-  "short_name": "Personal Life",
-  "description": "Private, offline-first personal operating system for tasks, notes, reminders, journal, and finances.",
+  "name": "Kanso",
+  "short_name": "Kanso",
+  "description": "Private, calm personal workspace for tasks, notes, reminders, journal, and finances.",
   "start_url": "./",
   "display": "standalone",
   "background_color": "#f8f9fa",
