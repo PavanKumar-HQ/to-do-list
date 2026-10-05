@@ -37,7 +37,7 @@ export const AppBootLoader: React.FC = () => {
 
       <div style={{ textAlign: 'center' }}>
         <h1 style={{ fontSize: '24px', fontWeight: 700, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.02em' }}>
-          Life OS
+          Kanso
         </h1>
         <p style={{ fontSize: '15px', color: 'var(--text-secondary)', margin: '6px 0 0 0', fontWeight: 500 }}>
           Your life. Organized.

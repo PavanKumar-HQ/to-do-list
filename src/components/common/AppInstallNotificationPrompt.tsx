@@ -82,7 +82,7 @@ export const AppInstallNotificationPrompt: React.FC = () => {
     if (result === 'granted') {
       dispatchNativeNotification(
         'welcome-notif',
-        'Personal Life OS Notifications Enabled',
+        'Kanso Notifications Enabled',
         'You will now receive timely alerts for your tasks and reminders.'
       );
     }
@@ -139,7 +139,7 @@ export const AppInstallNotificationPrompt: React.FC = () => {
               {needsInstall && needsNotification
                 ? 'Download App & Enable Notifications'
                 : needsInstall
-                ? 'Download Personal Life OS App'
+                ? 'Download Kanso App'
                 : 'Turn On Reminder Notifications'}
             </span>
             <span style={{ fontSize: '11.5px', color: 'var(--text-secondary, #a1a1aa)' }}>

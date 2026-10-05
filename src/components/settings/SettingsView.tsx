@@ -362,7 +362,7 @@ export const SettingsView: React.FC = () => {
             </div>
           )}
           <div style={{ fontSize: '13px', color: 'var(--text-tertiary)', marginTop: '2px' }}>
-            Personal Life OS
+            Kanso
           </div>
         </div>
       </div>
@@ -754,7 +754,7 @@ export const SettingsView: React.FC = () => {
             </div>
 
             <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: '1.5', marginBottom: '16px' }}>
-              Install Personal Life OS on your phone, tablet, or desktop. Enjoy full offline access, instant boot times, and home-screen convenience without any app store.
+              Install Kanso on your phone, tablet, or desktop. Enjoy full offline access, instant boot times, and home-screen convenience without any app store.
             </p>
 
             <button
@@ -843,7 +843,7 @@ export const SettingsView: React.FC = () => {
         <div className="card" style={{ padding: '20px', borderRadius: '20px', background: 'var(--bg-surface-elevated)' }}>
           <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '12px' }}>Local-First Privacy Architecture</h3>
           <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: '1.6', marginBottom: '16px' }}>
-            Life OS runs entirely inside your browser sandbox. No user data, analytics, tracking, or network telemetry leaves your device. All queries and relations are indexed inside IndexedDB.
+            Kanso runs entirely inside your browser sandbox. No user data, analytics, tracking, or network telemetry leaves your device. All queries and relations are indexed inside IndexedDB.
           </p>
 
           <div style={{ marginBottom: '16px' }}>
@@ -897,9 +897,9 @@ export const SettingsView: React.FC = () => {
             </div>
             <div>
               <strong style={{ color: 'var(--text-primary)', display: 'block', marginBottom: '3px' }}>
-                Does Life OS work completely offline?
+                Does Kanso work completely offline?
               </strong>
-              Yes! Life OS is completely local-first. You can manage tasks, log expenses, schedule events, and view your calendar with zero internet connection.
+              Yes! Kanso is completely local-first. You can manage tasks, log expenses, schedule events, and view your calendar with zero internet connection.
             </div>
           </div>
         </div>
@@ -908,7 +908,7 @@ export const SettingsView: React.FC = () => {
       {/* 7. SUBSECTION: ABOUT */}
       {activeSection === 'about' && (
         <div className="card" style={{ padding: '20px', borderRadius: '20px', background: 'var(--bg-surface-elevated)' }}>
-          <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '8px' }}>Personal Life OS</h3>
+          <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '8px' }}>Kanso</h3>
           <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '16px' }}>
             Version 1.0.0 (Production Build)
           </div>
