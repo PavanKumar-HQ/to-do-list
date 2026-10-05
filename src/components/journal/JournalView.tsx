@@ -3,7 +3,11 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import {
   BookOpen,
   Calendar,
+  Laugh,
   Smile,
+  Meh,
+  Frown,
+  ZapOff,
   Save,
   Trash2,
   CheckCircle,
@@ -127,12 +131,12 @@ export const JournalView: React.FC = () => {
     }
   };
 
-  const moods: { id: JournalEntry['mood']; label: string }[] = [
-    { id: 'great', label: 'Great' },
-    { id: 'good', label: 'Good' },
-    { id: 'neutral', label: 'Neutral' },
-    { id: 'tough', label: 'Tough' },
-    { id: 'exhausted', label: 'Exhausted' }
+  const moods: { id: JournalEntry['mood']; label: string; icon: React.ComponentType<{ size?: number }> }[] = [
+    { id: 'great', label: 'Great', icon: Laugh },
+    { id: 'good', label: 'Good', icon: Smile },
+    { id: 'neutral', label: 'Neutral', icon: Meh },
+    { id: 'tough', label: 'Tough', icon: Frown },
+    { id: 'exhausted', label: 'Exhausted', icon: ZapOff }
   ];
 
   return (
@@ -192,17 +196,29 @@ export const JournalView: React.FC = () => {
             Mood (Optional)
           </div>
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-            {moods.map((m) => (
-              <button
-                key={m.id}
-                type="button"
-                onClick={() => setMood(mood === m.id ? undefined : m.id)}
-                className={`btn btn-sm ${mood === m.id ? 'btn-primary' : 'btn-secondary'}`}
-                style={{ borderRadius: 'var(--radius-full)', padding: '4px 12px', fontSize: '13px' }}
-              >
-                <span>{m.label}</span>
-              </button>
-            ))}
+            {moods.map((m) => {
+              const Icon = m.icon;
+              const isSelected = mood === m.id;
+              return (
+                <button
+                  key={m.id}
+                  type="button"
+                  onClick={() => setMood(isSelected ? undefined : m.id)}
+                  className={`btn btn-sm ${isSelected ? 'btn-primary' : 'btn-secondary'}`}
+                  style={{
+                    borderRadius: 'var(--radius-full)',
+                    padding: '6px 14px',
+                    fontSize: '13px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  <Icon size={15} />
+                  <span>{m.label}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
 

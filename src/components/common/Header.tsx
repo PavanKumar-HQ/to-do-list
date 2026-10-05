@@ -68,6 +68,7 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <header
+      className="app-header"
       style={{
         height: 'var(--header-height)',
         background: 'var(--glass-surface)',

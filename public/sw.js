@@ -124,3 +124,30 @@ self.addEventListener('notificationclick', (event) => {
     })
   );
 });
+
+// Mobile Push Notification Event Handler
+self.addEventListener('push', (event) => {
+  let data = { title: 'Life OS Reminder', body: 'You have a scheduled reminder.' };
+  if (event.data) {
+    try {
+      data = event.data.json();
+    } catch (e) {
+      data.body = event.data.text();
+    }
+  }
+
+  const options = {
+    body: data.body || 'Scheduled reminder alert',
+    icon: '/icon-512.svg',
+    badge: '/icon-512.svg',
+    vibrate: [200, 100, 200, 100, 200],
+    tag: data.tag || 'life-os-reminder',
+    data: data.data || {},
+    actions: [
+      { action: 'complete', title: 'Complete' },
+      { action: 'snooze', title: 'Snooze 10m' }
+    ]
+  };
+
+  event.waitUntil(self.registration.showNotification(data.title, options));
+});

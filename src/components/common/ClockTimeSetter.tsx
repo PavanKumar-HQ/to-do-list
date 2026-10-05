@@ -7,8 +7,7 @@ import {
   Upload,
   Sparkles,
   Music,
-  Check,
-  Edit3
+  Check
 } from 'lucide-react';
 import {
   getConfiguredAlarmTone,
@@ -54,7 +53,6 @@ export const ClockTimeSetter: React.FC<ClockTimeSetterProps> = ({
   const [timeState, setTimeState] = useState(() => parse24To12(value));
   const [hourString, setHourString] = useState(String(timeState.hour).padStart(2, '0'));
   const [minuteString, setMinuteString] = useState(String(timeState.minute).padStart(2, '0'));
-  const [useNativeInput, setUseNativeInput] = useState(false);
   const [activeTone, setActiveTone] = useState<AlarmToneType>('digital');
   const [customToneName, setCustomToneName] = useState<string | null>(null);
   const [isPlayingTest, setIsPlayingTest] = useState(false);
@@ -154,9 +152,9 @@ export const ClockTimeSetter: React.FC<ClockTimeSetterProps> = ({
         gap: '12px'
       }}
     >
-      {/* Header Label with Compulsory Asterisk Indicator */}
+      {/* Header Label with Compulsory Asterisk Indicator & Clean Time Display */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>
           <Clock size={15} color="var(--accent)" />
           <span>{label}</span>
           {isRequired && (
@@ -175,57 +173,35 @@ export const ClockTimeSetter: React.FC<ClockTimeSetterProps> = ({
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <button
-            type="button"
-            onClick={() => setUseNativeInput(!useNativeInput)}
-            className="btn-ghost"
-            style={{ fontSize: '11px', color: 'var(--text-tertiary)', padding: '2px 6px', display: 'flex', alignItems: 'center', gap: '3px' }}
-            title="Toggle native time keyboard entry"
+          <span
+            style={{
+              fontSize: '13px',
+              fontWeight: 600,
+              color: 'var(--accent)',
+              background: 'var(--accent-light)',
+              padding: '2px 8px',
+              borderRadius: '6px',
+              fontVariantNumeric: 'tabular-nums'
+            }}
           >
-            <Edit3 size={11} />
-            <span>{useNativeInput ? 'Dial' : 'Type 24h'}</span>
-          </button>
-          {value ? (
-            <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--accent)', fontVariantNumeric: 'tabular-nums' }}>
-              {value} ({timeState.hour}:{String(timeState.minute).padStart(2, '0')} {timeState.period})
-            </span>
-          ) : null}
+            {timeState.hour}:{String(timeState.minute).padStart(2, '0')} {timeState.period}
+          </span>
         </div>
       </div>
 
-      {/* Mode A: Native Typeable Time input */}
-      {useNativeInput ? (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <input
-            type="time"
-            value={value || '10:00'}
-            onChange={(e) => onChange(e.target.value)}
-            style={{
-              flex: 1,
-              padding: '10px 14px',
-              fontSize: '16px',
-              fontWeight: 600,
-              borderRadius: '8px',
-              background: 'var(--bg-surface)',
-              border: '1px solid var(--border-subtle)',
-              color: 'var(--text-primary)'
-            }}
-          />
-        </div>
-      ) : (
-        /* Mode B: Tactile Clock Setter Interface with Direct Typing Support */
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '14px',
-            padding: '8px 0',
-            background: 'var(--bg-surface)',
-            borderRadius: '10px',
-            border: '1px solid var(--border-subtle)'
-          }}
-        >
+      {/* Tactile Clock Setter Interface with Direct Typing Support */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '14px',
+          padding: '8px 0',
+          background: 'var(--bg-surface)',
+          borderRadius: '10px',
+          border: '1px solid var(--border-subtle)'
+        }}
+      >
           {/* Hours Stepper & Typeable Input */}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
             <button
@@ -404,7 +380,6 @@ export const ClockTimeSetter: React.FC<ClockTimeSetterProps> = ({
             </button>
           </div>
         </div>
-      )}
 
       {/* Quick Relative Presets */}
       <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>

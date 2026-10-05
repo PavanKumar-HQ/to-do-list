@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import {
   CheckSquare,
@@ -14,7 +14,8 @@ import {
   ChevronDown,
   ChevronUp,
   X,
-  Network
+  Network,
+  Target
 } from 'lucide-react';
 import { db, generateId, logAudit } from '../../db/db';
 import { getTodayDateString, getRelativeDateLabel, calculateNextOccurrence } from '../../utils/dates';
@@ -29,6 +30,9 @@ export const TasksView: React.FC<{ onOpenQuickAdd: (type: any) => void }> = ({ o
   const [activeTab, setActiveTab] = useState<'today' | 'upcoming' | 'overdue' | 'inbox' | 'all' | 'completed'>('today');
   const [editingTask, setEditingTask] = useState<TaskItem | null>(null);
   const [expandedSubtasks, setExpandedSubtasks] = useState<Record<string, boolean>>({});
+
+  const goals = useLiveQuery(() => db.goals.filter(g => !g.deletedAt).toArray()) || [];
+  const goalMap = useMemo(() => new Map(goals.map(g => [g.id, g])), [goals]);
 
   // Context Modal state
   const [contextModal, setContextModal] = useState<{ isOpen: boolean; type: EntityType | null; id: string | null }>({
@@ -292,6 +296,13 @@ export const TasksView: React.FC<{ onOpenQuickAdd: (type: any) => void }> = ({ o
                         </span>
                       )}
 
+                      {task.goalId && goalMap.get(task.goalId) && (
+                        <span className="badge badge-accent" style={{ fontSize: '11px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                          <Target size={11} />
+                          <span>{goalMap.get(task.goalId)!.title}</span>
+                        </span>
+                      )}
+
                       {hasSubtasks && (
                         <button
                           onClick={() => setExpandedSubtasks((prev) => ({ ...prev, [task.id]: !prev[task.id] }))}
@@ -445,6 +456,23 @@ export const TasksView: React.FC<{ onOpenQuickAdd: (type: any) => void }> = ({ o
                   <option value="daily">Daily</option>
                   <option value="weekly">Weekly</option>
                   <option value="monthly">Monthly</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                  Linked Goal
+                </label>
+                <select
+                  value={editingTask.goalId || ''}
+                  onChange={(e) => setEditingTask({ ...editingTask, goalId: e.target.value || undefined })}
+                >
+                  <option value="">No goal linked (Standalone)</option>
+                  {goals.map((g) => (
+                    <option key={g.id} value={g.id}>
+                      🎯 {g.title}
+                    </option>
+                  ))}
                 </select>
               </div>
 

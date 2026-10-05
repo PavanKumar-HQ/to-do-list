@@ -20,8 +20,10 @@ import {
   MapPin,
   Clock,
   User,
-  CreditCard
+  CreditCard,
+  Target
 } from 'lucide-react';
+import { useLiveQuery } from 'dexie-react-hooks';
 import { db, generateId, logAudit } from '../../db/db';
 import { parseNaturalQuickInput } from '../../utils/naturalParser';
 import { getTodayDateString } from '../../utils/dates';
@@ -78,6 +80,9 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
   const [eventCategory, setEventCategory] = useState<'meeting' | 'personal' | 'deadline' | 'health' | 'travel'>('meeting');
   const [eventRemindOneDayBefore, setEventRemindOneDayBefore] = useState(true);
   const [eventRemindAtStart, setEventRemindAtStart] = useState(true);
+  const [selectedGoalId, setSelectedGoalId] = useState<string>('');
+
+  const goals = useLiveQuery(() => db.goals.filter(g => !g.deletedAt && g.status !== 'archived').toArray()) || [];
 
   // Duplicate warning state
   const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
@@ -126,6 +131,7 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
     setEndTime('');
     setPersonName('');
     setEventLocation('');
+    setSelectedGoalId('');
   };
 
   const handleSave = async (forceDuplicate: boolean = false) => {
@@ -171,8 +177,20 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
             dueTime: dueTime || undefined,
             priority,
             recurrence: recurrence || 'none',
-            tags: contextTag ? [contextTag] : []
+            tags: contextTag ? [contextTag] : [],
+            goalId: selectedGoalId || undefined
           });
+          if (selectedGoalId) {
+            await db.relationships.add({
+              id: generateId(),
+              sourceId: newTask.id,
+              sourceType: 'task',
+              targetId: selectedGoalId,
+              targetType: 'goal',
+              relationshipLabel: 'contributes_to',
+              createdAt: nowIso
+            });
+          }
           await logAudit('create', 'task', newTask.id, `Created task: ${cleanTitle}`);
           showToast(`Task created: ${cleanTitle}`, { type: 'success' });
           break;
@@ -799,6 +817,46 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
                         </button>
                       )}
                     </div>
+                  </div>
+
+                  {/* Goal Association */}
+                  <div>
+                    <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                        <Target size={14} color="var(--accent)" />
+                        <span>Link to Goal (Optional)</span>
+                      </span>
+                      {selectedGoalId && (
+                        <button
+                          type="button"
+                          onClick={() => setSelectedGoalId('')}
+                          className="btn-ghost"
+                          style={{ padding: '2px 6px', fontSize: '11px', color: 'var(--text-muted)' }}
+                        >
+                          Clear
+                        </button>
+                      )}
+                    </label>
+                    <select
+                      value={selectedGoalId}
+                      onChange={(e) => setSelectedGoalId(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '10px 12px',
+                        fontSize: '13.5px',
+                        borderRadius: '12px',
+                        border: '1px solid var(--border-subtle)',
+                        background: 'var(--bg-surface-elevated)',
+                        color: 'var(--text-primary)'
+                      }}
+                    >
+                      <option value="">No goal linked (Standalone)</option>
+                      {goals.map((g) => (
+                        <option key={g.id} value={g.id}>
+                          🎯 {g.title} {g.targetAmount > 0 ? `(${Math.round((g.currentAmount / g.targetAmount) * 100)}%)` : ''}
+                        </option>
+                      ))}
+                    </select>
                   </div>
 
                   <div>

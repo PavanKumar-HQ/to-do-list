@@ -82,35 +82,54 @@ export const ListsView: React.FC = () => {
 
   const handleAddItem = async () => {
     if (!activeList || !newItemText.trim()) return;
-    const newItem = {
-      id: generateId(),
-      text: newItemText.trim(),
-      completed: false,
-      order: activeList.items.length
-    };
-    await db.lists.update(activeList.id, {
-      items: [...activeList.items, newItem],
-      updatedAt: new Date().toISOString()
-    });
-    setNewItemText('');
+    try {
+      const freshList = await db.lists.get(activeList.id);
+      const currentItems = (freshList?.items || activeList.items || []);
+      const newItem = {
+        id: generateId(),
+        text: newItemText.trim(),
+        completed: false,
+        order: currentItems.length
+      };
+      await db.lists.update(activeList.id, {
+        items: [...currentItems, newItem],
+        updatedAt: new Date().toISOString()
+      });
+      setNewItemText('');
+    } catch (err: any) {
+      console.error('Failed to add item to list:', err);
+      showToast('Failed to add item', { type: 'error' });
+    }
   };
 
   const handleToggleItem = async (itemId: string) => {
     if (!activeList) return;
-    const updated = activeList.items.map((i) => (i.id === itemId ? { ...i, completed: !i.completed } : i));
-    await db.lists.update(activeList.id, {
-      items: updated,
-      updatedAt: new Date().toISOString()
-    });
+    try {
+      const freshList = await db.lists.get(activeList.id);
+      const currentItems = (freshList?.items || activeList.items || []);
+      const updated = currentItems.map((i) => (i.id === itemId ? { ...i, completed: !i.completed } : i));
+      await db.lists.update(activeList.id, {
+        items: updated,
+        updatedAt: new Date().toISOString()
+      });
+    } catch (err: any) {
+      console.error('Failed to toggle item:', err);
+    }
   };
 
   const handleDeleteItem = async (itemId: string) => {
     if (!activeList) return;
-    const updated = activeList.items.filter((i) => i.id !== itemId);
-    await db.lists.update(activeList.id, {
-      items: updated,
-      updatedAt: new Date().toISOString()
-    });
+    try {
+      const freshList = await db.lists.get(activeList.id);
+      const currentItems = (freshList?.items || activeList.items || []);
+      const updated = currentItems.filter((i) => i.id !== itemId);
+      await db.lists.update(activeList.id, {
+        items: updated,
+        updatedAt: new Date().toISOString()
+      });
+    } catch (err: any) {
+      console.error('Failed to delete item:', err);
+    }
   };
 
   const handleDeleteList = async (listId: string, title: string) => {
@@ -146,7 +165,7 @@ export const ListsView: React.FC = () => {
               className={`btn btn-sm ${(activeList?.id === l.id) ? 'btn-primary' : 'btn-secondary'}`}
               style={{ borderRadius: 'var(--radius-full)', padding: '6px 14px', flexShrink: 0, fontSize: '13px' }}
             >
-              {l.title} ({l.items.filter(i => !i.completed).length})
+              {l.title} ({(l.items || []).filter(i => !i.completed).length})
             </button>
           ))}
         </div>
@@ -159,7 +178,7 @@ export const ListsView: React.FC = () => {
             <div>
               <h3 style={{ fontSize: '17px', fontWeight: 600 }}>{activeList.title}</h3>
               <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                {activeList.items.filter(i => i.completed).length} of {activeList.items.length} completed
+                {(activeList.items || []).filter(i => i.completed).length} of {(activeList.items || []).length} completed
               </div>
             </div>
             <button
@@ -173,25 +192,33 @@ export const ListsView: React.FC = () => {
           </div>
 
           {/* Add item input */}
-          <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleAddItem();
+            }}
+            style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}
+          >
             <input
               type="text"
               placeholder="Add an item to list..."
               value={newItemText}
               onChange={(e) => setNewItemText(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleAddItem();
-              }}
-              style={{ fontSize: '14px', padding: '8px 12px' }}
+              style={{ fontSize: '14px', padding: '8px 12px', flex: 1 }}
             />
-            <button onClick={handleAddItem} className="btn btn-secondary btn-sm" style={{ padding: '8px 16px' }}>
+            <button
+              type="submit"
+              disabled={!newItemText.trim()}
+              className="btn btn-secondary btn-sm"
+              style={{ padding: '8px 16px' }}
+            >
               Add
             </button>
-          </div>
+          </form>
 
           {/* Items */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {activeList.items.map((item) => (
+            {(activeList.items || []).map((item) => (
               <div
                 key={item.id}
                 style={{

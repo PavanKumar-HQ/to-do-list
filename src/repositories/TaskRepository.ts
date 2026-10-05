@@ -58,6 +58,7 @@ export class TaskRepository {
       linkedPersonId: input.linkedPersonId,
       linkedEventId: input.linkedEventId,
       linkedNoteId: input.linkedNoteId,
+      goalId: input.goalId,
       attachmentIds: input.attachmentIds || [],
       isPinned: !!input.isPinned,
       createdAt: input.createdAt || now,

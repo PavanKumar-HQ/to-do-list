@@ -185,6 +185,7 @@ export interface TaskItem {
   linkedPersonId?: string;
   linkedEventId?: string;
   linkedNoteId?: string;
+  goalId?: string;
   attachmentIds?: string[];
   isPinned?: boolean;
   isMinimumDay?: boolean; // Highlighted for Minimum Day focus
