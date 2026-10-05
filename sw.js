@@ -1,5 +1,5 @@
 // Service Worker for Kanso PWA - Offline First
-const CACHE_NAME = 'kanso-cache-v5';
+const CACHE_NAME = 'kanso-cache-v6';
 
 self.addEventListener('install', (event) => {
   // In development, skip caching
@@ -12,6 +12,8 @@ self.addEventListener('install', (event) => {
     scope,
     new URL('index.html', scope).toString(),
     new URL('manifest.json', scope).toString(),
+    new URL('icon-192.png', scope).toString(),
+    new URL('icon-512.png', scope).toString(),
     new URL('icon-512.svg', scope).toString()
   ];
   event.waitUntil(
