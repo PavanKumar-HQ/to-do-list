@@ -764,7 +764,7 @@ export const SettingsView: React.FC = () => {
                   prompt.prompt();
                 } else {
                   localStorage.removeItem('kanso_prompt_dismissed_v1');
-                  showToast('Install prompt activated');
+                  window.dispatchEvent(new CustomEvent('kanso:open-install-guide'));
                 }
               }}
               className="btn btn-primary btn-sm"
