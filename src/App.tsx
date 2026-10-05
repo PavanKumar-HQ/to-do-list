@@ -70,14 +70,15 @@ export function AppContent() {
 
   const settings = useLiveQuery(() => db.settings.get('current_settings'));
 
-  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
-    return (localStorage.getItem('theme') as 'light' | 'dark') || 'light';
-  });
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
 
   useEffect(() => {
     initializeDatabaseDefaults();
     refreshNextReminderTimer();
     checkMissedReminders();
+    // Force light theme
+    document.documentElement.setAttribute('data-theme', 'light');
+    localStorage.setItem('theme', 'light');
     const bootTimer = setTimeout(() => {
       setIsBooting(false);
     }, 200);
@@ -85,13 +86,9 @@ export function AppContent() {
   }, []);
 
   useEffect(() => {
-    if (settings?.theme) {
-      setTheme(settings.theme);
-      document.documentElement.setAttribute('data-theme', settings.theme);
-      localStorage.setItem('theme', settings.theme);
-    } else {
-      document.documentElement.setAttribute('data-theme', theme);
-    }
+    const activeTheme = settings?.theme === 'dark' ? 'dark' : 'light';
+    setTheme(activeTheme);
+    document.documentElement.setAttribute('data-theme', activeTheme);
   }, [settings?.theme]);
 
   useEffect(() => {

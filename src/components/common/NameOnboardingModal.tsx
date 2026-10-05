@@ -84,7 +84,8 @@ export const NameOnboardingModal: React.FC<NameOnboardingModalProps> = ({ onComp
         position: 'fixed',
         inset: 0,
         zIndex: 1000,
-        background: 'var(--bg-app)',
+        background: 'var(--bg-app, #f9f9f8)',
+        color: 'var(--text-primary, #171717)',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
@@ -128,7 +129,7 @@ export const NameOnboardingModal: React.FC<NameOnboardingModalProps> = ({ onComp
                   position: 'absolute',
                   inset: 0,
                   borderRadius: '50%',
-                  background: 'radial-gradient(circle at 35% 35%, rgba(45, 212, 191, 0.45) 0%, rgba(13, 148, 136, 0.25) 50%, rgba(5, 5, 7, 0) 80%)',
+                  background: 'radial-gradient(circle at 35% 35%, rgba(13, 148, 136, 0.3) 0%, rgba(20, 184, 166, 0.15) 50%, rgba(255, 255, 255, 0) 80%)',
                   filter: 'blur(16px)'
                 }}
               />
@@ -137,10 +138,9 @@ export const NameOnboardingModal: React.FC<NameOnboardingModalProps> = ({ onComp
                   width: '74px',
                   height: '74px',
                   borderRadius: '50% 50% 45% 55% / 55% 45% 55% 45%',
-                  background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.35) 0%, rgba(20, 184, 166, 0.6) 40%, rgba(15, 23, 42, 0.9) 100%)',
-                  boxShadow: 'inset 0 2px 6px rgba(255, 255, 255, 0.6), 0 8px 32px rgba(20, 184, 166, 0.35)',
-                  border: '1px solid rgba(255, 255, 255, 0.3)',
-                  backdropFilter: 'blur(8px)'
+                  background: 'linear-gradient(135deg, #ccfbf1 0%, #2dd4bf 45%, #0d9488 100%)',
+                  boxShadow: 'inset 0 2px 6px rgba(255, 255, 255, 0.8), 0 8px 32px rgba(13, 148, 136, 0.25)',
+                  border: '1.5px solid rgba(255, 255, 255, 0.8)'
                 }}
               />
             </div>

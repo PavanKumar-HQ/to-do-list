@@ -1,5 +1,5 @@
 // Service Worker for Kanso PWA - Offline First
-const CACHE_NAME = 'kanso-cache-v4';
+const CACHE_NAME = 'kanso-cache-v5';
 
 self.addEventListener('install', (event) => {
   // In development, skip caching

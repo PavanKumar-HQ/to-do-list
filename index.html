@@ -18,12 +18,8 @@
     <script>
       (function() {
         try {
-          var saved = localStorage.getItem('theme');
-          if (saved === 'dark') {
-            document.documentElement.setAttribute('data-theme', 'dark');
-          } else {
-            document.documentElement.setAttribute('data-theme', 'light');
-          }
+          document.documentElement.setAttribute('data-theme', 'light');
+          localStorage.setItem('theme', 'light');
         } catch (e) {}
       })();
     </script>
