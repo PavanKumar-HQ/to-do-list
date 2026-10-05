@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Mic, WifiOff, ShieldAlert, Settings, Sun, Moon, Menu, ChevronDown } from 'lucide-react';
+import { Search, Mic, WifiOff, ShieldAlert, Settings, Sun, Moon, Menu, ChevronDown, Download } from 'lucide-react';
 import { db } from '../../db/db';
 import { useLiveQuery } from 'dexie-react-hooks';
 
@@ -23,6 +23,14 @@ export const Header: React.FC<HeaderProps> = ({
   onToggleTheme
 }) => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [canInstall, setCanInstall] = useState(false);
+
+  useEffect(() => {
+    const isStandaloneMode =
+      window.matchMedia('(display-mode: standalone)').matches ||
+      (window.navigator as any).standalone === true;
+    setCanInstall(!isStandaloneMode);
+  }, []);
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -130,6 +138,34 @@ export const Header: React.FC<HeaderProps> = ({
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+        {canInstall && (
+          <button
+            onClick={() => {
+              const prompt = (window as any).__kansoInstallPrompt;
+              if (prompt) {
+                prompt.prompt();
+              } else {
+                localStorage.removeItem('kanso_prompt_dismissed_v1');
+                window.location.reload();
+              }
+            }}
+            className="btn-ghost"
+            style={{
+              width: '38px',
+              height: '38px',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'var(--accent)'
+            }}
+            aria-label="Download / Install App"
+            title="Download / Install App"
+          >
+            <Download size={18} />
+          </button>
+        )}
+
         <button
           onClick={onOpenVoice}
           className="btn-ghost"

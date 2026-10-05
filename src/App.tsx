@@ -12,6 +12,7 @@ import { ViewSkeleton } from './components/common/ViewSkeleton';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { InAppReminderAlert } from './components/common/InAppReminderAlert';
 import { FloatingActionMenu } from './components/common/FloatingActionMenu';
+import { AppInstallNotificationPrompt } from './components/common/AppInstallNotificationPrompt';
 
 // Core HomeView is loaded eagerly for instant first paint
 import { HomeView } from './components/home/HomeView';
@@ -256,44 +257,8 @@ export function AppContent() {
           onToggleTheme={handleToggleTheme}
         />
 
-        {/* Polite Notification Permission Banner if not enabled */}
-        {notificationPermStatus === 'default' && !isPermBannerDismissed && (
-          <div
-            style={{
-              background: 'var(--bg-surface-elevated)',
-              borderBottom: '1px solid var(--border-subtle)',
-              padding: '8px 16px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: '10px',
-              fontSize: '12.5px',
-              color: 'var(--text-secondary)'
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Bell size={15} color="var(--accent)" />
-              <span>Enable notifications for timely reminders & event alerts</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <button
-                onClick={handleEnableNotifications}
-                className="btn btn-sm btn-primary"
-                style={{ padding: '3px 10px', fontSize: '12px' }}
-              >
-                Enable
-              </button>
-              <button
-                onClick={() => setIsPermBannerDismissed(true)}
-                className="btn-ghost"
-                style={{ padding: '2px', color: 'var(--text-muted)' }}
-                aria-label="Dismiss banner"
-              >
-                <X size={15} />
-              </button>
-            </div>
-          </div>
-        )}
+        {/* PWA Download / Install App and Notification Permission Prompt */}
+        <AppInstallNotificationPrompt />
 
         <main style={{ flex: 1, minWidth: 0 }}>
           {renderActiveView()}

@@ -148,8 +148,8 @@ export async function dispatchNativeNotification(
         if (registration && registration.showNotification) {
           await registration.showNotification(title, {
             body,
-            icon: '/icon-512.svg',
-            badge: '/icon-512.svg',
+            icon: typeof window !== 'undefined' ? new URL('icon-512.svg', window.location.href).href : './icon-512.svg',
+            badge: typeof window !== 'undefined' ? new URL('icon-512.svg', window.location.href).href : './icon-512.svg',
             tag, // Stable tag ensures replacement rather than duplicate spam
             renotify: true,
             data: data || {},
@@ -165,7 +165,7 @@ export async function dispatchNativeNotification(
       // Standard Web Notification fallback
       new Notification(title, {
         body,
-        icon: '/icon-512.svg',
+        icon: typeof window !== 'undefined' ? new URL('icon-512.svg', window.location.href).href : './icon-512.svg',
         tag
       });
     } catch (e) {

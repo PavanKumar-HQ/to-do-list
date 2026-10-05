@@ -731,6 +731,49 @@ export const SettingsView: React.FC = () => {
               <span>Play Alarm Chime</span>
             </button>
           </div>
+
+          {/* Install / Download App Card */}
+          <div className="card" style={{ padding: '20px', borderRadius: '20px', background: 'var(--bg-surface-elevated)', marginTop: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <Download size={20} color="var(--accent)" />
+                <h3 style={{ fontSize: '16px', fontWeight: 600 }}>Download & Install App</h3>
+              </div>
+              <span
+                style={{
+                  fontSize: '12px',
+                  padding: '3px 10px',
+                  borderRadius: '12px',
+                  fontWeight: 600,
+                  background: (typeof window !== 'undefined' && (window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone)) ? 'rgba(16, 185, 129, 0.2)' : 'rgba(59, 130, 246, 0.2)',
+                  color: (typeof window !== 'undefined' && (window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone)) ? 'var(--success)' : 'var(--accent)'
+                }}
+              >
+                {(typeof window !== 'undefined' && (window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone)) ? 'Installed' : 'Ready to Install'}
+              </span>
+            </div>
+
+            <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: '1.5', marginBottom: '16px' }}>
+              Install Personal Life OS on your phone, tablet, or desktop. Enjoy full offline access, instant boot times, and home-screen convenience without any app store.
+            </p>
+
+            <button
+              onClick={() => {
+                const prompt = (window as any).__kansoInstallPrompt;
+                if (prompt) {
+                  prompt.prompt();
+                } else {
+                  localStorage.removeItem('kanso_prompt_dismissed_v1');
+                  showToast('Install prompt activated');
+                }
+              }}
+              className="btn btn-primary btn-sm"
+              style={{ gap: '6px' }}
+            >
+              <Download size={14} />
+              <span>Install to Home Screen / Desktop</span>
+            </button>
+          </div>
         </div>
       )}
 
