@@ -84,7 +84,7 @@ export const NameOnboardingModal: React.FC<NameOnboardingModalProps> = ({ onComp
         position: 'fixed',
         inset: 0,
         zIndex: 1000,
-        background: '#050507',
+        background: 'var(--bg-app)',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
@@ -151,7 +151,7 @@ export const NameOnboardingModal: React.FC<NameOnboardingModalProps> = ({ onComp
               style={{
                 fontSize: '26px',
                 fontWeight: 700,
-                color: '#ffffff',
+                color: 'var(--text-primary)',
                 margin: '0 0 6px 0',
                 letterSpacing: '-0.02em'
               }}
@@ -161,7 +161,7 @@ export const NameOnboardingModal: React.FC<NameOnboardingModalProps> = ({ onComp
             <div
               style={{
                 fontSize: '14px',
-                color: 'rgba(255, 255, 255, 0.5)',
+                color: 'var(--text-secondary)',
                 marginBottom: '36px'
               }}
             >
@@ -173,7 +173,7 @@ export const NameOnboardingModal: React.FC<NameOnboardingModalProps> = ({ onComp
               style={{
                 fontSize: '28px',
                 fontWeight: 700,
-                color: '#ffffff',
+                color: 'var(--text-primary)',
                 margin: '0 0 10px 0',
                 letterSpacing: '-0.03em'
               }}
@@ -184,7 +184,7 @@ export const NameOnboardingModal: React.FC<NameOnboardingModalProps> = ({ onComp
               style={{
                 fontSize: '15px',
                 lineHeight: 1.5,
-                color: 'rgba(255, 255, 255, 0.6)',
+                color: 'var(--text-secondary)',
                 margin: '0 0 32px 0',
                 maxWidth: '320px'
               }}
@@ -196,12 +196,12 @@ export const NameOnboardingModal: React.FC<NameOnboardingModalProps> = ({ onComp
             <form onSubmit={handleStep1Submit} style={{ width: '100%', marginBottom: '20px' }}>
               <div
                 style={{
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  border: '1px solid rgba(255, 255, 255, 0.12)',
+                  background: 'var(--bg-surface)',
+                  border: '1.5px solid var(--border-light)',
                   borderRadius: '20px',
                   padding: '16px 20px',
                   textAlign: 'left',
-                  backdropFilter: 'blur(20px)',
+                  boxShadow: 'var(--shadow-sm)',
                   marginBottom: '18px'
                 }}
               >
@@ -211,7 +211,7 @@ export const NameOnboardingModal: React.FC<NameOnboardingModalProps> = ({ onComp
                     display: 'block',
                     fontSize: '13px',
                     fontWeight: 500,
-                    color: 'rgba(255, 255, 255, 0.55)',
+                    color: 'var(--text-muted)',
                     marginBottom: '8px'
                   }}
                 >
@@ -234,7 +234,7 @@ export const NameOnboardingModal: React.FC<NameOnboardingModalProps> = ({ onComp
                     outline: 'none',
                     fontSize: '17px',
                     fontWeight: 500,
-                    color: '#ffffff',
+                    color: 'var(--text-primary)',
                     padding: 0
                   }}
                 />
@@ -279,7 +279,7 @@ export const NameOnboardingModal: React.FC<NameOnboardingModalProps> = ({ onComp
               </button>
             </form>
 
-            <div style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.4)' }}>
+            <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
               No account. No email. Just you.
             </div>
           </div>
@@ -299,7 +299,7 @@ export const NameOnboardingModal: React.FC<NameOnboardingModalProps> = ({ onComp
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '4px',
-                color: 'rgba(255, 255, 255, 0.7)',
+                color: 'var(--text-secondary)',
                 padding: '6px 8px',
                 marginLeft: '-8px',
                 marginBottom: '16px'
@@ -312,7 +312,7 @@ export const NameOnboardingModal: React.FC<NameOnboardingModalProps> = ({ onComp
               style={{
                 fontSize: '26px',
                 fontWeight: 700,
-                color: '#ffffff',
+                color: 'var(--text-primary)',
                 margin: '0 0 8px 0',
                 letterSpacing: '-0.02em'
               }}
@@ -322,7 +322,7 @@ export const NameOnboardingModal: React.FC<NameOnboardingModalProps> = ({ onComp
             <p
               style={{
                 fontSize: '14px',
-                color: 'rgba(255, 255, 255, 0.6)',
+                color: 'var(--text-secondary)',
                 margin: '0 0 24px 0',
                 lineHeight: 1.45
               }}
@@ -349,10 +349,10 @@ export const NameOnboardingModal: React.FC<NameOnboardingModalProps> = ({ onComp
                     type="button"
                     onClick={() => toggleInterest(cat.id)}
                     style={{
-                      background: 'rgba(255, 255, 255, 0.04)',
+                      background: 'var(--bg-surface)',
                       border: isSelected
-                        ? '1px solid rgba(20, 184, 166, 0.5)'
-                        : '1px solid rgba(255, 255, 255, 0.08)',
+                        ? '1.5px solid var(--accent)'
+                        : '1px solid var(--border-light)',
                       borderRadius: '16px',
                       padding: '16px',
                       display: 'flex',
@@ -360,9 +360,8 @@ export const NameOnboardingModal: React.FC<NameOnboardingModalProps> = ({ onComp
                       alignItems: 'flex-start',
                       justifyContent: 'space-between',
                       cursor: 'pointer',
-                      backdropFilter: 'blur(12px)',
-                      transition: 'all 0.15s ease',
-                      boxShadow: isSelected ? '0 0 16px rgba(20, 184, 166, 0.12)' : 'none'
+                      boxShadow: isSelected ? '0 0 16px rgba(13, 148, 136, 0.15)' : 'var(--shadow-sm)',
+                      transition: 'all 0.15s ease'
                     }}
                   >
                     <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -385,7 +384,7 @@ export const NameOnboardingModal: React.FC<NameOnboardingModalProps> = ({ onComp
                           height: '20px',
                           borderRadius: '50%',
                           background: isSelected ? 'var(--accent)' : 'transparent',
-                          border: isSelected ? 'none' : '1.5px solid rgba(255, 255, 255, 0.25)',
+                          border: isSelected ? 'none' : '1.5px solid var(--border-strong)',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
@@ -399,7 +398,7 @@ export const NameOnboardingModal: React.FC<NameOnboardingModalProps> = ({ onComp
                       style={{
                         fontSize: '14px',
                         fontWeight: 600,
-                        color: '#ffffff',
+                        color: 'var(--text-primary)',
                         marginTop: '12px'
                       }}
                     >

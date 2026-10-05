@@ -80,7 +80,7 @@ export function AppContent() {
     checkMissedReminders();
     const bootTimer = setTimeout(() => {
       setIsBooting(false);
-    }, 700);
+    }, 200);
     return () => clearTimeout(bootTimer);
   }, []);
 

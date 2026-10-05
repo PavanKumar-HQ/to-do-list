@@ -20,30 +20,31 @@ export const AppBootLoader: React.FC = () => {
       {/* Clean, geometric monochrome mark */}
       <div
         style={{
-          width: '40px',
-          height: '40px',
-          borderRadius: '8px',
+          width: '56px',
+          height: '56px',
+          borderRadius: '14px',
           border: '1.5px solid var(--border-strong)',
           background: 'var(--bg-surface)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          color: 'var(--text-primary)'
+          color: 'var(--text-primary)',
+          boxShadow: 'var(--shadow-md)'
         }}
       >
-        <span style={{ fontSize: '18px', fontWeight: 700, letterSpacing: '-0.03em' }}>K</span>
+        <span style={{ fontSize: '26px', fontWeight: 700, letterSpacing: '-0.03em' }}>K</span>
       </div>
 
       <div style={{ textAlign: 'center' }}>
-        <h1 style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.01em' }}>
-          Kanso
+        <h1 style={{ fontSize: '24px', fontWeight: 700, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.02em' }}>
+          Life OS
         </h1>
-        <p style={{ fontSize: '12.5px', color: 'var(--text-muted)', margin: '4px 0 0 0' }}>
-          Workspace
+        <p style={{ fontSize: '15px', color: 'var(--text-secondary)', margin: '6px 0 0 0', fontWeight: 500 }}>
+          Your life. Organized.
         </p>
       </div>
 
-      <div style={{ marginTop: '8px' }}>
+      <div style={{ marginTop: '6px' }}>
         <ActivityBars />
       </div>
     </div>
