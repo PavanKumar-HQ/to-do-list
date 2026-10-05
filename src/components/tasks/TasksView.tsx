@@ -166,13 +166,8 @@ export const TasksView: React.FC<{ onOpenQuickAdd: (type: any) => void }> = ({ o
   return (
     <div className="page-wrapper">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-        <div>
-          <h2 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--text-primary)' }}>
-            Tasks
-          </h2>
-          <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
-            {allTasks.filter(t => t.status !== 'completed').length} active tasks
-          </p>
+        <div style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: 500 }}>
+          {allTasks.filter(t => t.status !== 'completed').length} active tasks
         </div>
         <button
           onClick={() => onOpenQuickAdd('task')}
@@ -310,27 +305,27 @@ export const TasksView: React.FC<{ onOpenQuickAdd: (type: any) => void }> = ({ o
                   </div>
 
                   {/* Actions */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <button
                       onClick={() => setContextModal({ isOpen: true, type: 'task', id: task.id })}
-                      className="btn-ghost"
-                      style={{ width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}
+                      className="btn btn-secondary btn-sm"
+                      style={{ width: '32px', height: '32px', borderRadius: '8px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}
                       title="View Life Context"
                     >
                       <Network size={14} />
                     </button>
                     <button
                       onClick={() => setEditingTask(task)}
-                      className="btn-ghost"
-                      style={{ width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                      className="btn btn-secondary btn-sm"
+                      style={{ width: '32px', height: '32px', borderRadius: '8px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                       title="Edit task"
                     >
                       <Edit2 size={14} />
                     </button>
                     <button
                       onClick={() => handleDeleteTask(task.id, task.title)}
-                      className="btn-ghost"
-                      style={{ width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--danger)' }}
+                      className="btn btn-secondary btn-sm"
+                      style={{ width: '32px', height: '32px', borderRadius: '8px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--danger)' }}
                       title="Delete task"
                     >
                       <Trash2 size={14} />
@@ -465,8 +460,8 @@ export const TasksView: React.FC<{ onOpenQuickAdd: (type: any) => void }> = ({ o
                       const newSubtask: Subtask = { id: generateId(), title: 'New subtask', completed: false };
                       setEditingTask({ ...editingTask, subtasks: [...(editingTask.subtasks || []), newSubtask] });
                     }}
-                    className="btn btn-ghost btn-sm"
-                    style={{ fontSize: '12px', padding: '2px 8px' }}
+                    className="btn btn-secondary btn-sm"
+                    style={{ fontSize: '12px', padding: '4px 10px', gap: '4px' }}
                   >
                     + Add Step
                   </button>
@@ -491,8 +486,8 @@ export const TasksView: React.FC<{ onOpenQuickAdd: (type: any) => void }> = ({ o
                           const updated = editingTask.subtasks.filter((_, i) => i !== idx);
                           setEditingTask({ ...editingTask, subtasks: updated });
                         }}
-                        className="btn-ghost"
-                        style={{ color: 'var(--danger)', padding: '4px' }}
+                        className="btn btn-secondary btn-sm"
+                        style={{ color: 'var(--danger)', padding: '6px 8px' }}
                       >
                         <Trash2 size={14} />
                       </button>

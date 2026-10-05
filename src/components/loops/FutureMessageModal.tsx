@@ -102,7 +102,7 @@ export const FutureMessageModal: React.FC<FutureMessageModalProps> = ({
         {messageToRead ? (
           // Read Mode
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <div style={{ background: '#f8fafc', padding: '0.75rem', borderRadius: '6px', borderLeft: '3px solid var(--primary)' }}>
+            <div style={{ background: 'var(--bg-surface-elevated)', border: '1px solid var(--border-subtle)', padding: '0.75rem', borderRadius: '6px', borderLeft: '3px solid var(--accent)' }}>
               <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>
                 Written on {formatDisplayDate(messageToRead.createdAt.slice(0, 10))} · Scheduled for {formatDisplayDate(messageToRead.openDate)}
               </div>

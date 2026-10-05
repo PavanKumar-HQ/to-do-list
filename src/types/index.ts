@@ -564,6 +564,9 @@ export interface AppSettings {
   accentColor?: AccentColor;
   isOnboarded?: boolean;
   momentumEnabled?: boolean;
+  displayName?: string;
+  displayNameUpdatedAt?: string;
+  reminderTone?: string;
 }
 
 export type AccentColor =

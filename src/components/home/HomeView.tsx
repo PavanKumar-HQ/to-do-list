@@ -1,43 +1,39 @@
-// HomeView — Private Memory & Action Operating System (Sections 1, 10, 23, 37, 38)
-// Replaces generic productivity dashboard with Attention Engine, Minimum Day, Life Load, Open Loops, and Context Graph.
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import {
-  ShieldCheck,
-  AlertTriangle,
-  Clock,
-  CheckCircle2,
-  Calendar,
-  Network,
-  ArrowRight,
-  TrendingDown,
-  Layers,
-  Target,
-  RotateCcw,
-  TrendingUp,
-  Filter,
-  Compass,
-  Inbox,
-  User,
-  Plus,
-  HelpCircle,
-  Archive,
-  Eye,
   CheckSquare,
-  Mail
+  Square,
+  Calendar,
+  Wallet,
+  Clock,
+  ChevronRight,
+  Plus,
+  RotateCcw,
+  Mail,
+  CheckCircle2,
+  ArrowRight,
+  Send,
+  Sparkles,
+  Bell,
+  HelpCircle,
+  ShieldCheck,
+  AlertTriangle
 } from 'lucide-react';
-import { db, logAudit } from '../../db/db';
+import { db, generateId, logAudit } from '../../db/db';
 import { getTodayDateString, getCurrentMonthString, formatDisplayDate } from '../../utils/dates';
 import { formatMoney } from '../../utils/currency';
+import { useTimeAwareGreeting } from '../../utils/greeting';
 import { useToast } from '../common/ToastContext';
 import { AttentionService } from '../../services/attentionService';
-import { TaskRepository, CommitmentRepository, OpenLoopRepository } from '../../repositories';
+import { TaskRepository, CommitmentRepository, OpenLoopRepository, ExpenseRepository, ReminderRepository } from '../../repositories';
+import { parseNaturalQuickInput } from '../../utils/naturalParser';
 import { ContextModal } from '../common/ContextModal';
+import { ItemDetailModal } from '../common/ItemDetailModal';
 import { LifeReviewModal } from '../loops/LifeReviewModal';
 import { FutureMessageModal } from '../loops/FutureMessageModal';
-import { LoadingSpinner } from '../common/LoadingSpinner';
+import { LifeLoadExplanationModal } from './LifeLoadExplanationModal';
 import { MissedRemindersBanner } from '../reminders/MissedRemindersBanner';
+import { ActivityBars } from '../common/LoadingSpinner';
 import { checkMissedReminders } from '../../services/notificationService';
 import { eventBus } from '../../services/eventBus';
 import type { AttentionItem, LifeLoadAssessment, TaskItem, EntityType, FutureMessageItem, ReminderItem } from '../../types';
@@ -52,8 +48,21 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigateTo, onOpenQuickAdd
   const todayStr = getTodayDateString();
   const currentMonth = getCurrentMonthString();
 
-  // Minimum Day mode toggle (Section 10)
-  const [minimumDayOnly, setMinimumDayOnly] = useState(false);
+  // Settings & Personalized Greeting
+  const settings = useLiveQuery(() => db.settings.get('current_settings'), []);
+  const { greeting, subtleDate } = useTimeAwareGreeting(settings?.displayName);
+
+  // Detail Modal state (for real persistent data view)
+  const [selectedDetail, setSelectedDetail] = useState<{
+    type: 'task' | 'event' | 'reminder' | 'loop' | 'expense' | null;
+    data: any | null;
+  }>({
+    type: null,
+    data: null
+  });
+
+  // Life Load explanation modal state
+  const [isLifeLoadModalOpen, setIsLifeLoadModalOpen] = useState(false);
 
   // Context Modal state
   const [contextModal, setContextModal] = useState<{ isOpen: boolean; type: EntityType | null; id: string | null }>({
@@ -96,10 +105,20 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigateTo, onOpenQuickAdd
     messageToRead: null
   });
 
-  // Missed Reminders recovery state (Section 41)
+  // Missed Reminders recovery state
   const [missedReminders, setMissedReminders] = useState<ReminderItem[]>([]);
 
+  // Quick Capture inline input state
+  const [captureText, setCaptureText] = useState('');
+  const [isSubmittingCapture, setIsSubmittingCapture] = useState(false);
+
+  const parsedCapture = useMemo(() => {
+    if (!captureText.trim()) return null;
+    return parseNaturalQuickInput(captureText);
+  }, [captureText]);
+
   useEffect(() => {
+    refreshAttention();
     checkMissedReminders().then(setMissedReminders);
 
     const unsubMissed = eventBus.subscribe('MISSED_REMINDERS', (e) => {
@@ -110,14 +129,25 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigateTo, onOpenQuickAdd
 
     const unsubMutated = eventBus.subscribe('REMINDER_MUTATED', () => {
       checkMissedReminders().then(setMissedReminders);
+      refreshAttention();
     });
+
+    const unsubTask = eventBus.subscribe('TASK_MUTATED', () => refreshAttention());
+    const unsubEvent = eventBus.subscribe('EVENT_MUTATED', () => refreshAttention());
+    const unsubLoop = eventBus.subscribe('OPEN_LOOP_MUTATED', () => refreshAttention());
+    const unsubExpense = eventBus.subscribe('EXPENSE_MUTATED', () => refreshAttention());
 
     return () => {
       unsubMissed();
       unsubMutated();
+      unsubTask();
+      unsubEvent();
+      unsubLoop();
+      unsubExpense();
     };
   }, []);
 
+  // Future messages arriving today
   const readyFutureMessages = useLiveQuery(() => {
     return db.futureMessages.filter(m => !m.deletedAt && !m.isOpened && m.openDate <= todayStr).toArray();
   }, [todayStr]) || [];
@@ -126,48 +156,238 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigateTo, onOpenQuickAdd
     return db.reviewSessions.orderBy('completedAt').reverse().first();
   }, []);
 
-  const closedLoopsCount = useLiveQuery(() => {
-    return db.openLoops.filter(l => !l.deletedAt && l.status === 'closed').count();
-  }, []) || 0;
-
-  const fulfilledCommitmentsCount = useLiveQuery(() => {
-    return db.commitments.filter(c => !c.deletedAt && c.status === 'fulfilled').count();
-  }, []) || 0;
-
-  const completedTasksCount = useLiveQuery(() => {
-    return db.tasks.filter(t => !t.deletedAt && t.status === 'completed').count();
-  }, []) || 0;
-
-  // Live queries for quick tallies
-  const settings = useLiveQuery(() => db.settings.get('current_settings'), []);
-
-  const inboxCount = useLiveQuery(() => {
-    return db.inbox.filter((i) => !i.deletedAt && !i.isProcessed).count();
-  }, []) || 0;
-
-  const todayEvents = useLiveQuery(() => {
-    return db.events.filter((e) => !e.deletedAt && e.date === todayStr).toArray();
+  // Today's tasks (due today OR unscheduled tasks created today, not completed)
+  const todayTasks = useLiveQuery(() => {
+    return db.tasks
+      .filter((t) => !t.deletedAt && t.status !== 'completed' && (!t.dueDate || t.dueDate === todayStr))
+      .toArray();
   }, [todayStr]) || [];
 
+  // Today's events (IndexedDB date index)
+  const todayEvents = useLiveQuery(() => {
+    return db.events.where('date').equals(todayStr).filter((e) => !e.deletedAt).toArray();
+  }, [todayStr]) || [];
+
+  // Today's reminders (IndexedDB date index)
+  const todayReminders = useLiveQuery(() => {
+    return db.reminders
+      .where('date')
+      .equals(todayStr)
+      .filter((r) => !r.deletedAt && (r.status === 'active' || r.status === 'snoozed'))
+      .toArray();
+  }, [todayStr]) || [];
+
+  // Open loops (waiting on others / active loops)
+  const openLoopsList = useLiveQuery(() => {
+    return db.openLoops.filter((l) => !l.deletedAt && l.status === 'open').limit(5).toArray();
+  }, []) || [];
+
+  // Tomorrow's items for Up Next section
+  const tomorrowStr = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    return d.toISOString().split('T')[0];
+  }, []);
+
+  const upNextItems = useLiveQuery(async () => {
+    const [tasks, events, reminders] = await Promise.all([
+      db.tasks.where('dueDate').equals(tomorrowStr).filter(t => !t.deletedAt && t.status !== 'completed').toArray(),
+      db.events.where('date').equals(tomorrowStr).filter(e => !e.deletedAt).toArray(),
+      db.reminders.where('date').equals(tomorrowStr).filter(r => !r.deletedAt && (r.status === 'active' || r.status === 'snoozed')).toArray()
+    ]);
+    return [
+      ...tasks.map(t => ({ id: t.id, title: t.title, type: 'Task' })),
+      ...events.map(e => ({ id: e.id, title: e.title, type: 'Event' })),
+      ...reminders.map(r => ({ id: r.id, title: r.title, type: 'Reminder' }))
+    ];
+  }, [tomorrowStr]) || [];
+
+  // Financial metrics (IndexedDB date index)
   const todayExpenses = useLiveQuery(() => {
-    return db.expenses.filter((e) => !e.deletedAt && e.date === todayStr).toArray();
+    return db.expenses.where('date').equals(todayStr).filter((e) => !e.deletedAt).toArray();
   }, [todayStr]) || [];
 
   const monthlyExpenses = useLiveQuery(() => {
     return db.expenses.filter((e) => !e.deletedAt && e.date.startsWith(currentMonth)).toArray();
   }, [currentMonth]) || [];
 
-  const openLoopsList = useLiveQuery(() => {
-    return db.openLoops.filter((l) => !l.deletedAt && l.status === 'open').limit(4).toArray();
-  }, []) || [];
-
   const todayTotalSpentMinor = todayExpenses.reduce((sum, e) => sum + e.amountMinor, 0);
   const monthlyTotalSpentMinor = monthlyExpenses.reduce((sum, e) => sum + e.amountMinor, 0);
 
-  // Backup status
-  const lastBackup = settings?.lastBackupDate ? settings.lastBackupDate.split('T')[0] : null;
+  // Grouped monthly expenses by category (only categories with real data)
+  const activeExpenseCategories = useMemo(() => {
+    const map = new Map<string, number>();
+    monthlyExpenses.forEach((e) => {
+      const current = map.get(e.category) || 0;
+      map.set(e.category, current + e.amountMinor);
+    });
+    return Array.from(map.entries())
+      .map(([category, amountMinor]) => ({ category, amountMinor }))
+      .sort((a, b) => b.amountMinor - a.amountMinor);
+  }, [monthlyExpenses]);
 
-  // Actions for Attention items
+  // Real status indicators for "Worth your attention"
+  const counts = useLiveQuery(async () => {
+    const commitments = await db.commitments.filter(c => !c.deletedAt && c.status === 'pending').count();
+    const waitingLoops = await db.openLoops.filter(l => !l.deletedAt && l.status === 'open').count();
+    const waitingFollowups = await db.followups.filter(f => !f.deletedAt && f.status === 'waiting').count();
+    const deadlines = await db.events.filter(e => !e.deletedAt && e.category === 'deadline' && e.date >= todayStr).count();
+    return {
+      commitments,
+      waiting: waitingLoops + waitingFollowups,
+      deadlines
+    };
+  }, [todayStr]) || { commitments: 0, waiting: 0, deadlines: 0 };
+
+  // Recent activity stream (only items that actually exist in the database)
+  const recentActivities = useLiveQuery(async () => {
+    const [tasks, expenses, notes, reminders] = await Promise.all([
+      db.tasks.filter(t => !t.deletedAt).reverse().limit(3).toArray(),
+      db.expenses.filter(e => !e.deletedAt).reverse().limit(3).toArray(),
+      db.notes.filter(n => !n.deletedAt && !n.archivedAt).reverse().limit(3).toArray(),
+      db.reminders.filter(r => !r.deletedAt).reverse().limit(3).toArray()
+    ]);
+
+    const combined: Array<{
+      id: string;
+      type: string;
+      title: string;
+      detail: string;
+      timestamp: string;
+    }> = [
+        ...tasks.map(t => ({
+          id: t.id,
+          type: 'Task',
+          title: t.title,
+          detail: t.dueDate ? `Due ${t.dueDate}` : 'Open task',
+          timestamp: t.createdAt
+        })),
+        ...expenses.map(e => ({
+          id: e.id,
+          type: 'Expense',
+          title: `₹${(e.amountMinor / 100).toFixed(0)}`,
+          detail: e.category,
+          timestamp: e.createdAt
+        })),
+        ...notes.map(n => ({
+          id: n.id,
+          type: 'Note',
+          title: n.title,
+          detail: (n.content || '').slice(0, 40),
+          timestamp: n.createdAt
+        })),
+        ...reminders.map(r => ({
+          id: r.id,
+          type: 'Reminder',
+          title: r.title,
+          detail: r.time ? `${r.date} · ${r.time}` : r.date,
+          timestamp: r.createdAt
+        }))
+      ];
+
+    combined.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    return combined.slice(0, 3);
+  }, []) || [];
+
+  // Helper for human-readable relative time
+  const formatRelativeTime = (isoString?: string) => {
+    if (!isoString) return '';
+    const diffMs = Date.now() - new Date(isoString).getTime();
+    const diffMins = Math.max(0, Math.floor(diffMs / 60000));
+    if (diffMins < 1) return 'just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `${diffHours}h ago`;
+    const diffDays = Math.floor(diffHours / 24);
+    return `${diffDays}d ago`;
+  };
+
+  // Submit Quick Capture directly from Home
+  const handleQuickCaptureSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const trimmed = captureText.trim();
+    if (!trimmed) {
+      onOpenQuickAdd('task');
+      return;
+    }
+
+    setIsSubmittingCapture(true);
+    try {
+      const parsed = parseNaturalQuickInput(trimmed);
+
+      if (parsed.detectedType === 'expense') {
+        const exp = await ExpenseRepository.create({
+          amountMinor: parsed.amountMinor || 0,
+          currency: 'INR',
+          date: parsed.dueDate || getTodayDateString(),
+          category: parsed.category || 'Other',
+          notes: parsed.title
+        });
+        eventBus.emit('EXPENSE_MUTATED', { type: 'EXPENSE_MUTATED', entityId: exp.id });
+        showToast(`Expense logged: ₹${((parsed.amountMinor || 0) / 100).toFixed(0)}`, { type: 'success' });
+      } else if (parsed.detectedType === 'reminder') {
+        const rem = await ReminderRepository.create({
+          title: parsed.title,
+          date: parsed.dueDate || getTodayDateString(),
+          time: parsed.dueTime || undefined,
+          status: 'active'
+        });
+        eventBus.emit('REMINDER_MUTATED', { type: 'REMINDER_MUTATED', entityId: rem.id });
+        showToast(`Reminder set for ${rem.date}`, { type: 'success' });
+      } else if (parsed.detectedType === 'idea') {
+        const ideaId = generateId();
+        const nowIso = new Date().toISOString();
+        await db.ideas.add({
+          id: ideaId,
+          title: parsed.title,
+          description: '',
+          category: 'General',
+          tags: [],
+          isPinned: false,
+          status: 'active',
+          createdAt: nowIso,
+          updatedAt: nowIso
+        });
+        showToast(`Idea captured: ${parsed.title}`, { type: 'success' });
+      } else if (parsed.detectedType === 'event') {
+        const eventId = generateId();
+        const nowIso = new Date().toISOString();
+        await db.events.add({
+          id: eventId,
+          title: parsed.title,
+          date: parsed.dueDate || getTodayDateString(),
+          startTime: parsed.dueTime || '10:00',
+          category: 'meeting',
+          color: '#3b82f6',
+          recurrence: 'none',
+          reminderSchedule: { enabled: true, oneDayBefore: true },
+          createdAt: nowIso,
+          updatedAt: nowIso
+        });
+        eventBus.emit('EVENT_MUTATED', { type: 'EVENT_MUTATED', entityId: eventId });
+        showToast(`Event added: ${parsed.title}`, { type: 'success' });
+      } else {
+        // Default to Task
+        const task = await TaskRepository.create({
+          title: parsed.title,
+          dueDate: parsed.dueDate || undefined,
+          dueTime: parsed.dueTime || undefined,
+          status: 'todo'
+        });
+        eventBus.emit('TASK_MUTATED', { type: 'TASK_MUTATED', entityId: task.id });
+        showToast(`Task added: ${parsed.title}`, { type: 'success' });
+      }
+
+      setCaptureText('');
+      refreshAttention();
+    } catch (err: any) {
+      showToast(err.message || 'Failed to save', { type: 'error' });
+    } finally {
+      setIsSubmittingCapture(false);
+    }
+  };
+
+  // Attention actions
   const handleAttentionAction = async (item: AttentionItem, action: string) => {
     try {
       if (action === 'open_context' && item.entityType && item.entityId) {
@@ -220,47 +440,330 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigateTo, onOpenQuickAdd
     }
   };
 
-  const getLifeLoadBadge = (level?: string) => {
-    switch (level) {
-      case 'overloaded':
-        return { label: 'Life Load: Overloaded', bg: 'var(--danger-bg)', text: 'var(--danger)', border: 'var(--danger-border)' };
-      case 'heavy':
-        return { label: 'Life Load: Heavy', bg: 'var(--warning-bg)', text: 'var(--warning)', border: 'var(--warning-border)' };
-      case 'moderate':
-        return { label: 'Life Load: Moderate', bg: 'var(--warning-bg)', text: 'var(--warning)', border: 'var(--warning-border)' };
-      default:
-        return { label: 'Life Load: Light', bg: 'var(--success-bg)', text: 'var(--success)', border: 'var(--success-border)' };
+  // Intelligent schedule-aware contextual status commentary
+  const getScheduleInsight = () => {
+    const activeTasksCount = todayTasks.filter((t) => t.status !== 'completed').length;
+    const completedTasksCount = todayTasks.filter((t) => t.status === 'completed').length;
+    const eventsCount = todayEvents.length;
+    const remindersCount = todayReminders.length;
+    const attentionCount = attentionData.attentionItems.length;
+
+    // Check next upcoming event time today
+    const currentHM = new Date().toTimeString().slice(0, 5);
+    const nextEvent = todayEvents
+      .filter((e) => !e.startTime || e.startTime >= currentHM)
+      .sort((a, b) => (a.startTime || '23:59').localeCompare(b.startTime || '23:59'))[0];
+
+    if (attentionCount > 0) {
+      return {
+        label: attentionCount === 1 ? '1 urgent item today' : `${attentionCount} items need attention`,
+        color: 'var(--danger)',
+        dotColor: 'var(--danger)'
+      };
     }
+
+    if (nextEvent && nextEvent.startTime) {
+      return {
+        label: `Next: ${nextEvent.title} (${nextEvent.startTime})`,
+        color: 'var(--accent)',
+        dotColor: 'var(--accent)'
+      };
+    }
+
+    if (eventsCount > 0 && activeTasksCount > 0) {
+      return {
+        label: `${eventsCount} ${eventsCount === 1 ? 'event' : 'events'} • ${activeTasksCount} ${activeTasksCount === 1 ? 'task' : 'tasks'}`,
+        color: 'var(--accent)',
+        dotColor: 'var(--accent)'
+      };
+    }
+
+    if (eventsCount > 0) {
+      return {
+        label: `${eventsCount} ${eventsCount === 1 ? 'event' : 'events'} scheduled`,
+        color: 'var(--accent)',
+        dotColor: 'var(--accent)'
+      };
+    }
+
+    if (activeTasksCount > 0) {
+      return {
+        label: `${activeTasksCount} ${activeTasksCount === 1 ? 'task' : 'tasks'} planned`,
+        color: 'var(--text-secondary)',
+        dotColor: '#10b981'
+      };
+    }
+
+    if (remindersCount > 0) {
+      return {
+        label: `${remindersCount} ${remindersCount === 1 ? 'reminder' : 'reminders'} set`,
+        color: 'var(--accent)',
+        dotColor: 'var(--accent)'
+      };
+    }
+
+    if (completedTasksCount > 0 && activeTasksCount === 0) {
+      return {
+        label: 'All tasks completed today',
+        color: 'var(--success)',
+        dotColor: 'var(--success)'
+      };
+    }
+
+    return {
+      label: 'Clear schedule today',
+      color: 'var(--text-secondary)',
+      dotColor: 'var(--success)'
+    };
   };
 
-  const loadBadge = getLifeLoadBadge(attentionData.lifeLoad?.level);
+  const loadStatus = getScheduleInsight();
+  const isOverloadedOrEssential =
+    attentionData.lifeLoad?.level === 'overloaded' ||
+    attentionData.lifeLoad?.level === 'heavy' ||
+    attentionData.minimumDayTasks.length > 0;
+
+  // Unified items scheduled for today in chronological order
+  const todayTimelineItems = useMemo(() => {
+    const items: Array<{
+      id: string;
+      type: 'event' | 'task' | 'reminder';
+      time: string;
+      title: string;
+      subtitle?: string;
+      isCompleted?: boolean;
+      rawItem: any;
+    }> = [];
+
+    todayEvents.forEach((ev) => {
+      items.push({
+        id: ev.id,
+        type: 'event',
+        time: ev.startTime || 'All day',
+        title: ev.title,
+        subtitle: ev.location,
+        rawItem: ev
+      });
+    });
+
+    todayTasks.forEach((t) => {
+      items.push({
+        id: t.id,
+        type: 'task',
+        time: t.dueTime || 'Today',
+        title: t.title,
+        isCompleted: t.status === 'completed',
+        rawItem: t
+      });
+    });
+
+    todayReminders.forEach((r) => {
+      items.push({
+        id: r.id,
+        type: 'reminder',
+        time: r.time || 'Today',
+        title: r.title,
+        subtitle: 'Reminder',
+        rawItem: r
+      });
+    });
+
+    // Sort items by time string
+    items.sort((a, b) => {
+      if (a.time === 'All day' || a.time === 'Today') return 1;
+      if (b.time === 'All day' || b.time === 'Today') return -1;
+      return a.time.localeCompare(b.time);
+    });
+
+    return items;
+  }, [todayEvents, todayTasks, todayReminders]);
 
   return (
-    <div className="content-max-width" style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
-      {/* 1. Header with Clean, Professional Typography */}
-      <div style={{ borderBottom: '1px solid var(--border-subtle)', paddingBottom: '1rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
-          <div>
-            <h1 style={{ fontSize: '1.75rem', fontWeight: 600, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.02em' }}>
-              {formatDisplayDate(todayStr)}
-            </h1>
+    <div
+      className="page-wrapper"
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '1.75rem',
+        width: '100%',
+        maxWidth: '720px',
+        margin: '0 auto',
+        boxSizing: 'border-box',
+        paddingBottom: '3rem'
+      }}
+    >
+      {/* =====================================================================
+          1. GREETING & CONTEXT HEADER
+          ===================================================================== */}
+      <div
+        style={{
+          paddingTop: '8px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          gap: '12px',
+          flexWrap: 'nowrap',
+          width: '100%'
+        }}
+      >
+        <div style={{ flex: '1 1 auto', minWidth: 0 }}>
+          <h1
+            style={{
+              fontSize: '1.625rem',
+              fontWeight: 700,
+              color: 'var(--text-primary)',
+              letterSpacing: '-0.025em',
+              margin: '0 0 2px 0',
+              lineHeight: 1.2
+            }}
+          >
+            {greeting}
+          </h1>
+
+          <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
+
+          </p>
+        </div>
+
+        {/* Right Date Card — Placed sideways with text in the right empty space */}
+        <div
+          className="card"
+          style={{
+            padding: '6px 12px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            borderRadius: '12px',
+            background: 'var(--bg-surface-elevated)',
+            border: '1px solid var(--border-subtle)',
+            flexShrink: 0
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'var(--bg-surface)',
+              border: '1px solid var(--border-subtle)',
+              borderRadius: '8px',
+              padding: '3px 7px',
+              minWidth: '36px'
+            }}
+          >
+            <span style={{ fontSize: '0.625rem', fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase' }}>
+              {new Date().toLocaleString('en-US', { month: 'short' })}
+            </span>
+            <span style={{ fontSize: '1.125rem', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1 }}>
+              {new Date().getDate()}
+            </span>
           </div>
 
-          {/* Quick shortcuts */}
-          {inboxCount > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+              {new Date().toLocaleString('en-US', { weekday: 'long' })}
+            </span>
             <button
-              onClick={() => onNavigateTo('inbox')}
-              className="btn btn-sm btn-secondary"
-              style={{ gap: '0.375rem' }}
+              type="button"
+              onClick={() => setIsLifeLoadModalOpen(true)}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                padding: 0,
+                fontSize: '0.6875rem',
+                color: loadStatus.color,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                marginTop: '1px'
+              }}
+              title="Click to view day load assessment"
             >
-              <Inbox size={13} color="var(--accent)" />
-              <span>Inbox ({inboxCount})</span>
+              <span
+                style={{
+                  width: '6px',
+                  height: '6px',
+                  borderRadius: '50%',
+                  background: loadStatus.dotColor
+                }}
+              />
+              <span>{loadStatus.label}</span>
             </button>
-          )}
+          </div>
         </div>
       </div>
 
-      {/* Missed Reminders Recovery Banner (Section 41) */}
+      {/* =====================================================================
+          2. QUICK CAPTURE CARD (Image 2)
+          ===================================================================== */}
+      <section
+        className="card"
+        onClick={() => onOpenQuickAdd('task')}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '14px 16px',
+          background: 'var(--bg-surface-elevated)',
+          border: '1px solid var(--border-subtle)',
+          borderRadius: '16px',
+          cursor: 'pointer',
+          transition: 'all 0.15s ease'
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div
+            style={{
+              width: '36px',
+              height: '36px',
+              borderRadius: '10px',
+              background: 'rgba(56, 189, 248, 0.15)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0
+            }}
+          >
+            <CheckSquare size={18} color="#38bdf8" />
+          </div>
+          <div>
+            <div style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+              Quick capture
+            </div>
+            <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
+              What do you need to remember?
+            </div>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onOpenQuickAdd();
+          }}
+          className="btn-ghost"
+          style={{
+            width: '34px',
+            height: '34px',
+            borderRadius: '50%',
+            background: 'var(--bg-surface)',
+            border: '1px solid var(--border-subtle)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: 'var(--text-secondary)',
+            padding: 0
+          }}
+          aria-label="Add item"
+        >
+          <Plus size={18} />
+        </button>
+      </section>
+
+      {/* Missed Reminders Recovery Banner (if any) */}
       {missedReminders.length > 0 && (
         <MissedRemindersBanner
           missedItems={missedReminders}
@@ -269,488 +772,579 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigateTo, onOpenQuickAdd
         />
       )}
 
-      {/* Arrived Messages from Past Self */}
+      {/* Arrived Messages from Past Self (if any) */}
       {readyFutureMessages.length > 0 && (
         <div
-          className="animate-row-enter"
+          className="card"
           style={{
-            background: 'var(--bg-surface-elevated)',
-            border: '1px solid var(--border-subtle)',
-            borderLeft: '3px solid var(--accent)',
-            borderRadius: '8px',
-            padding: '0.875rem 1rem',
+            borderLeft: '4px solid var(--accent)',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center'
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <Mail size={18} color="var(--accent)" />
             <div>
-              <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--accent)', letterSpacing: '0.04em' }}>
-                Message from past self arrived
+              <div style={{ fontSize: '0.6875rem', color: 'var(--accent)', fontWeight: 600, textTransform: 'uppercase' }}>
+                Note from past self
               </div>
-              <div style={{ fontSize: '0.9375rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+              <div style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-primary)' }}>
                 {readyFutureMessages[0].title}
               </div>
             </div>
           </div>
           <button
-            className="btn btn-primary"
-            style={{ fontSize: '0.75rem', padding: '0.375rem 0.75rem' }}
+            className="btn btn-primary btn-sm"
             onClick={() => setFutureModalConfig({ isOpen: true, messageToRead: readyFutureMessages[0] })}
           >
-            Read message
+            Open note
           </button>
         </div>
       )}
 
-      {/* Weekly Review Prompt */}
-      {(!lastReviewSession || (new Date().getTime() - new Date(lastReviewSession.completedAt).getTime() > 7 * 86400000)) && (
-        <div
-          className="animate-row-enter"
-          style={{
-            background: 'var(--bg-surface)',
-            border: '1px solid var(--border-subtle)',
-            borderRadius: '8px',
-            padding: '0.875rem 1rem',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center'
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
-            <RotateCcw size={18} color="var(--accent)" />
-            <div>
-              <div style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-                Weekly life review due
-              </div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                {lastReviewSession ? `Last completed ${formatDisplayDate(lastReviewSession.completedAt.slice(0, 10))}` : 'Review open loops, commitments, and stagnant backlog.'}
-              </div>
-            </div>
-          </div>
-          <button
-            className="btn btn-sm btn-primary"
-            onClick={() => setIsReviewModalOpen(true)}
-          >
-            Start life review
-          </button>
-        </div>
-      )}
-
-      {/* Momentum (Meaningful Outcomes) - Section 1, 38 */}
-      {settings?.momentumEnabled && (
-        <div style={{ padding: '0.875rem 1rem', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: '8px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-              <TrendingUp size={15} color="var(--success)" />
-              <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
-                Overview
-              </span>
-            </div>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem', marginTop: '0.5rem' }}>
-            <div style={{ background: 'var(--bg-surface-elevated)', padding: '0.5rem 0.75rem', borderRadius: '6px' }}>
-              <div style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-                {closedLoopsCount}
-              </div>
-              <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>
-                Loops closed
-              </div>
-            </div>
-            <div style={{ background: 'var(--bg-surface-elevated)', padding: '0.5rem 0.75rem', borderRadius: '6px' }}>
-              <div style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-                {fulfilledCommitmentsCount}
-              </div>
-              <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>
-                Promises kept
-              </div>
-            </div>
-            <div style={{ background: 'var(--bg-surface-elevated)', padding: '0.5rem 0.75rem', borderRadius: '6px' }}>
-              <div style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-                {completedTasksCount}
-              </div>
-              <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>
-                Tasks completed
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 2. Life Load Radar Banner (Section 23) */}
-      {attentionData.lifeLoad && (
-        <div
-          style={{
-            background: 'var(--bg-surface)',
-            border: `1px solid ${loadBadge.border}`,
-            borderLeft: `3px solid ${loadBadge.text}`,
-            borderRadius: '8px',
-            padding: '0.875rem 1rem',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '0.5rem'
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: loadBadge.text, letterSpacing: '0.02em' }}>
-              {loadBadge.label}
-            </span>
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-              Load score: {attentionData.lifeLoad.score}
-            </span>
-          </div>
-          <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
-            {attentionData.lifeLoad.summary}
-          </p>
-
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.25rem' }}>
-            {attentionData.lifeLoad.breakdown.overdueCount > 0 && (
-              <span style={{ fontSize: '0.75rem', background: 'var(--danger-bg)', padding: '0.2rem 0.5rem', borderRadius: '4px', color: 'var(--danger)' }}>
-                {attentionData.lifeLoad.breakdown.overdueCount} Overdue
-              </span>
-            )}
-            {attentionData.lifeLoad.breakdown.waitingCount > 0 && (
-              <span style={{ fontSize: '0.75rem', background: 'var(--warning-bg)', padding: '0.2rem 0.5rem', borderRadius: '4px', color: 'var(--warning)' }}>
-                {attentionData.lifeLoad.breakdown.waitingCount} Waiting on others
-              </span>
-            )}
-            {attentionData.lifeLoad.breakdown.staleCount > 0 && (
-              <span style={{ fontSize: '0.75rem', background: 'var(--bg-surface-elevated)', padding: '0.2rem 0.5rem', borderRadius: '4px', color: 'var(--text-muted)' }}>
-                {attentionData.lifeLoad.breakdown.staleCount} Going stale
-              </span>
-            )}
-            {attentionData.lifeLoad.breakdown.upcomingPaymentMinor > 0 && (
-              <span style={{ fontSize: '0.75rem', background: 'var(--bg-surface-elevated)', padding: '0.2rem 0.5rem', borderRadius: '4px', color: 'var(--text-secondary)' }}>
-                {formatMoney(attentionData.lifeLoad.breakdown.upcomingPaymentMinor, '₹')} Upcoming payments
-              </span>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* 3. The "Worth your attention" Engine (Section 1, 52) */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <h2 style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>
-              Worth your attention
-            </h2>
-          </div>
+      {/* =====================================================================
+          3. WORTH YOUR ATTENTION (Image 2)
+          ===================================================================== */}
+      <section
+        className="card"
+        style={{
+          background: 'var(--bg-surface-elevated)',
+          border: '1px solid var(--border-subtle)',
+          borderRadius: '16px',
+          padding: '16px'
+        }}
+      >
+        <div style={{ fontSize: '0.9375rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '12px' }}>
+          Worth your attention
         </div>
 
         {loadingAttention ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
-            <div
-              style={{
-                background: 'var(--bg-surface)',
-                border: '1px solid var(--border-subtle)',
-                borderRadius: '8px',
-                padding: '1rem',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '0.625rem'
-              }}
-            >
-              <div className="skeleton-shimmer" style={{ width: '38%', height: '14px', borderRadius: '4px' }} />
-              <div className="skeleton-shimmer" style={{ width: '68%', height: '12px', borderRadius: '4px' }} />
-            </div>
-            <div
-              style={{
-                background: 'var(--bg-surface)',
-                border: '1px solid var(--border-subtle)',
-                borderRadius: '8px',
-                padding: '1rem',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '0.625rem'
-              }}
-            >
-              <div className="skeleton-shimmer" style={{ width: '28%', height: '14px', borderRadius: '4px' }} />
-              <div className="skeleton-shimmer" style={{ width: '55%', height: '12px', borderRadius: '4px' }} />
-            </div>
+          <div style={{ padding: '8px 0', color: 'var(--text-muted)', fontSize: '0.8125rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <ActivityBars />
+            <span>Checking commitments...</span>
           </div>
         ) : attentionData.attentionItems.length === 0 ? (
-          <div style={{ padding: '1.5rem', textAlign: 'center', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: '8px' }}>
-            <div style={{ fontSize: '0.9375rem', fontWeight: 500, color: 'var(--text-primary)' }}>All clear</div>
-            <p style={{ margin: '0.25rem 0 0', fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
-              No overdue commitments, waiting items, or critical deadlines right now.
-            </p>
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
-            {attentionData.attentionItems.map((item) => {
-              const isCrit = item.severity === 'critical';
-              const isHigh = item.severity === 'high';
-              const borderCol = isCrit ? 'var(--danger)' : isHigh ? 'var(--warning)' : 'var(--border-subtle)';
-
-              return (
-                <div
-                  key={item.id}
-                  className="animate-row-enter"
-                  style={{
-                    background: 'var(--bg-surface)',
-                    border: '1px solid var(--border-subtle)',
-                    borderLeft: `3px solid ${borderCol}`,
-                    borderRadius: '8px',
-                    padding: '0.875rem 1rem',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '0.5rem'
-                  }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-                        <span
-                          style={{
-                            fontSize: '0.6875rem',
-                            fontWeight: 600,
-                            letterSpacing: '0.04em',
-                            padding: '0.125rem 0.375rem',
-                            borderRadius: '3px',
-                            background: isCrit ? 'var(--danger-bg)' : isHigh ? 'var(--warning-bg)' : 'var(--bg-surface-elevated)',
-                            color: isCrit ? 'var(--danger)' : isHigh ? 'var(--warning)' : 'var(--text-muted)'
-                          }}
-                        >
-                          {item.type.replace('_', ' ')}
-                        </span>
-                        {item.consequence && item.consequence !== 'none' && (
-                          <span style={{ fontSize: '0.6875rem', color: 'var(--warning)', fontWeight: 500 }}>
-                            Consequence: {item.consequence}
-                          </span>
-                        )}
-                      </div>
-                      <h3 style={{ fontSize: '0.9375rem', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>
-                        {item.title}
-                      </h3>
-                      <p style={{ margin: '0.25rem 0 0', fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
-                        {item.reason}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Action buttons */}
-                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.25rem', borderTop: '1px solid var(--border-subtle)', paddingTop: '0.5rem' }}>
-                    {item.suggestedActions.includes('complete') && (
-                      <button
-                        className="btn btn-sm btn-primary"
-                        onClick={() => handleAttentionAction(item, 'complete')}
-                      >
-                        {item.actionLabel || 'Do It'}
-                      </button>
-                    )}
-                    {item.suggestedActions.includes('open_context') && (
-                      <button
-                        className="btn btn-sm btn-secondary"
-                        style={{ gap: '0.25rem' }}
-                        onClick={() => handleAttentionAction(item, 'open_context')}
-                      >
-                        <Network size={12} />
-                        <span>Context</span>
-                      </button>
-                    )}
-                    {item.suggestedActions.includes('snooze') && (
-                      <button
-                        className="btn btn-sm btn-secondary"
-                        onClick={() => handleAttentionAction(item, 'snooze')}
-                      >
-                        Snooze
-                      </button>
-                    )}
-                    {item.suggestedActions.includes('archive') && (
-                      <button
-                        className="btn btn-sm btn-secondary"
-                        style={{ color: 'var(--text-muted)' }}
-                        onClick={() => handleAttentionAction(item, 'archive')}
-                      >
-                        Archive
-                      </button>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* 4. The "Minimum Day" Focus Engine (Section 10) */}
-      <div style={{ padding: '1rem', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: '8px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Target size={16} color="var(--accent)" />
-            <span style={{ fontSize: '0.9375rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-              Focus for today
-            </span>
-          </div>
-          <button
-            onClick={() => setMinimumDayOnly(!minimumDayOnly)}
-            className={`btn btn-sm ${minimumDayOnly ? 'btn-primary' : 'btn-secondary'}`}
-            style={{ gap: '0.375rem' }}
-          >
-            <Filter size={13} />
-            <span>{minimumDayOnly ? 'Show all tasks' : 'Filter minimum day'}</span>
-          </button>
-        </div>
-
-        {attentionData.minimumDayTasks.length === 0 ? (
-          <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', padding: '0.5rem 0' }}>
-            No critical tasks assigned for today. You are fully clear.
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            {attentionData.minimumDayTasks.map((task, idx) => (
+          <div>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: '16px' }}>
               <div
-                key={task.id}
                 style={{
+                  width: '28px',
+                  height: '28px',
+                  borderRadius: '50%',
+                  background: 'var(--success-light)',
                   display: 'flex',
-                  alignItems: 'flex-start',
-                  gap: '0.625rem',
-                  padding: '0.5rem 0',
-                  borderBottom: idx < attentionData.minimumDayTasks.length - 1 ? '1px solid var(--border-subtle)' : 'none'
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                  marginTop: '1px'
                 }}
               >
-                <button
-                  onClick={async () => {
-                    await TaskRepository.complete(task.id);
-                    refreshAttention();
-                    showToast('Minimum day task completed', { type: 'success' });
-                  }}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                    color: 'var(--text-muted)',
-                    padding: '0.125rem',
-                    marginTop: '0.125rem'
-                  }}
-                >
-                  <CheckSquare size={16} />
-                </button>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-                    {task.title}
-                  </div>
-                  {task.why && (
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.125rem' }}>
-                      Why: {task.why}
-                    </div>
-                  )}
-                  {task.consequence && task.consequence !== 'none' && (
-                    <div style={{ fontSize: '0.6875rem', color: 'var(--warning)', fontWeight: 500, marginTop: '0.125rem' }}>
-                      Consequence if missed: {task.consequence}
-                    </div>
-                  )}
+                <CheckCircle2 size={16} color="var(--success)" />
+              </div>
+              <div>
+                <div style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                  You're clear.
                 </div>
-                <button
-                  onClick={() => setContextModal({ isOpen: true, type: 'task', id: task.id })}
-                  className="btn btn-sm btn-secondary"
-                  style={{ padding: '4px 8px', minHeight: '28px' }}
-                  title="View Context"
-                >
-                  <Eye size={13} />
-                </button>
+                <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
+                  Nothing urgent needs your attention right now.
+                </div>
+              </div>
+            </div>
+
+            {/* 3 Metric Columns: Commitments, Waiting, Deadlines */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '8px 10px',
+                  background: 'var(--bg-surface)',
+                  borderRadius: '10px',
+                  border: '1px solid var(--border-subtle)'
+                }}
+              >
+                <CheckCircle2 size={16} color="var(--success)" />
+                <div>
+                  <div style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1 }}>
+                    {counts.commitments}
+                  </div>
+                  <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                    Commitments
+                  </div>
+                </div>
+              </div>
+
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '8px 10px',
+                  background: 'var(--bg-surface)',
+                  borderRadius: '10px',
+                  border: '1px solid var(--border-subtle)'
+                }}
+              >
+                <Clock size={16} color="#38bdf8" />
+                <div>
+                  <div style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1 }}>
+                    {counts.waiting}
+                  </div>
+                  <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                    Waiting
+                  </div>
+                </div>
+              </div>
+
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '8px 10px',
+                  background: 'var(--bg-surface)',
+                  borderRadius: '10px',
+                  border: '1px solid var(--border-subtle)'
+                }}
+              >
+                <AlertTriangle size={16} color="#f97316" />
+                <div>
+                  <div style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1 }}>
+                    {counts.deadlines}
+                  </div>
+                  <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                    Deadlines
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {attentionData.attentionItems.map((item) => (
+              <div
+                key={item.id}
+                onClick={() => handleAttentionAction(item, 'open_context')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '10px 12px',
+                  background: 'var(--bg-surface)',
+                  borderRadius: '10px',
+                  border: '1px solid var(--border-subtle)',
+                  cursor: 'pointer'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flex: 1 }}>
+                  <div
+                    style={{
+                      width: '28px',
+                      height: '28px',
+                      borderRadius: '8px',
+                      background: 'rgba(249, 115, 22, 0.15)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0
+                    }}
+                  >
+                    <AlertTriangle size={15} color="#f97316" />
+                  </div>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                      {item.title}
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '1px' }}>
+                      {item.reason}
+                    </div>
+                  </div>
+                </div>
+                <ChevronRight size={16} color="var(--text-tertiary)" />
               </div>
             ))}
           </div>
         )}
-      </div>
+      </section>
 
-      {/* 5. Schedule & Today's Events */}
-      {todayEvents.length > 0 && (
-        <div style={{ padding: '1rem', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: '8px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
-            <Calendar size={16} color="var(--accent)" />
-            <h3 style={{ fontSize: '0.9375rem', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>
-              Today's schedule ({todayEvents.length})
-            </h3>
+      {/* =====================================================================
+          4. TODAY SCHEDULE (Image 2)
+          ===================================================================== */}
+      <section
+        className="card"
+        style={{
+          background: 'var(--bg-surface-elevated)',
+          border: '1px solid var(--border-subtle)',
+          borderRadius: '16px',
+          padding: '16px'
+        }}
+      >
+        <div
+          onClick={() => onNavigateTo('calendar')}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: '12px',
+            cursor: 'pointer'
+          }}
+        >
+          <div style={{ fontSize: '0.9375rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+            Today
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            {todayEvents.map((evt) => (
+          <ChevronRight size={16} color="var(--text-tertiary)" />
+        </div>
+
+        {todayTimelineItems.length === 0 ? (
+          <div>
+            <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '14px' }}>
+              Your day is open.
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+              <button
+                type="button"
+                onClick={() => onOpenQuickAdd('task')}
+                className="btn btn-secondary"
+                style={{
+                  padding: '10px',
+                  borderRadius: '10px',
+                  fontSize: '0.8125rem',
+                  fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px'
+                }}
+              >
+                <Plus size={15} />
+                <span>Add task</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => onOpenQuickAdd('event')}
+                className="btn btn-secondary"
+                style={{
+                  padding: '10px',
+                  borderRadius: '10px',
+                  fontSize: '0.8125rem',
+                  fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px'
+                }}
+              >
+                <Plus size={15} />
+                <span>Add event</span>
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {todayTimelineItems.map((item) => (
               <div
-                key={evt.id}
+                key={`${item.type}_${item.id}`}
+                onClick={() => setSelectedDetail({ type: item.type, data: item.rawItem })}
                 style={{
                   display: 'flex',
-                  justifyContent: 'space-between',
                   alignItems: 'center',
-                  padding: '0.625rem 0.75rem',
+                  justifyContent: 'space-between',
+                  padding: '10px 12px',
+                  background: 'var(--bg-surface)',
+                  borderRadius: '10px',
+                  border: '1px solid var(--border-subtle)',
+                  cursor: 'pointer',
+                  transition: 'background 0.12s ease'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0, flex: 1 }}>
+                  <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-secondary)', width: '48px', flexShrink: 0 }}>
+                    {item.time}
+                  </span>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-primary)', textDecoration: item.isCompleted ? 'line-through' : 'none' }}>
+                      {item.title}
+                    </div>
+                    {item.subtitle && (
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '1px' }}>
+                        {item.subtitle}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <ChevronRight size={16} color="var(--text-tertiary)" style={{ flexShrink: 0 }} />
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* =====================================================================
+          5. OPEN LOOPS (Image 2)
+          ===================================================================== */}
+      <section
+        className="card"
+        style={{
+          background: 'var(--bg-surface-elevated)',
+          border: '1px solid var(--border-subtle)',
+          borderRadius: '16px',
+          padding: '16px'
+        }}
+      >
+        <div
+          onClick={() => onNavigateTo('loops')}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: '12px',
+            cursor: 'pointer'
+          }}
+        >
+          <div style={{ fontSize: '0.9375rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+            Open loops
+          </div>
+          <ChevronRight size={16} color="var(--text-tertiary)" />
+        </div>
+
+        {openLoopsList.length === 0 ? (
+          <div>
+            <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '14px' }}>
+              Nothing unresolved right now.
+            </div>
+            <button
+              type="button"
+              onClick={() => onOpenQuickAdd('followup')}
+              className="btn btn-secondary"
+              style={{
+                width: '100%',
+                padding: '10px',
+                borderRadius: '10px',
+                fontSize: '0.8125rem',
+                fontWeight: 600,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px'
+              }}
+            >
+              <Plus size={15} />
+              <span>Add something you're waiting for</span>
+            </button>
+          </div>
+        ) : (
+          <div
+            onClick={() => onNavigateTo('loops')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '10px 12px',
+              background: 'var(--bg-surface)',
+              borderRadius: '10px',
+              border: '1px solid var(--border-subtle)',
+              cursor: 'pointer'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div
+                style={{
+                  width: '28px',
+                  height: '28px',
+                  borderRadius: '8px',
+                  background: 'rgba(168, 85, 247, 0.15)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0
+                }}
+              >
+                <RotateCcw size={15} color="#a855f7" />
+              </div>
+              <div style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                {openLoopsList.length} things you're waiting on
+              </div>
+            </div>
+            <ChevronRight size={16} color="var(--text-tertiary)" />
+          </div>
+        )}
+      </section>
+
+      {/* =====================================================================
+          6. MONEY (Image 2)
+          ===================================================================== */}
+      <section
+        className="card"
+        style={{
+          background: 'var(--bg-surface-elevated)',
+          border: '1px solid var(--border-subtle)',
+          borderRadius: '16px',
+          padding: '16px'
+        }}
+      >
+        <div
+          onClick={() => onNavigateTo('money')}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: '12px',
+            cursor: 'pointer'
+          }}
+        >
+          <div style={{ fontSize: '0.9375rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+            Money
+          </div>
+          <ChevronRight size={16} color="var(--text-tertiary)" />
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '12px' }}>
+          <div>
+            <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+              {formatMoney(todayTotalSpentMinor, '₹')} today
+            </div>
+          </div>
+          <div style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-secondary)' }}>
+            {formatMoney(monthlyTotalSpentMinor, '₹')} this month
+          </div>
+        </div>
+
+        {todayExpenses.length > 0 && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px', flexWrap: 'wrap' }}>
+            {todayExpenses.slice(0, 3).map((exp) => (
+              <span
+                key={exp.id}
+                style={{
+                  fontSize: '0.75rem',
+                  padding: '3px 8px',
+                  borderRadius: '6px',
+                  background: 'var(--bg-surface)',
+                  border: '1px solid var(--border-subtle)',
+                  color: 'var(--text-secondary)'
+                }}
+              >
+                {exp.category} · {formatMoney(exp.amountMinor, '₹')}
+              </span>
+            ))}
+          </div>
+        )}
+
+        <button
+          type="button"
+          onClick={() => onNavigateTo('money')}
+          className="btn btn-secondary"
+          style={{
+            width: '100%',
+            padding: '10px',
+            borderRadius: '10px',
+            fontSize: '0.8125rem',
+            fontWeight: 600,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '6px'
+          }}
+        >
+          <span>View money</span>
+          <ChevronRight size={14} />
+        </button>
+      </section>
+
+      {/* =====================================================================
+          8. UP NEXT
+          ===================================================================== */}
+      <section className="card">
+        <div className="card-header">
+          <div className="card-title">
+            <Calendar size={15} color="var(--accent)" />
+            <span>Up Next</span>
+          </div>
+          <span className="badge badge-neutral">Tomorrow</span>
+        </div>
+
+        <div style={{ fontSize: '0.9375rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+          {upNextItems.length > 0 ? `Tomorrow · ${upNextItems.length} things` : 'Tomorrow · Clear schedule'}
+        </div>
+
+        {upNextItems.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '10px' }}>
+            {upNextItems.slice(0, 3).map((item) => (
+              <div
+                key={item.id}
+                style={{
+                  fontSize: '0.8125rem',
+                  color: 'var(--text-secondary)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '6px 10px',
                   background: 'var(--bg-surface-elevated)',
                   borderRadius: '6px'
                 }}
               >
-                <div>
-                  <div style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-                    {evt.title}
-                  </div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                    {evt.startTime ? `${evt.startTime} - ${evt.endTime || 'End'}` : 'All Day'} {evt.location ? `· ${evt.location}` : ''}
-                  </div>
-                </div>
-                <button
-                  onClick={() => setContextModal({ isOpen: true, type: 'event', id: evt.id })}
-                  className="btn btn-sm btn-secondary"
-                  style={{ gap: '0.25rem' }}
-                >
-                  <Compass size={12} />
-                  <span>Pre-event brief</span>
-                </button>
+                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--accent)', flexShrink: 0 }} />
+                <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {item.title}
+                </span>
+                <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>{item.type}</span>
               </div>
             ))}
           </div>
-        </div>
+        )}
+      </section>
+
+      {/* =====================================================================
+          8. RECENT ACTIVITY — ONLY DISPLAYED WHEN REAL USER DATA EXISTS
+          ===================================================================== */}
+      {recentActivities.length > 0 && (
+        <section className="card">
+          <div className="card-header">
+            <div className="card-title">
+              <Clock size={15} color="var(--text-muted)" />
+              <span>Recently added</span>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {recentActivities.map((act) => (
+              <div
+                key={`${act.type}_${act.id}`}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '8px 12px',
+                  background: 'var(--bg-surface-elevated)',
+                  borderRadius: '8px',
+                  border: '1px solid var(--border-subtle)'
+                }}
+              >
+                <div style={{ minWidth: 0, flex: 1, paddingRight: '8px' }}>
+                  <div style={{ fontSize: '0.6875rem', color: 'var(--accent)', fontWeight: 600 }}>
+                    {act.type}
+                  </div>
+                  <div style={{ fontSize: '0.8125rem', fontWeight: 500, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {act.title} {act.detail ? `· ${act.detail}` : ''}
+                  </div>
+                </div>
+                <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', flexShrink: 0 }}>
+                  {formatRelativeTime(act.timestamp)}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
       )}
 
-      {/* 6. Money Connected to Life (Section 19, 20) */}
-      <div style={{ padding: '1rem', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: '8px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-          <div>
-            <h3 style={{ fontSize: '0.9375rem', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>
-              Money
-            </h3>
-          </div>
-          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-            <button
-              onClick={() => onOpenQuickAdd('expense')}
-              className="btn btn-sm btn-secondary"
-              style={{ gap: '0.375rem' }}
-            >
-              <Plus size={13} />
-              <span>Log expense</span>
-            </button>
-            <button
-              onClick={() => onNavigateTo('money')}
-              className="btn btn-sm btn-primary"
-              style={{ gap: '0.375rem' }}
-            >
-              <span>Manage</span>
-              <ArrowRight size={13} />
-            </button>
-          </div>
-        </div>
+      {/* Modals */}
+      <LifeLoadExplanationModal
+        isOpen={isLifeLoadModalOpen}
+        onClose={() => setIsLifeLoadModalOpen(false)}
+        lifeLoad={attentionData.lifeLoad}
+      />
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginTop: '0.5rem' }}>
-          <div style={{ background: 'var(--bg-surface-elevated)', padding: '0.875rem', borderRadius: '6px' }}>
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 500 }}>
-              Spent today
-            </span>
-            <div style={{ fontSize: '1.25rem', fontWeight: 600, color: 'var(--text-primary)', marginTop: '0.25rem' }}>
-              {formatMoney(todayTotalSpentMinor, '₹')}
-            </div>
-          </div>
-          <div style={{ background: 'var(--bg-surface-elevated)', padding: '0.875rem', borderRadius: '6px' }}>
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 500 }}>
-              This month
-            </span>
-            <div style={{ fontSize: '1.25rem', fontWeight: 600, color: 'var(--text-primary)', marginTop: '0.25rem' }}>
-              {formatMoney(monthlyTotalSpentMinor, '₹')}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* 7. Context Modal */}
       <ContextModal
         isOpen={contextModal.isOpen}
         onClose={() => setContextModal({ isOpen: false, type: null, id: null })}
@@ -758,7 +1352,6 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigateTo, onOpenQuickAdd
         entityId={contextModal.id}
       />
 
-      {/* 8. Life Review Modal */}
       <LifeReviewModal
         isOpen={isReviewModalOpen}
         onClose={() => {
@@ -767,12 +1360,20 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigateTo, onOpenQuickAdd
         }}
       />
 
-      {/* 9. Future Message Modal */}
       <FutureMessageModal
         isOpen={futureModalConfig.isOpen}
         onClose={() => setFutureModalConfig({ isOpen: false, messageToRead: null })}
         messageToRead={futureModalConfig.messageToRead}
         onSaved={refreshAttention}
+      />
+
+      {/* Universal Real-Data Detail Modal */}
+      <ItemDetailModal
+        isOpen={!!selectedDetail.type}
+        onClose={() => setSelectedDetail({ type: null, data: null })}
+        itemType={selectedDetail.type}
+        itemData={selectedDetail.data}
+        onOpenContext={(type, id) => setContextModal({ isOpen: true, type, id })}
       />
     </div>
   );

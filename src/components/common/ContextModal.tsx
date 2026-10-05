@@ -38,12 +38,13 @@ export const ContextModal: React.FC<ContextModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
+    <div className="modal-overlay" onClick={onClose} role="dialog" aria-modal="true">
       <div
-        className="modal-content"
+        className="bottom-sheet"
         style={{ maxWidth: '640px', width: '100%', maxHeight: '90vh', overflowY: 'auto' }}
         onClick={(e) => e.stopPropagation()}
       >
+        <div className="sheet-handle" />
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem' }}>
           <div>
@@ -77,8 +78,8 @@ export const ContextModal: React.FC<ContextModalProps> = ({
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             {/* Why does this exist? */}
             {context.why && (
-              <div style={{ background: '#f8fafc', padding: '0.875rem', borderRadius: '8px', borderLeft: '3px solid var(--primary)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.25rem' }}>
+              <div style={{ background: 'var(--bg-surface-elevated)', border: '1px solid var(--border-subtle)', padding: '0.875rem', borderRadius: '8px', borderLeft: '3px solid var(--accent)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.75rem', fontWeight: 600, color: 'var(--accent)', marginBottom: '0.25rem' }}>
                   <HelpCircle size={14} />
                   <span>WHY DOES THIS EXIST?</span>
                 </div>
@@ -90,12 +91,12 @@ export const ContextModal: React.FC<ContextModalProps> = ({
 
             {/* Next Action */}
             {context.nextAction && (
-              <div style={{ background: '#f0fdf4', padding: '0.875rem', borderRadius: '8px', borderLeft: '3px solid #16a34a' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.75rem', fontWeight: 600, color: '#16a34a', marginBottom: '0.25rem' }}>
+              <div style={{ background: 'var(--success-bg)', border: '1px solid var(--success-border)', padding: '0.875rem', borderRadius: '8px', borderLeft: '3px solid var(--success)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.75rem', fontWeight: 600, color: 'var(--success)', marginBottom: '0.25rem' }}>
                   <ArrowRight size={14} />
                   <span>NEXT ACTION</span>
                 </div>
-                <p style={{ margin: 0, fontSize: '0.875rem', fontWeight: 500, color: '#14532d' }}>
+                <p style={{ margin: 0, fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-primary)' }}>
                   {context.nextAction}
                 </p>
               </div>
@@ -103,12 +104,12 @@ export const ContextModal: React.FC<ContextModalProps> = ({
 
             {/* Consequence if missed */}
             {context.consequence && context.consequence !== 'none' && (
-              <div style={{ background: '#fffbeb', padding: '0.875rem', borderRadius: '8px', borderLeft: '3px solid #d97706' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.75rem', fontWeight: 600, color: '#b45309', marginBottom: '0.25rem' }}>
+              <div style={{ background: 'var(--warning-bg)', border: '1px solid var(--warning-border)', padding: '0.875rem', borderRadius: '8px', borderLeft: '3px solid var(--warning)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.75rem', fontWeight: 600, color: 'var(--warning)', marginBottom: '0.25rem' }}>
                   <ShieldAlert size={14} />
                   <span>CONSEQUENCE LEVEL: {context.consequence.toUpperCase()}</span>
                 </div>
-                <p style={{ margin: 0, fontSize: '0.8125rem', color: '#78350f' }}>
+                <p style={{ margin: 0, fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>
                   Unresolved delay on this item carries tangible real-world impact.
                 </p>
               </div>
@@ -127,10 +128,10 @@ export const ContextModal: React.FC<ContextModalProps> = ({
                       key={p.id}
                       style={{
                         fontSize: '0.8125rem',
-                        background: '#f1f5f9',
+                        background: 'var(--bg-surface-elevated)',
                         padding: '0.25rem 0.625rem',
                         borderRadius: '4px',
-                        border: '1px solid #e2e8f0',
+                        border: '1px solid var(--border-subtle)',
                         color: 'var(--text-primary)'
                       }}
                     >
@@ -157,7 +158,7 @@ export const ContextModal: React.FC<ContextModalProps> = ({
                         display: 'flex',
                         justifyContent: 'space-between',
                         padding: '0.375rem 0',
-                        borderBottom: '1px solid #f1f5f9'
+                        borderBottom: '1px solid var(--border-subtle)'
                       }}
                     >
                       <span style={{ color: t.status === 'completed' ? 'var(--text-muted)' : 'var(--text-primary)', textDecoration: t.status === 'completed' ? 'line-through' : 'none' }}>
@@ -178,7 +179,7 @@ export const ContextModal: React.FC<ContextModalProps> = ({
                     <IndianRupee size={15} />
                     <span>FINANCIAL FOOTPRINT</span>
                   </div>
-                  <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--primary)' }}>
+                  <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--accent)' }}>
                     {formatMoney(context.totalExpenseMinor, '₹')}
                   </span>
                 </div>
@@ -210,7 +211,7 @@ export const ContextModal: React.FC<ContextModalProps> = ({
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                   {context.connectedDecisions.map(d => (
-                    <div key={d.id} style={{ background: '#f8fafc', padding: '0.5rem', borderRadius: '4px' }}>
+                    <div key={d.id} style={{ background: 'var(--bg-surface-elevated)', border: '1px solid var(--border-subtle)', padding: '0.5rem', borderRadius: '4px' }}>
                       <div style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-primary)' }}>
                         Decision: {d.title}
                       </div>
@@ -241,10 +242,10 @@ export const ContextModal: React.FC<ContextModalProps> = ({
                       key={a.id}
                       style={{
                         fontSize: '0.75rem',
-                        background: '#f1f5f9',
+                        background: 'var(--bg-surface-elevated)',
                         padding: '0.25rem 0.5rem',
                         borderRadius: '4px',
-                        border: '1px solid #e2e8f0'
+                        border: '1px solid var(--border-subtle)'
                       }}
                     >
                       {a.name} ({(a.sizeBytes / 1024).toFixed(0)} KB)

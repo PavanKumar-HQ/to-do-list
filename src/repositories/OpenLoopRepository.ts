@@ -91,4 +91,13 @@ export class OpenLoopRepository {
     const list = await this.queryOpen();
     return list.filter(l => l.loopType === 'waiting_on');
   }
+
+  public static async softDelete(id: string): Promise<void> {
+    const existing = await db.openLoops.get(id);
+    if (!existing) return;
+    const now = new Date().toISOString();
+    await db.openLoops.update(id, { deletedAt: now, updatedAt: now });
+    await logAudit('delete', 'open_loop', id, `Moved open loop to trash: ${existing.title}`);
+    multiTabSync.broadcastMutation('open_loop', id, 'delete', now);
+  }
 }

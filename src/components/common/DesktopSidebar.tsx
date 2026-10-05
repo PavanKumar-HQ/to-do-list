@@ -158,8 +158,8 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
             <div style={{ fontWeight: 600, fontSize: '15px', color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>
               Kanso
             </div>
-            <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-              Personal Life OS
+            <div style={{ fontSize: '11.5px', color: 'var(--text-muted)' }}>
+              Workspace
             </div>
           </div>
         </div>

@@ -6,12 +6,13 @@ import { eventBus } from './eventBus';
 export class EventReminderService {
   /**
    * Synchronize reminders for a given event based on its reminderSchedule
+   * Only creates durable, non-polluting single reminders (at event time, and optionally 1 day before).
    */
   static async syncEventReminders(event: EventItem): Promise<void> {
     const nowIso = new Date().toISOString();
     const todayStr = nowIso.slice(0, 10);
 
-    // First remove existing active reminders for this event
+    // Remove existing active reminders for this event to avoid duplicate backlog
     const existingReminders = await db.reminders
       .filter((r) => !r.deletedAt && r.linkedType === 'event' && r.linkedId === event.id)
       .toArray();
@@ -58,29 +59,21 @@ export class EventReminderService {
       }
     }
 
-    // 2. Day-of-Event & Recurring interval reminders (default every 2 hours until event/acknowledged)
-    const recurringInterval = schedule.recurringHours || 2;
+    // 2. Day-of-Event Single Reminder (At Event Start Time)
     const eventTimeStr = event.startTime || '10:00';
-    const [eventHour, eventMin] = eventTimeStr.split(':').map(Number);
+    const currentHM = new Date().toTimeString().slice(0, 5);
 
-    // Generate intervals leading up to the event starting from morning (e.g. 08:00) or 2hr steps
-    const timesToRemind: string[] = [];
-    let startH = Math.max(8, eventHour - (recurringInterval * 3));
-    while (startH < eventHour) {
-      timesToRemind.push(`${String(startH).padStart(2, '0')}:${String(eventMin || 0).padStart(2, '0')}`);
-      startH += recurringInterval;
-    }
-    // Also add the event start time
-    timesToRemind.push(eventTimeStr);
+    // Only schedule if the event is today in future, or upcoming date
+    const isFutureTime = event.date > todayStr || (event.date === todayStr && eventTimeStr >= currentHM);
 
-    for (const time of timesToRemind) {
-      const existing = existingReminders.find((r) => r.date === event.date && r.time === time);
-      if (!existing && event.date >= todayStr) {
+    if (isFutureTime) {
+      const existingAtTime = existingReminders.find((r) => r.date === event.date && r.time === eventTimeStr);
+      if (!existingAtTime) {
         const newReminder: ReminderItem = {
           id: generateId(),
-          title: `Upcoming: ${event.title} (${time})`,
+          title: `Event: ${event.title}`,
           date: event.date,
-          time,
+          time: eventTimeStr,
           recurrence: 'none',
           status: 'active',
           notificationState: 'scheduled',
@@ -90,6 +83,13 @@ export class EventReminderService {
           updatedAt: nowIso
         };
         await db.reminders.add(newReminder);
+      }
+    }
+
+    // Clean up any old duplicate synthetic interval reminders for this event
+    for (const r of existingReminders) {
+      if (r.title.startsWith('Upcoming:') && r.time !== eventTimeStr) {
+        await db.reminders.delete(r.id);
       }
     }
 
@@ -121,33 +121,60 @@ export class EventReminderService {
       updatedAt: new Date().toISOString()
     });
 
-    const updatedEvent = { ...event, reminderSchedule: updatedSchedule };
-    await this.syncEventReminders(updatedEvent);
-    await logAudit('update', 'event', eventId, `Toggled reminders ${enabled ? 'ON' : 'OFF'}`);
+    const updatedEvent = await db.events.get(eventId);
+    if (updatedEvent) {
+      await this.syncEventReminders(updatedEvent);
+    }
   }
 
   /**
-   * Update the custom schedule (e.g. interval hours, one-day before)
+   * Update full reminder schedule for an event
    */
   static async updateSchedule(
     eventId: string,
-    updates: { oneDayBefore?: boolean; recurringHours?: number; enabled?: boolean; isDismissed?: boolean }
+    scheduleUpdates: {
+      oneDayBefore?: boolean;
+      recurringHours?: number;
+      enabled?: boolean;
+      isDismissed?: boolean;
+    }
   ): Promise<void> {
     const event = await db.events.get(eventId);
-    if (!event) return;
+    if (!event) throw new Error('Event not found');
 
-    const schedule = {
-      oneDayBefore: updates.oneDayBefore ?? event.reminderSchedule?.oneDayBefore ?? true,
-      recurringHours: updates.recurringHours ?? event.reminderSchedule?.recurringHours ?? 2,
-      enabled: updates.enabled ?? event.reminderSchedule?.enabled ?? true,
-      isDismissed: updates.isDismissed ?? event.reminderSchedule?.isDismissed ?? false
+    const current = event.reminderSchedule || {
+      oneDayBefore: true,
+      recurringHours: 2,
+      enabled: true
+    };
+
+    const newSchedule = {
+      ...current,
+      ...scheduleUpdates
     };
 
     await db.events.update(eventId, {
-      reminderSchedule: schedule,
+      reminderSchedule: newSchedule,
       updatedAt: new Date().toISOString()
     });
 
-    await this.syncEventReminders({ ...event, reminderSchedule: schedule });
+    const updatedEvent = await db.events.get(eventId);
+    if (updatedEvent) {
+      await this.syncEventReminders(updatedEvent);
+    }
+  }
+
+  /**
+   * Purge any historical synthetic interval flood reminders from the database
+   */
+  static async purgeFloodedReminders(): Promise<number> {
+    const flooded = await db.reminders
+      .filter((r) => r.linkedType === 'event' && r.title.startsWith('Upcoming:'))
+      .toArray();
+
+    for (const r of flooded) {
+      await db.reminders.delete(r.id);
+    }
+    return flooded.length;
   }
 }

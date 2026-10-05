@@ -79,4 +79,13 @@ export class CommitmentRepository {
       .filter(c => c.status === 'pending' && !c.deletedAt && c.promisedDate >= today && c.promisedDate <= sevenDaysLater)
       .toArray();
   }
+
+  public static async softDelete(id: string): Promise<void> {
+    const existing = await db.commitments.get(id);
+    if (!existing) return;
+    const now = new Date().toISOString();
+    await db.commitments.update(id, { deletedAt: now, updatedAt: now });
+    await logAudit('delete', 'commitment', id, `Moved commitment to trash: ${existing.what}`);
+    multiTabSync.broadcastMutation('commitment', id, 'delete', now);
+  }
 }

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Shield, Bell, Check } from 'lucide-react';
+import { Plus, Shield, Bell, Check, X } from 'lucide-react';
 import { Header } from './components/common/Header';
 import { BottomNav } from './components/common/BottomNav';
 import { DesktopSidebar } from './components/common/DesktopSidebar';
@@ -7,8 +7,11 @@ import { QuickAddModal } from './components/common/QuickAddModal';
 import { MoreSheetModal } from './components/common/MoreSheetModal';
 import { ToastProvider } from './components/common/ToastContext';
 import { AppBootLoader } from './components/common/AppBootLoader';
+import { NameOnboardingModal } from './components/common/NameOnboardingModal';
 import { ViewSkeleton } from './components/common/ViewSkeleton';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
+import { InAppReminderAlert } from './components/common/InAppReminderAlert';
+import { FloatingActionMenu } from './components/common/FloatingActionMenu';
 
 // Core HomeView is loaded eagerly for instant first paint
 import { HomeView } from './components/home/HomeView';
@@ -34,7 +37,7 @@ const VoiceRecorderModal = React.lazy(() => import('./components/common/VoiceRec
 
 import { db, initializeDatabaseDefaults } from './db/db';
 import { COMMON_CURRENCIES } from './utils/currency';
-import { requestNotificationPermission, handleNotificationAction } from './services/notificationService';
+import { requestNotificationPermission, handleNotificationAction, refreshNextReminderTimer, checkMissedReminders } from './services/notificationService';
 import { eventBus } from './services/eventBus';
 import { useLiveQuery } from 'dexie-react-hooks';
 import type { EntityType } from './types';
@@ -43,11 +46,26 @@ export function AppContent() {
   const [currentScreen, setCurrentScreen] = useState('home');
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   const [quickAddType, setQuickAddType] = useState<EntityType>('task');
+  const [quickAddDate, setQuickAddDate] = useState<string | undefined>(undefined);
+  const [isFloatingMenuOpen, setIsFloatingMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isVoiceOpen, setIsVoiceOpen] = useState(false);
   const [isMoreSheetOpen, setIsMoreSheetOpen] = useState(false);
-  const [isOnboardingDismissed, setIsOnboardingDismissed] = useState(false);
   const [isBooting, setIsBooting] = useState(true);
+
+  // Notification permission banner state
+  const [notificationPermStatus, setNotificationPermStatus] = useState<string>(() => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      return Notification.permission;
+    }
+    return 'unsupported';
+  });
+  const [isPermBannerDismissed, setIsPermBannerDismissed] = useState(false);
+
+  const handleEnableNotifications = async () => {
+    const res = await requestNotificationPermission();
+    setNotificationPermStatus(res);
+  };
 
   const settings = useLiveQuery(() => db.settings.get('current_settings'));
 
@@ -57,6 +75,8 @@ export function AppContent() {
 
   useEffect(() => {
     initializeDatabaseDefaults();
+    refreshNextReminderTimer();
+    checkMissedReminders();
     const bootTimer = setTimeout(() => {
       setIsBooting(false);
     }, 700);
@@ -137,16 +157,10 @@ export function AppContent() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  const openQuickAddWithType = (type: EntityType = 'task') => {
+  const openQuickAddWithType = (type: EntityType = 'task', date?: string) => {
     setQuickAddType(type);
+    setQuickAddDate(date);
     setIsQuickAddOpen(true);
-  };
-
-  const handleFinishOnboarding = async () => {
-    if (settings) {
-      await db.settings.update('current_settings', { isOnboarded: true });
-    }
-    setIsOnboardingDismissed(true);
   };
 
   const renderActiveView = () => {
@@ -173,7 +187,7 @@ export function AppContent() {
         content = <MoneyView onOpenQuickAdd={openQuickAddWithType} />;
         break;
       case 'calendar':
-        content = <CalendarView />;
+        content = <CalendarView onOpenQuickAdd={openQuickAddWithType} />;
         break;
       case 'journal':
         content = <JournalView />;
@@ -208,7 +222,18 @@ export function AppContent() {
     return <AppBootLoader />;
   }
 
-  const showOnboarding = settings && !settings.isOnboarded && !isOnboardingDismissed;
+  // First-launch personalization: if no display name exists, show minimal full-screen onboarding view
+  const needsNameSetup = !settings?.displayName?.trim();
+
+  if (needsNameSetup) {
+    return (
+      <NameOnboardingModal
+        onComplete={() => {
+          setCurrentScreen('home');
+        }}
+      />
+    );
+  }
 
   return (
     <div className="app-container">
@@ -226,9 +251,49 @@ export function AppContent() {
           onOpenSearch={() => setIsSearchOpen(true)}
           onOpenVoice={() => setIsVoiceOpen(true)}
           onOpenSettings={() => setCurrentScreen('settings')}
+          onOpenMenu={() => setIsMoreSheetOpen(true)}
           theme={theme}
           onToggleTheme={handleToggleTheme}
         />
+
+        {/* Polite Notification Permission Banner if not enabled */}
+        {notificationPermStatus === 'default' && !isPermBannerDismissed && (
+          <div
+            style={{
+              background: 'var(--bg-surface-elevated)',
+              borderBottom: '1px solid var(--border-subtle)',
+              padding: '8px 16px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '10px',
+              fontSize: '12.5px',
+              color: 'var(--text-secondary)'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Bell size={15} color="var(--accent)" />
+              <span>Enable notifications for timely reminders & event alerts</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <button
+                onClick={handleEnableNotifications}
+                className="btn btn-sm btn-primary"
+                style={{ padding: '3px 10px', fontSize: '12px' }}
+              >
+                Enable
+              </button>
+              <button
+                onClick={() => setIsPermBannerDismissed(true)}
+                className="btn-ghost"
+                style={{ padding: '2px', color: 'var(--text-muted)' }}
+                aria-label="Dismiss banner"
+              >
+                <X size={15} />
+              </button>
+            </div>
+          </div>
+        )}
 
         <main style={{ flex: 1, minWidth: 0 }}>
           {renderActiveView()}
@@ -243,87 +308,38 @@ export function AppContent() {
 
         {/* Persistent Floating Quick Add Button */}
         <button
-          onClick={() => openQuickAddWithType('task')}
+          onClick={() => setIsFloatingMenuOpen(!isFloatingMenuOpen)}
           className="fab-quick-add"
           aria-label="Quick capture"
           title="Quick Capture (+)"
         >
-          <Plus size={26} strokeWidth={2.5} />
+          <Plus
+            size={26}
+            strokeWidth={2.5}
+            style={{
+              transform: isFloatingMenuOpen ? 'rotate(45deg)' : 'none',
+              transition: 'transform 0.16s ease'
+            }}
+          />
         </button>
       </div>
 
-      {/* Minimal First-Run Onboarding Modal */}
-      {showOnboarding && (
-        <div className="modal-overlay" role="dialog" aria-modal="true">
-          <div className="bottom-sheet" style={{ maxWidth: '480px' }}>
-            <div className="sheet-handle" />
-            <div style={{ textAlign: 'center', marginBottom: '16px' }}>
-              <div style={{ width: '40px', height: '40px', borderRadius: '8px', background: 'var(--text-primary)', color: 'var(--bg-app)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px auto', fontWeight: 700, fontSize: '18px', letterSpacing: '-0.02em' }}>
-                K
-              </div>
-              <h2 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>
-                Kanso
-              </h2>
-              <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                A calm, private personal workspace. All data is kept locally on this device in IndexedDB.
-              </p>
-            </div>
+      {/* Floating Speed-Dial Capture Menu */}
+      <FloatingActionMenu
+        isOpen={isFloatingMenuOpen}
+        onClose={() => setIsFloatingMenuOpen(false)}
+        onSelectType={(type) => openQuickAddWithType(type)}
+      />
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '20px' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
-                  Select Primary Currency
-                </label>
-                <select
-                  value={settings?.currencyCode || 'INR'}
-                  onChange={(e) => {
-                    const sel = COMMON_CURRENCIES.find((c) => c.code === e.target.value);
-                    if (sel) {
-                      db.settings.update('current_settings', {
-                        currencyCode: sel.code,
-                        currencySymbol: sel.symbol
-                      });
-                    }
-                  }}
-                >
-                  {COMMON_CURRENCIES.map((c) => (
-                    <option key={c.code} value={c.code}>
-                      {c.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <button
-                  type="button"
-                  onClick={() => requestNotificationPermission()}
-                  className="btn btn-secondary btn-sm"
-                  style={{ width: '100%', justifyContent: 'center', gap: '6px' }}
-                >
-                  <Bell size={15} />
-                  <span>Enable Local Notifications</span>
-                </button>
-              </div>
-            </div>
-
-            <button
-              onClick={handleFinishOnboarding}
-              className="btn btn-primary"
-              style={{ width: '100%', gap: '6px' }}
-            >
-              <Check size={18} />
-              <span>Enter Personal Life OS</span>
-            </button>
-          </div>
-        </div>
-      )}
+      {/* In-App Reminder Alert System */}
+      <InAppReminderAlert />
 
       {/* Global Modals */}
       <QuickAddModal
         isOpen={isQuickAddOpen}
         onClose={() => setIsQuickAddOpen(false)}
         defaultType={quickAddType}
+        defaultDate={quickAddDate}
       />
 
       <React.Suspense fallback={null}>
@@ -349,6 +365,7 @@ export function AppContent() {
         isOpen={isMoreSheetOpen}
         onClose={() => setIsMoreSheetOpen(false)}
         onSelectScreen={setCurrentScreen}
+        currentScreen={currentScreen}
       />
     </div>
   );

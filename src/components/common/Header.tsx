@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Mic, WifiOff, ShieldAlert, Settings, Sun, Moon } from 'lucide-react';
+import { Search, Mic, WifiOff, ShieldAlert, Settings, Sun, Moon, Menu, ChevronDown } from 'lucide-react';
 import { db } from '../../db/db';
 import { useLiveQuery } from 'dexie-react-hooks';
 
@@ -8,6 +8,7 @@ interface HeaderProps {
   onOpenSearch: () => void;
   onOpenVoice: () => void;
   onOpenSettings: () => void;
+  onOpenMenu?: () => void;
   theme?: 'light' | 'dark';
   onToggleTheme?: () => void;
 }
@@ -17,6 +18,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenSearch,
   onOpenVoice,
   onOpenSettings,
+  onOpenMenu,
   theme = 'light',
   onToggleTheme
 }) => {
@@ -68,8 +70,10 @@ export const Header: React.FC<HeaderProps> = ({
     <header
       style={{
         height: 'var(--header-height)',
-        background: 'var(--bg-app)',
-        borderBottom: '1px solid var(--border-subtle)',
+        background: 'var(--glass-surface)',
+        backdropFilter: 'var(--glass-blur)',
+        WebkitBackdropFilter: 'var(--glass-blur)',
+        borderBottom: '1px solid var(--glass-border)',
         position: 'sticky',
         top: 0,
         zIndex: 500,
@@ -81,9 +85,36 @@ export const Header: React.FC<HeaderProps> = ({
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <h1 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text-primary)', letterSpacing: '-0.02em', margin: 0 }}>
-          {screenTitle()}
-        </h1>
+        {onOpenMenu && (
+          <button
+            onClick={onOpenMenu}
+            className="btn-ghost mobile-menu-btn"
+            style={{
+              width: '32px',
+              height: '32px',
+              borderRadius: '6px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'var(--text-primary)',
+              padding: 0
+            }}
+            aria-label="Open navigation menu"
+            title="Menu"
+          >
+            <Menu size={20} />
+          </button>
+        )}
+        {screenTitle() ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <h1 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text-primary)', letterSpacing: '-0.02em', margin: 0 }}>
+              {screenTitle()}
+            </h1>
+            {currentScreen === 'home' && (
+              <ChevronDown size={15} color="var(--text-tertiary)" style={{ marginTop: '1px' }} />
+            )}
+          </div>
+        ) : null}
 
         {!isOnline && (
           <span

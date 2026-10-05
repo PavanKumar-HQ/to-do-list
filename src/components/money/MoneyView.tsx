@@ -331,8 +331,7 @@ export const MoneyView: React.FC<{ onOpenQuickAdd: (type: any) => void }> = ({ o
                   setBudgetCategory('Overall');
                   setIsBudgetModalOpen(true);
                 }}
-                className="btn btn-ghost btn-sm"
-                style={{ fontSize: '12px' }}
+                className="btn btn-secondary btn-sm"
               >
                 {overallBudgetMinor > 0 ? 'Edit Budget' : '+ Set Budget'}
               </button>
@@ -459,8 +458,7 @@ export const MoneyView: React.FC<{ onOpenQuickAdd: (type: any) => void }> = ({ o
             <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Active Subscriptions & Recurring Bills</span>
             <button
               onClick={() => onOpenQuickAdd('expense')}
-              className="btn btn-ghost btn-sm"
-              style={{ fontSize: '12px' }}
+              className="btn btn-secondary btn-sm"
             >
               + Add Bill
             </button>

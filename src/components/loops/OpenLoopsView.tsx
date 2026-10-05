@@ -5,28 +5,24 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import {
   CheckCircle2,
   Clock,
-  User,
   Plus,
-  ArrowRight,
   HelpCircle,
-  Calendar,
   X,
   Network,
   RotateCcw,
   Mail,
   Lock,
   Eye,
-  MessageSquare,
-  AlertCircle
+  Check
 } from 'lucide-react';
 import { db } from '../../db/db';
-import { OpenLoopRepository, CommitmentRepository, DecisionRepository, FutureMessageRepository } from '../../repositories';
+import { OpenLoopRepository, CommitmentRepository, DecisionRepository } from '../../repositories';
 import { getTodayDateString, formatDisplayDate } from '../../utils/dates';
 import { useToast } from '../common/ToastContext';
 import { ContextModal } from '../common/ContextModal';
 import { LifeReviewModal } from './LifeReviewModal';
 import { FutureMessageModal } from './FutureMessageModal';
-import type { OpenLoopItem, CommitmentItem, DecisionItem, FutureMessageItem, EntityType } from '../../types';
+import type { OpenLoopItem, FutureMessageItem, EntityType } from '../../types';
 
 export const OpenLoopsView: React.FC = () => {
   const { showToast } = useToast();
@@ -79,7 +75,7 @@ export const OpenLoopsView: React.FC = () => {
         });
         setNewLoopTitle('');
         setNewLoopWaitingOn('');
-        showToast('Saved item', { type: 'success' });
+        showToast('Waiting item recorded', { type: 'success' });
       } else if (activeTab === 'commitments') {
         if (!newCommitmentWhat.trim()) return;
         await CommitmentRepository.create({
@@ -117,174 +113,118 @@ export const OpenLoopsView: React.FC = () => {
   const futureCount = futureMessages.length;
 
   return (
-    <div className="content-max-width" style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
-      {/* 1. Header with generous spacing & clean typography */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', borderBottom: '1px solid var(--border-light)', paddingBottom: '1.25rem' }}>
-        <div>
-          <h1 style={{ fontSize: '1.75rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.02em' }}>
-            Follow-ups & Commitments
-          </h1>
-        </div>
+    <div className="content-max-width" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+      {/* 1. Header Actions */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '0.5rem' }}>
+        <button
+          onClick={() => setShowReviewModal(true)}
+          className="btn btn-secondary btn-sm"
+          style={{ gap: '0.375rem' }}
+        >
+          <RotateCcw size={13} color="var(--accent)" />
+          <span>Weekly Review</span>
+        </button>
 
-        <div style={{ display: 'flex', gap: '0.625rem', alignItems: 'center' }}>
+        {activeTab === 'future_self' ? (
           <button
-            onClick={() => setShowReviewModal(true)}
-            className="btn btn-secondary"
-            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8125rem', padding: '0.5rem 0.875rem', borderColor: '#c7d2fe', color: '#4338ca', background: '#eef2ff' }}
+            onClick={() => setFutureModalConfig({ isOpen: true, messageToRead: null })}
+            className="btn btn-primary btn-sm"
+            style={{ gap: '0.375rem' }}
           >
-            <RotateCcw size={15} color="#4f46e5" />
-            <span>Weekly Review</span>
+            <Plus size={14} />
+            <span>Write Future Note</span>
           </button>
-
-          {activeTab === 'future_self' ? (
-            <button
-              onClick={() => setFutureModalConfig({ isOpen: true, messageToRead: null })}
-              className="btn btn-primary"
-              style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.8125rem', padding: '0.5rem 1rem' }}
-            >
-              <Plus size={16} />
-              <span>Write Future Note</span>
-            </button>
-          ) : (
-            <button
-              onClick={() => setShowAddModal(true)}
-              className="btn btn-primary"
-              style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.8125rem', padding: '0.5rem 1rem' }}
-            >
-              <Plus size={16} />
-              <span>Add Entry</span>
-            </button>
-          )}
-        </div>
+        ) : (
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="btn btn-primary btn-sm"
+            style={{ gap: '0.375rem' }}
+          >
+            <Plus size={14} />
+            <span>Add Entry</span>
+          </button>
+        )}
       </div>
 
       {/* 2. Color-Accented Navigation Tabs */}
-      <div style={{ display: 'flex', gap: '0.5rem', overflowX: 'auto', paddingBottom: '4px', borderBottom: '1px solid var(--border-light)' }}>
-        {/* Tab 1: Waiting on Others */}
-        <button
-          onClick={() => setActiveTab('loops')}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            padding: '0.625rem 1rem',
-            borderBottom: activeTab === 'loops' ? '2px solid #d97706' : '2px solid transparent',
-            color: activeTab === 'loops' ? '#92400e' : 'var(--text-secondary)',
-            fontWeight: activeTab === 'loops' ? 600 : 500,
-            fontSize: '0.875rem',
-            cursor: 'pointer',
-            background: 'none',
-            whiteSpace: 'nowrap'
-          }}
-        >
-          <span>Waiting on Others</span>
-          <span style={{ fontSize: '0.75rem', background: activeTab === 'loops' ? '#fef3c7' : '#f1f5f9', color: activeTab === 'loops' ? '#b45309' : 'var(--text-muted)', padding: '0.125rem 0.5rem', borderRadius: '12px', fontWeight: 600 }}>
-            {waitingCount}
-          </span>
-        </button>
-
-        {/* Tab 2: My Promises */}
-        <button
-          onClick={() => setActiveTab('commitments')}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            padding: '0.625rem 1rem',
-            borderBottom: activeTab === 'commitments' ? '2px solid #059669' : '2px solid transparent',
-            color: activeTab === 'commitments' ? '#065f46' : 'var(--text-secondary)',
-            fontWeight: activeTab === 'commitments' ? 600 : 500,
-            fontSize: '0.875rem',
-            cursor: 'pointer',
-            background: 'none',
-            whiteSpace: 'nowrap'
-          }}
-        >
-          <span>My Promises</span>
-          <span style={{ fontSize: '0.75rem', background: activeTab === 'commitments' ? '#d1fae5' : '#f1f5f9', color: activeTab === 'commitments' ? '#047857' : 'var(--text-muted)', padding: '0.125rem 0.5rem', borderRadius: '12px', fontWeight: 600 }}>
-            {commitmentsCount}
-          </span>
-        </button>
-
-        {/* Tab 3: Key Decisions */}
-        <button
-          onClick={() => setActiveTab('decisions')}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            padding: '0.625rem 1rem',
-            borderBottom: activeTab === 'decisions' ? '2px solid #4f46e5' : '2px solid transparent',
-            color: activeTab === 'decisions' ? '#3730a3' : 'var(--text-secondary)',
-            fontWeight: activeTab === 'decisions' ? 600 : 500,
-            fontSize: '0.875rem',
-            cursor: 'pointer',
-            background: 'none',
-            whiteSpace: 'nowrap'
-          }}
-        >
-          <span>Key Decisions</span>
-          <span style={{ fontSize: '0.75rem', background: activeTab === 'decisions' ? '#e0e7ff' : '#f1f5f9', color: activeTab === 'decisions' ? '#4338ca' : 'var(--text-muted)', padding: '0.125rem 0.5rem', borderRadius: '12px', fontWeight: 600 }}>
-            {decisionsCount}
-          </span>
-        </button>
-
-        {/* Tab 4: Time Capsule */}
-        <button
-          onClick={() => setActiveTab('future_self')}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            padding: '0.625rem 1rem',
-            borderBottom: activeTab === 'future_self' ? '2px solid #7c3aed' : '2px solid transparent',
-            color: activeTab === 'future_self' ? '#5b21b6' : 'var(--text-secondary)',
-            fontWeight: activeTab === 'future_self' ? 600 : 500,
-            fontSize: '0.875rem',
-            cursor: 'pointer',
-            background: 'none',
-            whiteSpace: 'nowrap'
-          }}
-        >
-          <span>Time Capsule</span>
-          <span style={{ fontSize: '0.75rem', background: activeTab === 'future_self' ? '#ede9fe' : '#f1f5f9', color: activeTab === 'future_self' ? '#6d28d9' : 'var(--text-muted)', padding: '0.125rem 0.5rem', borderRadius: '12px', fontWeight: 600 }}>
-            {futureCount}
-          </span>
-        </button>
+      <div style={{ display: 'flex', gap: '0.5rem', overflowX: 'auto', paddingBottom: '2px', borderBottom: '1px solid var(--border-subtle)' }}>
+        {[
+          { id: 'loops', label: 'Waiting on Others', count: waitingCount, color: 'var(--warning)' },
+          { id: 'commitments', label: 'My Promises', count: commitmentsCount, color: 'var(--success)' },
+          { id: 'decisions', label: 'Key Decisions', count: decisionsCount, color: 'var(--info)' },
+          { id: 'future_self', label: 'Time Capsule', count: futureCount, color: 'var(--accent)' }
+        ].map((tab) => {
+          const isSelected = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as any)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                padding: '0.5rem 0.875rem',
+                borderBottom: isSelected ? `2px solid ${tab.color}` : '2px solid transparent',
+                color: isSelected ? 'var(--text-primary)' : 'var(--text-secondary)',
+                fontWeight: isSelected ? 600 : 400,
+                fontSize: '0.8125rem',
+                cursor: 'pointer',
+                background: 'none',
+                borderTop: 'none',
+                borderLeft: 'none',
+                borderRight: 'none',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              <span>{tab.label}</span>
+              <span
+                style={{
+                  fontSize: '0.6875rem',
+                  background: isSelected ? 'var(--bg-surface-elevated)' : 'transparent',
+                  color: isSelected ? tab.color : 'var(--text-muted)',
+                  padding: '1px 6px',
+                  borderRadius: '10px',
+                  fontWeight: 600
+                }}
+              >
+                {tab.count}
+              </span>
+            </button>
+          );
+        })}
       </div>
 
-      {/* 3. Tab Content with Warm Colors & Polished Cards */}
+      {/* 3. Tab Content */}
 
       {/* Tab 1: Waiting on Others */}
       {activeTab === 'loops' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
           {openLoops.length === 0 ? (
             <div
-              className="card"
               style={{
-                padding: '3rem 2rem',
+                padding: '2.5rem 1.5rem',
                 textAlign: 'center',
-                background: '#fffdfa',
-                border: '1px dashed #fcd34d',
-                borderRadius: '12px',
+                background: 'var(--bg-surface)',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: '8px',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
                 gap: '0.75rem'
               }}
             >
-              <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: '#fef3c7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Clock size={22} color="#d97706" />
+              <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--bg-surface-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Clock size={20} color="var(--warning)" />
               </div>
-              <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+              <div style={{ fontSize: '0.9375rem', fontWeight: 600, color: 'var(--text-primary)' }}>
                 You are not waiting on anyone right now
               </div>
-              <p style={{ margin: 0, fontSize: '0.8125rem', color: 'var(--text-muted)', maxWidth: '400px' }}>
+              <p style={{ margin: 0, fontSize: '0.8125rem', color: 'var(--text-muted)', maxWidth: '380px', lineHeight: 1.5 }}>
                 When you're waiting for someone to reply, review a document, or send a proposal, record it here so you never forget to follow up.
               </p>
               <button
-                className="btn btn-secondary"
-                style={{ marginTop: '0.5rem', fontSize: '0.8125rem', borderColor: '#fcd34d', color: '#92400e' }}
+                className="btn btn-secondary btn-sm"
+                style={{ marginTop: '0.5rem' }}
                 onClick={() => setShowAddModal(true)}
               >
                 + Track a Waiting Item
@@ -297,37 +237,35 @@ export const OpenLoopsView: React.FC = () => {
               return (
                 <div
                   key={loop.id}
-                  className="card"
+                  className="animate-row-enter"
                   style={{
-                    padding: '1.125rem 1.25rem',
-                    borderLeft: `4px solid ${isClosed ? '#cbd5e1' : '#f59e0b'}`,
+                    padding: '0.875rem 1rem',
+                    borderRadius: '8px',
+                    border: '1px solid var(--border-subtle)',
+                    borderLeft: `3px solid ${isClosed ? 'var(--border-subtle)' : 'var(--warning)'}`,
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'flex-start',
-                    background: isClosed ? '#f8fafc' : '#ffffff',
-                    opacity: isClosed ? 0.65 : 1,
+                    background: 'var(--bg-surface)',
+                    opacity: isClosed ? 0.6 : 1,
                     gap: '1rem'
                   }}
                 >
                   <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.375rem' }}>
-                      {loop.waitingOnPersonName ? (
-                        <span style={{ fontSize: '0.75rem', fontWeight: 600, background: '#fef3c7', color: '#92400e', padding: '0.2rem 0.5rem', borderRadius: '4px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                      {loop.waitingOnPersonName && (
+                        <span style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--warning)', background: 'var(--warning-bg)', padding: '0.125rem 0.375rem', borderRadius: '4px' }}>
                           Waiting on: {loop.waitingOnPersonName}
                         </span>
-                      ) : (
-                        <span style={{ fontSize: '0.75rem', fontWeight: 600, background: '#f1f5f9', color: 'var(--text-secondary)', padding: '0.2rem 0.5rem', borderRadius: '4px' }}>
-                          Pending Item
-                        </span>
                       )}
-                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                        Created {formatDisplayDate(loop.createdAt.slice(0, 10))}
+                      <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>
+                        Logged {formatDisplayDate(loop.createdAt.slice(0, 10))}
                       </span>
                     </div>
 
                     <h3
                       style={{
-                        fontSize: '1rem',
+                        fontSize: '0.9375rem',
                         fontWeight: 600,
                         color: 'var(--text-primary)',
                         margin: 0,
@@ -341,20 +279,21 @@ export const OpenLoopsView: React.FC = () => {
                   <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                     {!isClosed && (
                       <button
-                        className="btn btn-outline"
-                        style={{ fontSize: '0.75rem', padding: '0.375rem 0.75rem', borderColor: '#fcd34d', color: '#92400e', background: '#fffdfa' }}
+                        className="btn btn-secondary btn-sm"
+                        style={{ fontSize: '0.75rem', padding: '0.25rem 0.625rem' }}
                         onClick={() => OpenLoopRepository.close(loop.id)}
                       >
-                        Resolved
+                        <Check size={13} />
+                        <span>Resolved</span>
                       </button>
                     )}
                     <button
                       onClick={() => setContextModal({ isOpen: true, type: 'open_loop', id: loop.id })}
                       className="btn-ghost"
-                      style={{ color: 'var(--text-muted)', padding: '6px', borderRadius: '4px' }}
-                      title="View Connected Context"
+                      style={{ color: 'var(--text-muted)', padding: '4px' }}
+                      title="Context"
                     >
-                      <Network size={16} />
+                      <Network size={14} />
                     </button>
                   </div>
                 </div>
@@ -366,34 +305,33 @@ export const OpenLoopsView: React.FC = () => {
 
       {/* Tab 2: My Promises & Commitments */}
       {activeTab === 'commitments' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
           {commitments.length === 0 ? (
             <div
-              className="card"
               style={{
-                padding: '3rem 2rem',
+                padding: '2.5rem 1.5rem',
                 textAlign: 'center',
-                background: '#fcfdfd',
-                border: '1px dashed #a7f3d0',
-                borderRadius: '12px',
+                background: 'var(--bg-surface)',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: '8px',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
                 gap: '0.75rem'
               }}
             >
-              <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: '#d1fae5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <CheckCircle2 size={22} color="#059669" />
+              <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--bg-surface-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <CheckCircle2 size={20} color="var(--success)" />
               </div>
-              <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+              <div style={{ fontSize: '0.9375rem', fontWeight: 600, color: 'var(--text-primary)' }}>
                 No active commitments recorded
               </div>
-              <p style={{ margin: 0, fontSize: '0.8125rem', color: 'var(--text-muted)', maxWidth: '400px' }}>
+              <p style={{ margin: 0, fontSize: '0.8125rem', color: 'var(--text-muted)', maxWidth: '380px', lineHeight: 1.5 }}>
                 When you promise something to a client, colleague, friend, or yourself ("I will send the deck by Friday"), capture it here.
               </p>
               <button
-                className="btn btn-secondary"
-                style={{ marginTop: '0.5rem', fontSize: '0.8125rem', borderColor: '#a7f3d0', color: '#065f46' }}
+                className="btn btn-secondary btn-sm"
+                style={{ marginTop: '0.5rem' }}
                 onClick={() => setShowAddModal(true)}
               >
                 + Record a Promise
@@ -406,31 +344,33 @@ export const OpenLoopsView: React.FC = () => {
               return (
                 <div
                   key={comm.id}
-                  className="card"
+                  className="animate-row-enter"
                   style={{
-                    padding: '1.125rem 1.25rem',
-                    borderLeft: `4px solid ${isFulfilled ? '#cbd5e1' : '#10b981'}`,
+                    padding: '0.875rem 1rem',
+                    borderRadius: '8px',
+                    border: '1px solid var(--border-subtle)',
+                    borderLeft: `3px solid ${isFulfilled ? 'var(--border-subtle)' : 'var(--success)'}`,
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'flex-start',
-                    background: isFulfilled ? '#f8fafc' : '#ffffff',
-                    opacity: isFulfilled ? 0.65 : 1,
+                    background: 'var(--bg-surface)',
+                    opacity: isFulfilled ? 0.6 : 1,
                     gap: '1rem'
                   }}
                 >
                   <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.375rem' }}>
-                      <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#047857', background: '#d1fae5', padding: '0.2rem 0.5rem', borderRadius: '4px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                      <span style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--success)', background: 'var(--success-bg)', padding: '0.125rem 0.375rem', borderRadius: '4px' }}>
                         Promised to: {comm.who}
                       </span>
-                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                      <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>
                         Due {formatDisplayDate(comm.promisedDate)}
                       </span>
                     </div>
 
                     <h3
                       style={{
-                        fontSize: '1rem',
+                        fontSize: '0.9375rem',
                         fontWeight: 600,
                         color: 'var(--text-primary)',
                         margin: 0,
@@ -444,20 +384,21 @@ export const OpenLoopsView: React.FC = () => {
                   <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                     {!isFulfilled && (
                       <button
-                        className="btn btn-outline"
-                        style={{ fontSize: '0.75rem', padding: '0.375rem 0.75rem', borderColor: '#a7f3d0', color: '#047857', background: '#ecfdf5' }}
+                        className="btn btn-secondary btn-sm"
+                        style={{ fontSize: '0.75rem', padding: '0.25rem 0.625rem' }}
                         onClick={() => CommitmentRepository.fulfill(comm.id)}
                       >
-                        Fulfilled
+                        <Check size={13} />
+                        <span>Kept</span>
                       </button>
                     )}
                     <button
                       onClick={() => setContextModal({ isOpen: true, type: 'commitment', id: comm.id })}
                       className="btn-ghost"
-                      style={{ color: 'var(--text-muted)', padding: '6px', borderRadius: '4px' }}
-                      title="View Connected Context"
+                      style={{ color: 'var(--text-muted)', padding: '4px' }}
+                      title="Context"
                     >
-                      <Network size={16} />
+                      <Network size={14} />
                     </button>
                   </div>
                 </div>
@@ -469,34 +410,33 @@ export const OpenLoopsView: React.FC = () => {
 
       {/* Tab 3: Key Decisions */}
       {activeTab === 'decisions' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
           {decisions.length === 0 ? (
             <div
-              className="card"
               style={{
-                padding: '3rem 2rem',
+                padding: '2.5rem 1.5rem',
                 textAlign: 'center',
-                background: '#fafafa',
-                border: '1px dashed #c7d2fe',
-                borderRadius: '12px',
+                background: 'var(--bg-surface)',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: '8px',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
                 gap: '0.75rem'
               }}
             >
-              <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: '#e0e7ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <HelpCircle size={22} color="#4f46e5" />
+              <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--bg-surface-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <HelpCircle size={20} color="var(--info)" />
               </div>
-              <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+              <div style={{ fontSize: '0.9375rem', fontWeight: 600, color: 'var(--text-primary)' }}>
                 No recorded decisions yet
               </div>
-              <p style={{ margin: 0, fontSize: '0.8125rem', color: 'var(--text-muted)', maxWidth: '400px' }}>
+              <p style={{ margin: 0, fontSize: '0.8125rem', color: 'var(--text-muted)', maxWidth: '380px', lineHeight: 1.5 }}>
                 Whenever you make a strategic choice, save the reasoning behind it so you never second-guess why you decided on that path months later.
               </p>
               <button
-                className="btn btn-secondary"
-                style={{ marginTop: '0.5rem', fontSize: '0.8125rem', borderColor: '#c7d2fe', color: '#4338ca' }}
+                className="btn btn-secondary btn-sm"
+                style={{ marginTop: '0.5rem' }}
                 onClick={() => setShowAddModal(true)}
               >
                 + Record a Decision
@@ -509,62 +449,65 @@ export const OpenLoopsView: React.FC = () => {
               return (
                 <div
                   key={dec.id}
-                  className="card"
+                  className="animate-row-enter"
                   style={{
-                    padding: '1.25rem',
-                    borderLeft: `4px solid ${isReviewDue ? '#ef4444' : '#6366f1'}`,
+                    padding: '1rem',
+                    borderRadius: '8px',
+                    border: '1px solid var(--border-subtle)',
+                    borderLeft: `3px solid ${isReviewDue ? 'var(--danger)' : 'var(--info)'}`,
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: '0.75rem'
+                    gap: '0.625rem',
+                    background: 'var(--bg-surface)'
                   }}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.75rem' }}>
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-                        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#4338ca', background: '#e0e7ff', padding: '0.125rem 0.5rem', borderRadius: '4px' }}>
+                        <span style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--info)', background: 'var(--info-bg)', padding: '0.125rem 0.375rem', borderRadius: '4px' }}>
                           Decided {formatDisplayDate(dec.decisionDate)}
                         </span>
                         {dec.reviewDate && (
-                          <span style={{ fontSize: '0.75rem', color: isReviewDue ? '#dc2626' : 'var(--text-muted)', fontWeight: isReviewDue ? 600 : 400 }}>
+                          <span style={{ fontSize: '0.6875rem', color: isReviewDue ? 'var(--danger)' : 'var(--text-muted)', fontWeight: isReviewDue ? 600 : 400 }}>
                             Review {formatDisplayDate(dec.reviewDate)}
                           </span>
                         )}
                       </div>
 
-                      <h3 style={{ fontSize: '1.0625rem', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>
+                      <h3 style={{ fontSize: '0.9375rem', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>
                         {dec.title}
                       </h3>
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                       {isReviewDue && (
-                        <span style={{ fontSize: '0.6875rem', background: '#fee2e2', color: '#991b1b', padding: '0.2rem 0.5rem', borderRadius: '4px', fontWeight: 600 }}>
+                        <span style={{ fontSize: '0.6875rem', background: 'var(--danger-bg)', color: 'var(--danger)', padding: '0.125rem 0.375rem', borderRadius: '4px', fontWeight: 600 }}>
                           Review Due
                         </span>
                       )}
                       <button
                         onClick={() => setContextModal({ isOpen: true, type: 'decision', id: dec.id })}
                         className="btn-ghost"
-                        style={{ color: 'var(--text-muted)', padding: '6px', borderRadius: '4px' }}
-                        title="View Connected Context"
+                        style={{ color: 'var(--text-muted)', padding: '4px' }}
+                        title="Context"
                       >
-                        <Network size={16} />
+                        <Network size={14} />
                       </button>
                     </div>
                   </div>
 
-                  <div style={{ background: '#f8fafc', padding: '0.875rem', borderRadius: '6px', borderLeft: '3px solid #6366f1' }}>
-                    <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.25rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  <div style={{ background: 'var(--bg-surface-elevated)', padding: '0.75rem', borderRadius: '6px' }}>
+                    <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.25rem' }}>
                       Reasoning
                     </div>
-                    <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--text-primary)', lineHeight: 1.5 }}>
+                    <p style={{ margin: 0, fontSize: '0.8125rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
                       {dec.reason}
                     </p>
                   </div>
 
                   {dec.alternativesConsidered.length > 0 && (
-                    <div style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>
-                      <span style={{ fontWeight: 600, color: 'var(--text-muted)' }}>Alternatives Considered: </span>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                      <span style={{ fontWeight: 500, color: 'var(--text-secondary)' }}>Alternatives: </span>
                       {dec.alternativesConsidered.join(', ')}
                     </div>
                   )}
@@ -577,34 +520,33 @@ export const OpenLoopsView: React.FC = () => {
 
       {/* Tab 4: Time Capsule */}
       {activeTab === 'future_self' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
           {futureMessages.length === 0 ? (
             <div
-              className="card"
               style={{
-                padding: '3rem 2rem',
+                padding: '2.5rem 1.5rem',
                 textAlign: 'center',
-                background: '#faf5ff',
-                border: '1px dashed #c084fc',
-                borderRadius: '12px',
+                background: 'var(--bg-surface)',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: '8px',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
                 gap: '0.75rem'
               }}
             >
-              <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: '#ede9fe', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Mail size={22} color="#7c3aed" />
+              <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--bg-surface-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Mail size={20} color="var(--accent)" />
               </div>
-              <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+              <div style={{ fontSize: '0.9375rem', fontWeight: 600, color: 'var(--text-primary)' }}>
                 No notes scheduled for your future self
               </div>
-              <p style={{ margin: 0, fontSize: '0.8125rem', color: 'var(--text-muted)', maxWidth: '400px' }}>
+              <p style={{ margin: 0, fontSize: '0.8125rem', color: 'var(--text-muted)', maxWidth: '380px', lineHeight: 1.5 }}>
                 Write an intention, reminder, or mindset for 6 months or 1 year from now. It will stay sealed until that exact date arrives.
               </p>
               <button
-                className="btn btn-secondary"
-                style={{ marginTop: '0.5rem', fontSize: '0.8125rem', borderColor: '#c084fc', color: '#6b21a8' }}
+                className="btn btn-secondary btn-sm"
+                style={{ marginTop: '0.5rem' }}
                 onClick={() => setFutureModalConfig({ isOpen: true, messageToRead: null })}
               >
                 + Write to Your Future Self
@@ -618,29 +560,32 @@ export const OpenLoopsView: React.FC = () => {
               return (
                 <div
                   key={msg.id}
-                  className="card"
+                  className="animate-row-enter"
                   style={{
-                    padding: '1.125rem 1.25rem',
-                    borderLeft: `4px solid ${isLocked ? '#94a3b8' : '#8b5cf6'}`,
+                    padding: '0.875rem 1rem',
+                    borderRadius: '8px',
+                    border: '1px solid var(--border-subtle)',
+                    borderLeft: `3px solid ${isLocked ? 'var(--border-subtle)' : 'var(--accent)'}`,
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
-                    gap: '1rem'
+                    gap: '1rem',
+                    background: 'var(--bg-surface)'
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
-                    <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: isLocked ? '#f1f5f9' : '#ede9fe', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <div style={{ width: '34px', height: '34px', borderRadius: '50%', background: 'var(--bg-surface-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                       {isLocked ? (
-                        <Lock size={18} color="#64748b" />
+                        <Lock size={15} color="var(--text-muted)" />
                       ) : (
-                        <Mail size={18} color="#7c3aed" />
+                        <Mail size={15} color="var(--accent)" />
                       )}
                     </div>
                     <div>
-                      <div style={{ fontSize: '0.75rem', color: isLocked ? 'var(--text-muted)' : '#6d28d9', fontWeight: 600 }}>
+                      <div style={{ fontSize: '0.6875rem', color: isLocked ? 'var(--text-muted)' : 'var(--accent)', fontWeight: 500 }}>
                         {isLocked ? `Sealed until ${formatDisplayDate(msg.openDate)}` : `Unlocked on ${formatDisplayDate(msg.openDate)}`}
                       </div>
-                      <div style={{ fontSize: '0.9375rem', fontWeight: 600, color: 'var(--text-primary)', marginTop: '0.125rem' }}>
+                      <div style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-primary)', marginTop: '0.125rem' }}>
                         {msg.title}
                       </div>
                     </div>
@@ -648,13 +593,13 @@ export const OpenLoopsView: React.FC = () => {
 
                   <div>
                     {isLocked ? (
-                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', background: '#f1f5f9', padding: '0.25rem 0.625rem', borderRadius: '12px' }}>
+                      <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', background: 'var(--bg-surface-elevated)', padding: '0.2rem 0.5rem', borderRadius: '10px' }}>
                         Locked
                       </span>
                     ) : (
                       <button
-                        className="btn btn-outline"
-                        style={{ fontSize: '0.75rem', padding: '0.375rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.375rem', borderColor: '#c084fc', color: '#6b21a8' }}
+                        className="btn btn-secondary btn-sm"
+                        style={{ fontSize: '0.75rem', gap: '0.25rem' }}
                         onClick={() => setFutureModalConfig({ isOpen: true, messageToRead: msg })}
                       >
                         <Eye size={13} />
@@ -669,16 +614,16 @@ export const OpenLoopsView: React.FC = () => {
         </div>
       )}
 
-      {/* 4. Add Entry Modal with Clean, Human Forms */}
+      {/* 4. Add Entry Modal */}
       {showAddModal && (
         <div className="modal-overlay" onClick={() => setShowAddModal(false)} role="dialog" aria-modal="true">
-          <div className="bottom-sheet" style={{ maxWidth: '520px', margin: '0 auto' }} onClick={e => e.stopPropagation()}>
+          <div className="bottom-sheet" style={{ maxWidth: '480px', margin: '0 auto', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }} onClick={e => e.stopPropagation()}>
             <div className="sheet-handle" />
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid var(--border-light)', paddingBottom: '0.75rem' }}>
-              <h2 style={{ fontSize: '1.125rem', fontWeight: 600, margin: 0 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '0.75rem' }}>
+              <h3 style={{ fontSize: '1rem', fontWeight: 600, margin: 0, color: 'var(--text-primary)' }}>
                 {activeTab === 'loops' ? 'Track a Waiting Item' : activeTab === 'commitments' ? 'Record a Promise' : 'Record a Decision'}
-              </h2>
-              <button onClick={() => setShowAddModal(false)} className="btn-ghost btn-icon">
+              </h3>
+              <button onClick={() => setShowAddModal(false)} className="btn-ghost" style={{ padding: '4px' }}>
                 <X size={18} />
               </button>
             </div>
@@ -718,32 +663,33 @@ export const OpenLoopsView: React.FC = () => {
                 <>
                   <div>
                     <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '0.375rem' }}>
-                      Who did you promise?
-                    </label>
-                    <input
-                      className="input"
-                      placeholder="e.g. Mom / Client / Rahul / Myself"
-                      value={newCommitmentWho}
-                      onChange={e => setNewCommitmentWho(e.target.value)}
-                      required
-                      autoFocus
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '0.375rem' }}>
                       What did you promise?
                     </label>
                     <input
                       className="input"
-                      placeholder="e.g. Send the budget breakdown document"
+                      placeholder="e.g. Deliver redesign draft by 5 PM"
                       value={newCommitmentWhat}
                       onChange={e => setNewCommitmentWhat(e.target.value)}
                       required
+                      autoFocus
                     />
                   </div>
+
                   <div>
                     <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '0.375rem' }}>
-                      Promised By Date
+                      Who did you promise this to?
+                    </label>
+                    <input
+                      className="input"
+                      placeholder="e.g. Team, Client, Self"
+                      value={newCommitmentWho}
+                      onChange={e => setNewCommitmentWho(e.target.value)}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '0.375rem' }}>
+                      Promised Date
                     </label>
                     <input
                       type="date"
@@ -760,44 +706,47 @@ export const OpenLoopsView: React.FC = () => {
                 <>
                   <div>
                     <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '0.375rem' }}>
-                      What did you decide?
+                      What decision was made?
                     </label>
                     <input
                       className="input"
-                      placeholder="e.g. Hold off on public launch until beta feedback is in"
+                      placeholder="e.g. Chose IndexedDB instead of Cloud sync"
                       value={newDecisionTitle}
                       onChange={e => setNewDecisionTitle(e.target.value)}
                       required
                       autoFocus
                     />
                   </div>
+
                   <div>
                     <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '0.375rem' }}>
-                      Reasoning / Why
+                      Reasoning (The "Why")
                     </label>
                     <textarea
                       className="input"
                       rows={3}
-                      placeholder="Why did you make this decision? What context led to this choice?"
+                      placeholder="Why did you make this choice? What made it the best path?"
                       value={newDecisionReason}
                       onChange={e => setNewDecisionReason(e.target.value)}
                       required
                     />
                   </div>
+
                   <div>
                     <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '0.375rem' }}>
-                      Alternatives Considered (comma separated)
+                      Alternatives Considered (comma-separated)
                     </label>
                     <input
                       className="input"
-                      placeholder="e.g. Launch immediately, Invite public users"
+                      placeholder="e.g. Firebase, Supabase, SQLite"
                       value={newDecisionAlternatives}
                       onChange={e => setNewDecisionAlternatives(e.target.value)}
                     />
                   </div>
+
                   <div>
                     <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '0.375rem' }}>
-                      Review Date (optional)
+                      Revisit / Review Date (Optional)
                     </label>
                     <input
                       type="date"
@@ -809,11 +758,16 @@ export const OpenLoopsView: React.FC = () => {
                 </>
               )}
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.625rem', marginTop: '0.5rem', borderTop: '1px solid var(--border-light)', paddingTop: '0.75rem' }}>
-                <button type="button" className="btn btn-secondary" onClick={() => setShowAddModal(false)}>
+              <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowAddModal(false)}
+                  className="btn btn-secondary"
+                  style={{ flex: 1 }}
+                >
                   Cancel
                 </button>
-                <button type="submit" className="btn btn-primary">
+                <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>
                   Save Entry
                 </button>
               </div>
@@ -822,25 +776,25 @@ export const OpenLoopsView: React.FC = () => {
         </div>
       )}
 
-      {/* Guided Weekly Review Modal */}
-      <LifeReviewModal
-        isOpen={showReviewModal}
-        onClose={() => setShowReviewModal(false)}
-      />
-
-      {/* Future Message Modal */}
-      <FutureMessageModal
-        isOpen={futureModalConfig.isOpen}
-        onClose={() => setFutureModalConfig({ isOpen: false, messageToRead: null })}
-        messageToRead={futureModalConfig.messageToRead}
-      />
-
-      {/* Context Modal */}
+      {/* 5. Context Modal */}
       <ContextModal
         isOpen={contextModal.isOpen}
         onClose={() => setContextModal({ isOpen: false, type: null, id: null })}
         entityType={contextModal.type}
         entityId={contextModal.id}
+      />
+
+      {/* 6. Life Review Modal */}
+      <LifeReviewModal
+        isOpen={showReviewModal}
+        onClose={() => setShowReviewModal(false)}
+      />
+
+      {/* 7. Future Message Modal */}
+      <FutureMessageModal
+        isOpen={futureModalConfig.isOpen}
+        onClose={() => setFutureModalConfig({ isOpen: false, messageToRead: null })}
+        messageToRead={futureModalConfig.messageToRead}
       />
     </div>
   );

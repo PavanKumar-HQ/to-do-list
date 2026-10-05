@@ -39,7 +39,7 @@ export const AppBootLoader: React.FC = () => {
           Kanso
         </h1>
         <p style={{ fontSize: '12.5px', color: 'var(--text-muted)', margin: '4px 0 0 0' }}>
-          Personal Life OS
+          Workspace
         </p>
       </div>
 

@@ -12,3 +12,4 @@ export * from './OpenLoopRepository';
 export * from './FutureMessageRepository';
 export * from './ReviewSessionRepository';
 export * from './LifeContextRepository';
+export * from './SettingsRepository';

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import {
   Bell,
@@ -9,12 +9,14 @@ import {
   Trash2,
   Calendar,
   AlertCircle,
-  Volume2
+  Volume2,
+  Upload
 } from 'lucide-react';
 import { db, logAudit } from '../../db/db';
 import { getTodayDateString, formatDisplayDate, calculateNextOccurrence } from '../../utils/dates';
 import { useToast } from '../common/ToastContext';
 import { requestNotificationPermission, getNotificationPermissionStatus, playGentleChime } from '../../services/notificationService';
+import { getConfiguredAlarmTone, saveCustomDeviceTone, testAlarmSound, type AlarmToneType } from '../../services/soundService';
 import type { ReminderItem, RecurrenceType } from '../../types';
 
 export const RemindersView: React.FC<{ onOpenQuickAdd: (type: any) => void }> = ({ onOpenQuickAdd }) => {
@@ -22,6 +24,36 @@ export const RemindersView: React.FC<{ onOpenQuickAdd: (type: any) => void }> = 
   const todayStr = getTodayDateString();
   const [snoozeModalReminder, setSnoozeModalReminder] = useState<ReminderItem | null>(null);
   const [permissionStatus, setPermissionStatus] = useState(getNotificationPermissionStatus());
+  const [activeTone, setActiveTone] = useState<AlarmToneType>('digital');
+  const [customToneName, setCustomToneName] = useState<string | null>(null);
+  const [isPlayingTest, setIsPlayingTest] = useState(false);
+
+  useEffect(() => {
+    getConfiguredAlarmTone().then((cfg) => {
+      setActiveTone(cfg.tone);
+      if (cfg.customName) setCustomToneName(cfg.customName);
+    });
+  }, []);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const saved = await saveCustomDeviceTone(file);
+      setActiveTone('custom');
+      setCustomToneName(saved.name);
+      showToast(`Device audio saved: ${file.name}`, { type: 'success' });
+      testAlarmSound('custom');
+    } catch {
+      showToast('Could not load audio file', { type: 'warning' });
+    }
+  };
+
+  const handleTestSound = async (toneToTest?: AlarmToneType) => {
+    setIsPlayingTest(true);
+    await testAlarmSound(toneToTest || activeTone);
+    setTimeout(() => setIsPlayingTest(false), 1200);
+  };
 
   const reminders = useLiveQuery(async () => {
     return db.reminders.filter((r) => !r.deletedAt).toArray();
@@ -125,13 +157,8 @@ export const RemindersView: React.FC<{ onOpenQuickAdd: (type: any) => void }> = 
   return (
     <div className="page-wrapper">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-        <div>
-          <h2 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--text-primary)' }}>
-            Reminders
-          </h2>
-          <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
-            {activeReminders.length} scheduled reminders
-          </p>
+        <div style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: 500 }}>
+          {activeReminders.length} scheduled {activeReminders.length === 1 ? 'reminder' : 'reminders'}
         </div>
         <button
           onClick={() => onOpenQuickAdd('reminder')}
@@ -173,6 +200,83 @@ export const RemindersView: React.FC<{ onOpenQuickAdd: (type: any) => void }> = 
           </button>
         </div>
       )}
+
+      {/* Alarm Ringtone & Custom Audio from Device */}
+      <div
+        className="card"
+        style={{
+          marginBottom: '16px',
+          padding: '14px 16px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '10px'
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Volume2 size={16} color="var(--accent)" />
+            <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>
+              Alarm Ringtone & Custom Tone
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => handleTestSound()}
+            disabled={isPlayingTest}
+            className="btn btn-secondary btn-sm"
+            style={{ fontSize: '11px', padding: '4px 10px', gap: '4px' }}
+          >
+            <Volume2 size={13} color="var(--accent)" />
+            <span>{isPlayingTest ? 'Playing...' : 'Test Tone'}</span>
+          </button>
+        </div>
+
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+          {[
+            { id: 'digital', label: 'Digital Alarm' },
+            { id: 'chime', label: 'Gentle Chime' },
+            { id: 'radar', label: 'Radar Pulse' },
+            { id: 'marimba', label: 'Marimba' }
+          ].map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              onClick={async () => {
+                setActiveTone(t.id as AlarmToneType);
+                await db.settings.update('current_settings', { reminderTone: t.id as any });
+                handleTestSound(t.id as AlarmToneType);
+              }}
+              className={`btn btn-sm ${activeTone === t.id ? 'btn-primary' : 'btn-secondary'}`}
+              style={{ fontSize: '12px', padding: '4px 12px', borderRadius: '8px' }}
+            >
+              {t.label}
+            </button>
+          ))}
+
+          {/* Custom audio from device */}
+          <label
+            className={`btn btn-sm ${activeTone === 'custom' ? 'btn-primary' : 'btn-secondary'}`}
+            style={{
+              fontSize: '12px',
+              padding: '4px 12px',
+              borderRadius: '8px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              cursor: 'pointer'
+            }}
+          >
+            <Upload size={13} />
+            <span>{customToneName ? `Custom: ${customToneName.slice(0, 16)}...` : 'Upload Device Tone'}</span>
+            <input
+              type="file"
+              accept="audio/*"
+              onChange={handleFileUpload}
+              style={{ display: 'none' }}
+            />
+          </label>
+        </div>
+      </div>
 
       {/* Active Reminders List */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -235,11 +339,11 @@ export const RemindersView: React.FC<{ onOpenQuickAdd: (type: any) => void }> = 
 
                   <button
                     onClick={() => handleDelete(reminder.id, reminder.title)}
-                    className="btn-ghost"
-                    style={{ color: 'var(--danger)', padding: '6px' }}
+                    className="btn btn-secondary btn-sm"
+                    style={{ color: 'var(--danger)', padding: '6px 8px', borderRadius: '6px' }}
                     title="Delete reminder"
                   >
-                    <Trash2 size={16} />
+                    <Trash2 size={15} />
                   </button>
                 </div>
 
@@ -285,7 +389,7 @@ export const RemindersView: React.FC<{ onOpenQuickAdd: (type: any) => void }> = 
 
                   <button
                     onClick={() => handleDismiss(reminder.id)}
-                    className="btn btn-sm btn-ghost"
+                    className="btn btn-sm btn-secondary"
                     style={{ flex: 1 }}
                   >
                     Dismiss

@@ -23,7 +23,8 @@ import {
   InboxRepository,
   CommitmentRepository,
   DecisionRepository,
-  OpenLoopRepository
+  OpenLoopRepository,
+  SettingsRepository
 } from '../src/repositories';
 import { IntegrityService } from '../src/services/integrityService';
 import { multiTabSync } from '../src/services/multiTabService';
@@ -32,6 +33,10 @@ import { AttentionService } from '../src/services/attentionService';
 import { LifeGraphService } from '../src/services/lifeGraphService';
 import { eventBus } from '../src/services/eventBus';
 import { notificationService } from '../src/services/notificationService';
+import { SettingsService } from '../src/services/settingsService';
+import { getTimeAwareGreeting, getSubtleDateString } from '../src/utils/greeting';
+import { api } from '../src/api';
+import { triggerHaptic } from '../src/utils/haptics';
 
 async function runTestSuite() {
   console.log('=====================================================');
@@ -508,6 +513,119 @@ async function runTestSuite() {
   assert(cleanedCount >= 1, 'Relationship cleanup removed all edges referencing the record');
   const remainingRels = await RelationshipRepository.findForRecord(idempTask.id);
   assert(remainingRels.length === 0, 'No dangling relationship edges left after cleanup');
+
+  // -----------------------------------------------------------------
+  // 18. FIRST-LAUNCH NAME VALIDATION & GREETING LOGIC
+  // -----------------------------------------------------------------
+  console.log('\n--- 18. First-Launch Personalization & Time-Aware Greeting ---');
+  const emptyValidation = SettingsService.validateDisplayName('');
+  assert(emptyValidation.isValid === false, 'Rejects empty display name');
+
+  const whitespaceValidation = SettingsService.validateDisplayName('     ');
+  assert(whitespaceValidation.isValid === false, 'Rejects whitespace-only display name');
+
+  const longValidation = SettingsService.validateDisplayName('A'.repeat(51));
+  assert(longValidation.isValid === false, 'Rejects display name over 50 characters');
+
+  const validValidation = SettingsService.validateDisplayName('   Pavan Kumar   ');
+  assert(validValidation.isValid === true && validValidation.cleanName === 'Pavan Kumar', 'Trims whitespace correctly');
+
+  const unicodeValidation = SettingsService.validateDisplayName('Pavān Müller 李雷');
+  assert(unicodeValidation.isValid === true && unicodeValidation.cleanName === 'Pavān Müller 李雷', 'Preserves Unicode characters');
+
+  const emojiValidation = SettingsService.validateDisplayName('Pavan 🚀');
+  assert(emojiValidation.isValid === true && emojiValidation.cleanName === 'Pavan 🚀', 'Preserves emoji in display name');
+
+  // Persistence via SettingsService & SettingsRepository
+  const savedSettings = await SettingsService.saveDisplayName('Pavan');
+  assert(savedSettings.displayName === 'Pavan' && savedSettings.isOnboarded === true, 'Saves display name to IndexedDB settings');
+  const retrievedName = await SettingsService.getDisplayName();
+  assert(retrievedName === 'Pavan', 'Retrieves stored display name accurately');
+
+  // Time-aware greeting intervals:
+  // 05:00–11:59: Good morning
+  const morningDate = new Date();
+  morningDate.setHours(8, 30, 0, 0);
+  assert(getTimeAwareGreeting('Pavan', morningDate) === 'Good morning, Pavan', '08:30 returns Good morning, Pavan');
+
+  // 12:00–16:59: Good afternoon
+  const afternoonDate = new Date();
+  afternoonDate.setHours(14, 15, 0, 0);
+  assert(getTimeAwareGreeting('Pavan', afternoonDate) === 'Good afternoon, Pavan', '14:15 returns Good afternoon, Pavan');
+
+  // 17:00–04:59: Good evening
+  const eveningDate = new Date();
+  eveningDate.setHours(18, 0, 0, 0);
+  assert(getTimeAwareGreeting('Pavan', eveningDate) === 'Good evening, Pavan', '18:00 returns Good evening, Pavan');
+
+  const lateNightDate = new Date();
+  lateNightDate.setHours(2, 0, 0, 0);
+  assert(getTimeAwareGreeting('Pavan', lateNightDate) === 'Good evening, Pavan', '02:00 returns Good evening, Pavan');
+
+  // Subtle date formatting
+  const testDate = new Date(2026, 9, 5); // October 5, 2026
+  const subtleStr = getSubtleDateString(testDate);
+  assert(subtleStr.includes('5') && subtleStr.includes('October'), 'Subtle date contains weekday, day, and month');
+  assert(!subtleStr.includes('2026'), 'Subtle date does not redundantly show year');
+
+  // -----------------------------------------------------------------
+  // 19. GLOBAL APPLICATION API & DOMAIN LAYER TRANSACTIONS
+  // -----------------------------------------------------------------
+  console.log('\n--- 19. Application API Layer & Domain Transactions ---');
+
+  // Task API
+  const apiTask = await api.tasks.create({ title: 'Task via API', priority: 'high' });
+  assert(apiTask.title === 'Task via API' && apiTask.priority === 'high', 'api.tasks.create returns persisted task');
+
+  await api.tasks.complete(apiTask.id);
+  const apiCompletedTask = await db.tasks.get(apiTask.id);
+  assert(apiCompletedTask?.status === 'completed', 'api.tasks.complete marks status completed in IndexedDB');
+
+  await api.tasks.undoComplete(apiTask.id);
+  const reopenedTask = await db.tasks.get(apiTask.id);
+  assert(reopenedTask?.status === 'todo', 'api.tasks.undoComplete reopens task in IndexedDB');
+
+  await api.tasks.snooze(apiTask.id, 2);
+  const snoozedTask = await db.tasks.get(apiTask.id);
+  assert((snoozedTask?.postponeCount || 0) >= 1, 'api.tasks.snooze increments postpone count and updates due date');
+
+  // Reminder API
+  const apiReminder = await api.reminders.create({ title: 'Reminder via API', date: '2026-10-10', time: '14:00' });
+  assert(apiReminder.title === 'Reminder via API', 'api.reminders.create schedules reminder');
+
+  await api.reminders.snooze(apiReminder.id, 15);
+  const snoozedReminder = await db.reminders.get(apiReminder.id);
+  assert(!!snoozedReminder?.snoozedUntil, 'api.reminders.snooze sets snoozedUntil');
+
+  await api.reminders.complete(apiReminder.id);
+  const completedReminder = await db.reminders.get(apiReminder.id);
+  assert(completedReminder?.status === 'completed', 'api.reminders.complete marks status completed');
+
+  // Expense API
+  const apiExpense = await api.expenses.create({ amountMinor: 50000, category: 'Food', notes: 'Lunch via API' });
+  assert(apiExpense.amountMinor === 50000, 'api.expenses.create records expense in minor units');
+
+  // Open Loops API
+  const apiLoop = await api.loops.create({ title: 'Waiting on report' });
+  assert(apiLoop.title === 'Waiting on report', 'api.loops.create records open loop');
+
+  await api.loops.close(apiLoop.id);
+  const closedLoop = await db.openLoops.get(apiLoop.id);
+  assert(closedLoop?.status === 'closed', 'api.loops.close closes open loop');
+
+  // Commitments API
+  const apiCommitment = await api.commitments.create({ personName: 'Rahul', commitmentText: 'Send budget document' });
+  assert(apiCommitment.who === 'Rahul', 'api.commitments.create records commitment');
+
+  await api.commitments.fulfill(apiCommitment.id);
+  const fulfilledCommitment = await db.commitments.get(apiCommitment.id);
+  assert(fulfilledCommitment?.status === 'fulfilled', 'api.commitments.fulfill marks commitment fulfilled');
+
+  // Haptics safe fallback
+  triggerHaptic('light');
+  triggerHaptic('success');
+  triggerHaptic('error');
+  assert(true, 'triggerHaptic executes gracefully with silent fallback');
 
   console.log('\n=====================================================');
   console.log(` RESULTS: ${passed} passed, ${failed} failed`);

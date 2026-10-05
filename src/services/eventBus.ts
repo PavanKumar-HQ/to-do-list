@@ -19,7 +19,8 @@ export type AppEventType =
   | 'BACKUP_COMPLETED'
   | 'DATABASE_RESTORED'
   | 'APP_RESUMED'
-  | 'ACCENT_CHANGED';
+  | 'ACCENT_CHANGED'
+  | 'IN_APP_ALERT';
 
 export interface AppEventPayload {
   type: AppEventType;

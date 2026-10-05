@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import {
   ChevronLeft,
@@ -16,9 +16,14 @@ import {
   Sliders,
   Check,
   X,
-  AlertCircle
+  AlertCircle,
+  Plus,
+  Trash2,
+  Edit2,
+  MapPin,
+  FileText
 } from 'lucide-react';
-import { db } from '../../db/db';
+import { db, logAudit } from '../../db/db';
 import { getTodayDateString, formatDisplayDate } from '../../utils/dates';
 import { formatMoney } from '../../utils/currency';
 import { ContextModal } from '../common/ContextModal';
@@ -27,7 +32,7 @@ import { useToast } from '../common/ToastContext';
 import { eventBus } from '../../services/eventBus';
 import type { EntityType, EventItem } from '../../types';
 
-export const EVENT_PALETTES: Record<string, { bg: string; text: string; border: string; dot: string; label: string }> = {
+const EVENT_PALETTES: Record<string, { bg: string; text: string; border: string; dot: string; label: string }> = {
   meeting: { bg: 'rgba(59, 130, 246, 0.14)', text: '#3b82f6', border: 'rgba(59, 130, 246, 0.35)', dot: '#3b82f6', label: 'Meetings & Calls' },
   work: { bg: 'rgba(59, 130, 246, 0.14)', text: '#3b82f6', border: 'rgba(59, 130, 246, 0.35)', dot: '#3b82f6', label: 'Work' },
   personal: { bg: 'rgba(16, 185, 129, 0.14)', text: '#10b981', border: 'rgba(16, 185, 129, 0.35)', dot: '#10b981', label: 'Personal & Family' },
@@ -37,7 +42,7 @@ export const EVENT_PALETTES: Record<string, { bg: string; text: string; border: 
   default: { bg: 'rgba(59, 130, 246, 0.14)', text: '#3b82f6', border: 'rgba(59, 130, 246, 0.35)', dot: '#3b82f6', label: 'Event' }
 };
 
-export const getEventTheme = (ev: { category?: string; color?: string; title: string }) => {
+const getEventTheme = (ev: { category?: string; color?: string; title: string }) => {
   if (ev.color) {
     return {
       bg: `${ev.color}1f`,
@@ -55,7 +60,11 @@ export const getEventTheme = (ev: { category?: string; color?: string; title: st
   return EVENT_PALETTES[keys[Math.abs(hash) % keys.length]];
 };
 
-export const CalendarView: React.FC = () => {
+interface CalendarViewProps {
+  onOpenQuickAdd?: (type?: any, date?: string) => void;
+}
+
+export const CalendarView: React.FC<CalendarViewProps> = ({ onOpenQuickAdd }) => {
   const { showToast } = useToast();
   const todayStr = getTodayDateString();
   const [viewMode, setViewMode] = useState<'day' | 'week' | 'month'>('month');
@@ -81,9 +90,24 @@ export const CalendarView: React.FC = () => {
   const [scheduleRecurringHours, setScheduleRecurringHours] = useState<number>(2);
   const [scheduleEnabled, setScheduleEnabled] = useState(true);
 
+  // Event detail & edit modal state
+  const [detailModalEvent, setDetailModalEvent] = useState<EventItem | null>(null);
+  const [isEditingDetail, setIsEditingDetail] = useState(false);
+  const [editTitle, setEditTitle] = useState('');
+  const [editDate, setEditDate] = useState('');
+  const [editStartTime, setEditStartTime] = useState('');
+  const [editLocation, setEditLocation] = useState('');
+  const [editNotes, setEditNotes] = useState('');
+  const [editCategory, setEditCategory] = useState<'meeting' | 'work' | 'personal' | 'deadline' | 'health' | 'travel'>('meeting');
+
   // Current calendar year/month
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth()); // 0-11
+
+  // Purge any historical synthetic interval reminders from past event schedule bugs
+  useEffect(() => {
+    EventReminderService.purgeFloodedReminders();
+  }, []);
 
   // Targeted query: only query items for current visible month prefix
   const monthPrefix = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
@@ -110,7 +134,7 @@ export const CalendarView: React.FC = () => {
 
   const reminders = useLiveQuery(async () => {
     return db.reminders
-      .filter((r) => !r.deletedAt && r.date.startsWith(monthPrefix))
+      .filter((r) => !r.deletedAt && r.status === 'active' && r.linkedType !== 'event' && r.date.startsWith(monthPrefix))
       .toArray();
   }, [monthPrefix]) || [];
 
@@ -219,6 +243,76 @@ export const CalendarView: React.FC = () => {
     showToast(!currentlyEnabled ? 'Reminders active (1-day & recurring 2h)' : 'Reminders turned off', { type: 'info' });
   };
 
+  // Delete event with audit log and reminder cancellation
+  const handleDeleteEvent = async (event: EventItem, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    try {
+      const now = new Date().toISOString();
+      await db.events.update(event.id, { deletedAt: now, updatedAt: now });
+      await EventReminderService.toggleEventReminder(event.id, false);
+      eventBus.emit('EVENT_MUTATED', { entityId: event.id, action: 'delete' });
+      await logAudit('delete', 'event', event.id, `Deleted event "${event.title}"`);
+      showToast('Event moved to trash');
+      if (detailModalEvent?.id === event.id) {
+        setDetailModalEvent(null);
+      }
+    } catch (err: any) {
+      showToast(err.message || 'Failed to delete event', { type: 'error' });
+    }
+  };
+
+  // Open detail modal to view and edit all filled fields
+  const openDetailModal = (event: EventItem, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setDetailModalEvent(event);
+    setIsEditingDetail(false);
+    setEditTitle(event.title);
+    setEditDate(event.date);
+    setEditStartTime(event.startTime || '10:00');
+    setEditLocation(event.location || '');
+    setEditNotes(event.notes || '');
+    setEditCategory((event.category as any) || 'meeting');
+  };
+
+  // Save changes from detail modal
+  const handleSaveEditEvent = async () => {
+    if (!detailModalEvent) return;
+    if (!editTitle.trim()) {
+      showToast('Event title is required', { type: 'warning' });
+      return;
+    }
+    try {
+      const now = new Date().toISOString();
+      const updated: EventItem = {
+        ...detailModalEvent,
+        title: editTitle.trim(),
+        date: editDate || detailModalEvent.date,
+        startTime: editStartTime || detailModalEvent.startTime,
+        location: editLocation.trim() || undefined,
+        notes: editNotes.trim() || undefined,
+        category: editCategory,
+        updatedAt: now
+      };
+      await db.events.update(detailModalEvent.id, {
+        title: updated.title,
+        date: updated.date,
+        startTime: updated.startTime,
+        location: updated.location,
+        notes: updated.notes,
+        category: updated.category,
+        updatedAt: now
+      });
+      await EventReminderService.syncEventReminders(updated);
+      eventBus.emit('EVENT_MUTATED', { entityId: detailModalEvent.id, action: 'update' });
+      await logAudit('update', 'event', detailModalEvent.id, `Updated event: ${updated.title}`);
+      showToast('Event updated successfully', { type: 'success' });
+      setDetailModalEvent(updated);
+      setIsEditingDetail(false);
+    } catch (err: any) {
+      showToast(err.message || 'Failed to update event', { type: 'error' });
+    }
+  };
+
   // Filter events based on active layer
   const filterByLayer = (evList: EventItem[]) => {
     if (activeLayer === 'all') return evList;
@@ -228,19 +322,23 @@ export const CalendarView: React.FC = () => {
     return evList;
   };
 
-  // Week calculation (Monday through Sunday around selectedDate)
+  // Load settings for start of week preference
+  const settings = useLiveQuery(() => db.settings.get('current_settings'), []);
+  const weekStartsMonday = settings?.weekStartsMonday ?? true;
+
+  // Week calculation (respecting weekStartsMonday preference)
   const getWeekDays = (baseDateStr: string) => {
     const parts = baseDateStr.split('-');
     const base = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
     const day = base.getDay();
-    const diffToMon = (day === 0 ? -6 : 1) - day;
-    const monday = new Date(base);
-    monday.setDate(base.getDate() + diffToMon);
+    const diff = weekStartsMonday ? ((day === 0 ? -6 : 1) - day) : -day;
+    const startOfWeek = new Date(base);
+    startOfWeek.setDate(base.getDate() + diff);
 
     const week: { dateStr: string; dayName: string; dayNum: number }[] = [];
     for (let i = 0; i < 7; i++) {
-      const d = new Date(monday);
-      d.setDate(monday.getDate() + i);
+      const d = new Date(startOfWeek);
+      d.setDate(startOfWeek.getDate() + i);
       const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
       week.push({
         dateStr,
@@ -253,9 +351,10 @@ export const CalendarView: React.FC = () => {
 
   const currentWeekDays = getWeekDays(selectedDate);
 
-  // Month grid calculation
+  // Month grid calculation (Monday vs Sunday offset)
   const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-  const firstDayOfWeek = new Date(currentYear, currentMonth, 1).getDay(); // 0 is Sunday
+  const rawFirstDay = new Date(currentYear, currentMonth, 1).getDay(); // 0 is Sunday
+  const firstDayOffset = weekStartsMonday ? (rawFirstDay === 0 ? 6 : rawFirstDay - 1) : rawFirstDay;
 
   // Filtered items for selected date
   const selectedTasks = tasks.filter((t) => t.dueDate === selectedDate);
@@ -327,7 +426,11 @@ export const CalendarView: React.FC = () => {
                   </span>
                 )}
               </div>
-              <h3 style={{ fontSize: '1.05rem', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>
+              <h3
+                onClick={() => openDetailModal(nextImminentEvent)}
+                style={{ fontSize: '1.05rem', fontWeight: 600, color: 'var(--text-primary)', margin: 0, cursor: 'pointer' }}
+                title="Click to view event details"
+              >
                 {nextImminentEvent.title}
               </h3>
             </div>
@@ -351,11 +454,19 @@ export const CalendarView: React.FC = () => {
                 <Sliders size={13} />
               </button>
               <button
-                onClick={() => setContextModal({ isOpen: true, type: 'event', id: nextImminentEvent.id })}
+                onClick={() => openDetailModal(nextImminentEvent)}
                 className="btn btn-sm btn-secondary"
                 style={{ fontSize: '0.75rem' }}
               >
                 View Details
+              </button>
+              <button
+                onClick={(e) => handleDeleteEvent(nextImminentEvent, e)}
+                className="btn btn-sm btn-secondary"
+                style={{ padding: '6px 8px', color: 'var(--danger)' }}
+                title="Delete Event"
+              >
+                <Trash2 size={13} />
               </button>
             </div>
           </div>
@@ -370,7 +481,19 @@ export const CalendarView: React.FC = () => {
           </h2>
         </div>
 
-        {/* View Switcher: Day | Week | Month */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {onOpenQuickAdd && (
+            <button
+              onClick={() => onOpenQuickAdd('event', selectedDate)}
+              className="btn btn-primary btn-sm"
+              style={{ gap: '5px', fontSize: '0.75rem', padding: '5px 12px' }}
+            >
+              <Plus size={14} />
+              <span>New Event</span>
+            </button>
+          )}
+
+          {/* View Switcher: Day | Week | Month */}
         <div style={{ display: 'flex', background: 'var(--bg-surface-elevated)', padding: '2px', borderRadius: '6px', border: '1px solid var(--border-subtle)' }}>
           {(['day', 'week', 'month'] as const).map((mode) => (
             <button
@@ -422,10 +545,11 @@ export const CalendarView: React.FC = () => {
             <ChevronRight size={16} />
           </button>
         </div>
+        </div>
       </div>
 
       {/* 3. EVENT LAYERS FILTER */}
-      <div style={{ display: 'flex', gap: '0.5rem', overflowX: 'auto', paddingBottom: '2px' }}>
+      <div className="no-scrollbar" style={{ display: 'flex', gap: '0.5rem', overflowX: 'auto', paddingBottom: '2px' }}>
         {[
           { id: 'all', label: 'All Activities', count: events.length },
           { id: 'meetings', label: 'Meetings & Calls', count: events.filter((e) => e.category === 'meeting' || e.category === 'work').length },
@@ -473,13 +597,13 @@ export const CalendarView: React.FC = () => {
       {viewMode === 'month' && (
         <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: '10px', padding: '1rem' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', textAlign: 'center', marginBottom: '8px', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-tertiary)' }}>
-            {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((d) => (
+            {(weekStartsMonday ? ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'] : ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']).map((d) => (
               <div key={d}>{d}</div>
             ))}
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px' }}>
-            {Array.from({ length: firstDayOfWeek }).map((_, i) => (
+            {Array.from({ length: firstDayOffset }).map((_, i) => (
               <div key={`empty_${i}`} />
             ))}
 
@@ -512,56 +636,70 @@ export const CalendarView: React.FC = () => {
                     handleItemDropOnDate(dateStr);
                   }}
                   style={{
-                    height: '46px',
+                    height: '42px',
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    borderRadius: '6px',
-                    background: isSelected
-                      ? 'var(--accent)'
-                      : isHoveredTarget
-                      ? 'var(--bg-surface-elevated)'
-                      : isToday
-                      ? 'var(--bg-surface-elevated)'
-                      : 'transparent',
-                    border: isHoveredTarget ? '1px dashed var(--accent)' : 'none',
-                    color: isSelected ? '#ffffff' : isToday ? 'var(--accent)' : 'var(--text-primary)',
-                    fontWeight: isSelected || isToday ? 600 : 400,
-                    fontSize: '0.8125rem',
                     position: 'relative',
-                    cursor: 'pointer'
+                    background: 'transparent',
+                    border: 'none',
+                    cursor: 'pointer',
+                    padding: '2px'
                   }}
                 >
-                  <span>{dayNum}</span>
-                  {hasAny && (
-                    <div style={{ display: 'flex', gap: '2px', alignItems: 'center', marginTop: '2px' }}>
-                      {dayEvents.slice(0, 3).map((ev) => {
-                        const theme = getEventTheme(ev);
-                        return (
+                  <div
+                    style={{
+                      width: '32px',
+                      height: '32px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderRadius: '8px',
+                      background: isSelected
+                        ? 'var(--accent)'
+                        : isHoveredTarget
+                        ? 'var(--bg-surface-elevated)'
+                        : isToday
+                        ? 'var(--bg-surface-elevated)'
+                        : 'transparent',
+                      border: isHoveredTarget ? '1px dashed var(--accent)' : isToday && !isSelected ? '1px solid var(--accent)' : 'none',
+                      color: isSelected ? '#ffffff' : isToday ? 'var(--accent)' : 'var(--text-primary)',
+                      fontWeight: isSelected || isToday ? 600 : 400,
+                      fontSize: '0.8125rem'
+                    }}
+                  >
+                    <span>{dayNum}</span>
+                    {hasAny && (
+                      <div style={{ display: 'flex', gap: '2px', alignItems: 'center', marginTop: '1px' }}>
+                        {dayEvents.slice(0, 3).map((ev) => {
+                          const theme = getEventTheme(ev);
+                          return (
+                            <span
+                              key={ev.id}
+                              style={{
+                                width: '4px',
+                                height: '4px',
+                                borderRadius: '50%',
+                                background: isSelected ? '#ffffff' : theme.dot
+                              }}
+                            />
+                          );
+                        })}
+                        {dayEvents.length === 0 && (
                           <span
-                            key={ev.id}
                             style={{
-                              width: '5px',
-                              height: '5px',
+                              width: '3px',
+                              height: '3px',
                               borderRadius: '50%',
-                              background: isSelected ? '#ffffff' : theme.dot
+                              background: isSelected ? '#ffffff' : 'var(--text-muted)'
                             }}
                           />
-                        );
-                      })}
-                      {dayEvents.length === 0 && (
-                        <span
-                          style={{
-                            width: '4px',
-                            height: '4px',
-                            borderRadius: '50%',
-                            background: isSelected ? '#ffffff' : 'var(--text-muted)'
-                          }}
-                        />
-                      )}
-                    </div>
-                  )}
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </button>
               );
             })}
@@ -571,7 +709,20 @@ export const CalendarView: React.FC = () => {
 
       {/* 5. WEEK VIEW WITH COLOR CODING */}
       {viewMode === 'week' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '6px', overflowX: 'auto', paddingBottom: '4px' }}>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(7, minmax(0, 1fr))',
+            gap: '6px',
+            width: '100%',
+            boxSizing: 'border-box',
+            overflowX: 'auto',
+            scrollbarWidth: 'none',
+            msOverflowStyle: 'none',
+            paddingBottom: '4px'
+          }}
+          className="no-scrollbar"
+        >
           {currentWeekDays.map((col) => {
             const isToday = col.dateStr === todayStr;
             const isSelected = col.dateStr === selectedDate;
@@ -595,8 +746,9 @@ export const CalendarView: React.FC = () => {
                   handleItemDropOnDate(col.dateStr);
                 }}
                 style={{
-                  minHeight: '140px',
-                  padding: '8px 6px',
+                  minHeight: '88px',
+                  minWidth: 0,
+                  padding: '8px 4px',
                   borderRadius: '8px',
                   border: isHoveredTarget
                     ? '1.5px dashed var(--accent)'
@@ -606,7 +758,8 @@ export const CalendarView: React.FC = () => {
                   background: 'var(--bg-surface)',
                   cursor: 'pointer',
                   display: 'flex',
-                  flexDirection: 'column'
+                  flexDirection: 'column',
+                  overflow: 'hidden'
                 }}
               >
                 <div style={{ textAlign: 'center', marginBottom: '8px' }}>
@@ -759,6 +912,37 @@ export const CalendarView: React.FC = () => {
                         <span style={{ fontSize: '0.8125rem', color: 'var(--text-primary)' }}>{t.title}</span>
                       </div>
                     ))}
+                    {hourEvents.length === 0 && hourTasks.length === 0 && onOpenQuickAdd && (
+                      <div
+                        onClick={() => onOpenQuickAdd('event', selectedDate)}
+                        style={{
+                          height: '26px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          color: 'var(--text-muted)',
+                          fontSize: '0.75rem',
+                          cursor: 'pointer',
+                          borderRadius: '4px',
+                          padding: '0 8px',
+                          border: '1px dashed transparent',
+                          transition: 'all 0.15s ease'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.borderColor = 'var(--border-subtle)';
+                          e.currentTarget.style.background = 'var(--bg-surface-elevated)';
+                          e.currentTarget.style.color = 'var(--text-secondary)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.borderColor = 'transparent';
+                          e.currentTarget.style.background = 'transparent';
+                          e.currentTarget.style.color = 'var(--text-muted)';
+                        }}
+                      >
+                        <Plus size={12} />
+                        <span>Empty slot • tap to add</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               );
@@ -773,16 +957,41 @@ export const CalendarView: React.FC = () => {
           <div style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
             Agenda for {formatDisplayDate(selectedDate)}
           </div>
-          {draggingItem && (
-            <span style={{ fontSize: '0.75rem', color: 'var(--accent)', fontWeight: 600 }}>
-              Drop onto any day to reschedule
-            </span>
-          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {onOpenQuickAdd && (
+              <button
+                onClick={() => onOpenQuickAdd('event', selectedDate)}
+                className="btn btn-secondary btn-sm"
+                style={{ fontSize: '0.75rem', gap: '0.375rem', padding: '4px 10px' }}
+                title="Schedule an event for this date"
+              >
+                <Plus size={13} />
+                <span>Add Event</span>
+              </button>
+            )}
+            {draggingItem && (
+              <span style={{ fontSize: '0.75rem', color: 'var(--accent)', fontWeight: 600 }}>
+                Drop onto any day to reschedule
+              </span>
+            )}
+          </div>
         </div>
 
         {selectedTasks.length === 0 && selectedEvents.length === 0 && selectedReminders.length === 0 && selectedPayments.length === 0 && selectedFollowups.length === 0 ? (
-          <div style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--text-muted)', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: '8px' }}>
-            Nothing scheduled for this date.
+          <div style={{ padding: '2rem 1rem', textAlign: 'center', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: '8px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.625rem' }}>
+            <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>
+              Nothing scheduled for {formatDisplayDate(selectedDate)}
+            </div>
+            {onOpenQuickAdd && (
+              <button
+                onClick={() => onOpenQuickAdd('event', selectedDate)}
+                className="btn btn-secondary btn-sm"
+                style={{ fontSize: '0.75rem', gap: '0.375rem' }}
+              >
+                <Plus size={13} />
+                <span>Schedule Event or Task</span>
+              </button>
+            )}
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -799,6 +1008,7 @@ export const CalendarView: React.FC = () => {
                     setDraggingItem({ id: ev.id, type: 'event', title: ev.title });
                   }}
                   onDragEnd={() => setDraggingItem(null)}
+                  onClick={() => openDetailModal(ev)}
                   className="animate-row-enter"
                   style={{
                     display: 'flex',
@@ -809,7 +1019,7 @@ export const CalendarView: React.FC = () => {
                     border: '1px solid var(--border-subtle)',
                     borderLeft: `3px solid ${theme.dot}`,
                     borderRadius: '8px',
-                    cursor: 'grab'
+                    cursor: 'pointer'
                   }}
                 >
                   <GripVertical size={14} color="var(--text-tertiary)" style={{ flexShrink: 0 }} />
@@ -836,7 +1046,10 @@ export const CalendarView: React.FC = () => {
                   </button>
 
                   <button
-                    onClick={() => openScheduleModal(ev)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openScheduleModal(ev);
+                    }}
                     className="btn-ghost"
                     style={{ color: 'var(--text-muted)', padding: '4px' }}
                     title="Customize Reminders"
@@ -845,12 +1058,24 @@ export const CalendarView: React.FC = () => {
                   </button>
 
                   <button
-                    onClick={() => setContextModal({ isOpen: true, type: 'event', id: ev.id })}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setContextModal({ isOpen: true, type: 'event', id: ev.id });
+                    }}
                     className="btn-ghost"
                     style={{ color: 'var(--text-muted)', padding: '4px' }}
                     title="Context"
                   >
                     <Network size={14} />
+                  </button>
+
+                  <button
+                    onClick={(e) => handleDeleteEvent(ev, e)}
+                    className="btn-ghost"
+                    style={{ color: 'var(--danger)', padding: '4px' }}
+                    title="Delete event"
+                  >
+                    <Trash2 size={15} />
                   </button>
 
                   <span
@@ -911,6 +1136,18 @@ export const CalendarView: React.FC = () => {
 
             {selectedReminders.map((r) => (
               <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '0.75rem 1rem', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: '8px' }}>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await db.reminders.update(r.id, { status: 'completed', notificationState: 'cancelled', updatedAt: new Date().toISOString() });
+                    showToast('Reminder completed', { type: 'success' });
+                  }}
+                  className="btn-ghost"
+                  style={{ width: '28px', height: '28px', padding: 0, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}
+                  title="Complete / Dismiss reminder"
+                >
+                  <Check size={16} />
+                </button>
                 <Bell size={16} color="var(--warning)" style={{ flexShrink: 0 }} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontWeight: 600, fontSize: '0.875rem', color: 'var(--text-primary)' }}>{r.title}</div>
@@ -1069,7 +1306,261 @@ export const CalendarView: React.FC = () => {
         </div>
       )}
 
-      {/* 9. Context Modal */}
+      {/* 9. EVENT DETAIL & EDIT MODAL (Shows all filled data with full editing & deletion) */}
+      {detailModalEvent && (
+        <div className="modal-overlay" onClick={() => setDetailModalEvent(null)} role="dialog" aria-modal="true">
+          <div
+            className="bottom-sheet"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              maxWidth: '480px',
+              width: '100%',
+              background: 'var(--bg-surface-elevated)',
+              border: '1px solid var(--border-light)',
+              borderRadius: '16px',
+              padding: '20px',
+              boxShadow: 'var(--shadow-xl)',
+              maxHeight: '90vh',
+              overflowY: 'auto'
+            }}
+          >
+            <div className="sheet-handle" />
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <CalendarIcon size={18} color="var(--accent)" />
+                <h3 style={{ fontSize: '1.125rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
+                  {isEditingDetail ? 'Edit Event' : 'Event Details'}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDetailModalEvent(null)}
+                className="btn-ghost"
+                style={{ padding: '4px' }}
+                aria-label="Close"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {isEditingDetail ? (
+              /* EDIT MODE */
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                    Event Title *
+                  </label>
+                  <input
+                    type="text"
+                    value={editTitle}
+                    onChange={(e) => setEditTitle(e.target.value)}
+                    placeholder="Event title"
+                    autoFocus
+                  />
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                      Date
+                    </label>
+                    <input
+                      type="date"
+                      value={editDate}
+                      onChange={(e) => setEditDate(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                      Start Time
+                    </label>
+                    <input
+                      type="time"
+                      value={editStartTime}
+                      onChange={(e) => setEditStartTime(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                    Location / Link (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={editLocation}
+                    onChange={(e) => setEditLocation(e.target.value)}
+                    placeholder="e.g. Conference Room A, Google Meet link"
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                    Notes / Description (Optional)
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={editNotes}
+                    onChange={(e) => setEditNotes(e.target.value)}
+                    placeholder="Add agenda, discussion points, or notes..."
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                    Category
+                  </label>
+                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                    {[
+                      { id: 'meeting', label: 'Meeting', color: '#3b82f6' },
+                      { id: 'work', label: 'Work', color: '#3b82f6' },
+                      { id: 'personal', label: 'Personal', color: '#10b981' },
+                      { id: 'deadline', label: 'Deadline', color: '#f59e0b' },
+                      { id: 'health', label: 'Health', color: '#f43f5e' },
+                      { id: 'travel', label: 'Travel', color: '#8b5cf6' }
+                    ].map((cat) => (
+                      <button
+                        key={cat.id}
+                        type="button"
+                        onClick={() => setEditCategory(cat.id as any)}
+                        className={`btn btn-sm ${editCategory === cat.id ? 'btn-primary' : 'btn-secondary'}`}
+                        style={{ fontSize: '11px', padding: '4px 10px', borderRadius: '16px' }}
+                      >
+                        {cat.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setIsEditingDetail(false)}
+                    className="btn btn-secondary"
+                    style={{ flex: 1 }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSaveEditEvent}
+                    className="btn btn-primary"
+                    style={{ flex: 1 }}
+                  >
+                    Save Changes
+                  </button>
+                </div>
+              </div>
+            ) : (
+              /* VIEW MODE — Shows all data filled */
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div>
+                  <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '4px' }}>
+                    {detailModalEvent.title}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                    <span
+                      style={{
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        padding: '3px 8px',
+                        borderRadius: '4px',
+                        background: getEventTheme(detailModalEvent).bg,
+                        color: getEventTheme(detailModalEvent).text,
+                        border: `1px solid ${getEventTheme(detailModalEvent).border}`
+                      }}
+                    >
+                      {getEventTheme(detailModalEvent).label}
+                    </span>
+                    <span style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                      <Clock size={13} />
+                      <span>{formatDisplayDate(detailModalEvent.date)} at {detailModalEvent.startTime || 'All day'}</span>
+                    </span>
+                  </div>
+                </div>
+
+                {detailModalEvent.location && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'var(--text-primary)', background: 'var(--bg-surface)', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
+                    <MapPin size={16} color="var(--accent)" style={{ flexShrink: 0 }} />
+                    <span style={{ wordBreak: 'break-word' }}>{detailModalEvent.location}</span>
+                  </div>
+                )}
+
+                {detailModalEvent.notes && (
+                  <div style={{ background: 'var(--bg-surface)', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
+                    <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>
+                      Notes & Agenda
+                    </div>
+                    <div style={{ fontSize: '13px', color: 'var(--text-primary)', whiteSpace: 'pre-wrap' }}>
+                      {detailModalEvent.notes}
+                    </div>
+                  </div>
+                )}
+
+                {/* Reminder status summary */}
+                <div style={{ background: 'var(--bg-surface)', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    {detailModalEvent.reminderSchedule?.enabled ? <Bell size={16} color="var(--accent)" /> : <BellOff size={16} color="var(--text-muted)" />}
+                    <div>
+                      <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                        {detailModalEvent.reminderSchedule?.enabled ? 'Alerts Active' : 'Alerts Disabled'}
+                      </div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                        {detailModalEvent.reminderSchedule?.enabled
+                          ? `1 day before & recurring every ${detailModalEvent.reminderSchedule?.recurringHours || 2}h`
+                          : 'No reminders set for this event'}
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={(e) => handleToggleReminder(detailModalEvent, e)}
+                    className="btn btn-secondary btn-sm"
+                    style={{ fontSize: '11px', padding: '4px 8px' }}
+                  >
+                    {detailModalEvent.reminderSchedule?.enabled ? 'Turn Off' : 'Turn On'}
+                  </button>
+                </div>
+
+                {/* Action buttons */}
+                <div style={{ display: 'flex', gap: '8px', marginTop: '6px', paddingTop: '10px', borderTop: '1px solid var(--border-subtle)' }}>
+                  <button
+                    type="button"
+                    onClick={() => setIsEditingDetail(true)}
+                    className="btn btn-secondary btn-sm"
+                    style={{ flex: 1, gap: '5px' }}
+                  >
+                    <Edit2 size={13} />
+                    <span>Edit</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteEvent(detailModalEvent)}
+                    className="btn btn-secondary btn-sm"
+                    style={{ color: 'var(--danger)', gap: '5px' }}
+                  >
+                    <Trash2 size={13} />
+                    <span>Delete</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setDetailModalEvent(null)}
+                    className="btn btn-primary btn-sm"
+                    style={{ padding: '6px 16px' }}
+                  >
+                    Done
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 10. Context Modal */}
       <ContextModal
         isOpen={contextModal.isOpen}
         onClose={() => setContextModal({ isOpen: false, type: null, id: null })}

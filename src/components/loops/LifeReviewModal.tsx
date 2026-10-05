@@ -197,7 +197,7 @@ export const LifeReviewModal: React.FC<LifeReviewModalProps> = ({ isOpen, onClos
                 openLoops.map(loop => (
                   <div key={loop.id} className="card" style={{ padding: '0.875rem 1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
-                      <div style={{ fontSize: '0.6875rem', color: '#b45309', background: '#fef3c7', padding: '0.125rem 0.375rem', borderRadius: '3px', display: 'inline-block', fontWeight: 600 }}>
+                      <div style={{ fontSize: '0.6875rem', color: 'var(--warning)', background: 'var(--warning-bg)', padding: '0.125rem 0.375rem', borderRadius: '3px', display: 'inline-block', fontWeight: 600 }}>
                         {loop.waitingOnPersonName ? `Waiting on ${loop.waitingOnPersonName}` : 'Pending Item'}
                       </div>
                       <div style={{ fontSize: '0.9375rem', fontWeight: 600, color: 'var(--text-primary)', marginTop: '0.25rem' }}>
@@ -205,8 +205,8 @@ export const LifeReviewModal: React.FC<LifeReviewModalProps> = ({ isOpen, onClos
                       </div>
                     </div>
                     <button
-                      className="btn btn-outline"
-                      style={{ fontSize: '0.75rem', padding: '0.375rem 0.625rem', borderColor: '#fcd34d', color: '#92400e' }}
+                      className="btn btn-secondary"
+                      style={{ fontSize: '0.75rem', padding: '0.375rem 0.625rem' }}
                       onClick={() => handleCloseLoop(loop.id)}
                     >
                       Resolved
@@ -266,7 +266,7 @@ export const LifeReviewModal: React.FC<LifeReviewModalProps> = ({ isOpen, onClos
                   <div key={task.id} className="card" style={{ padding: '0.875rem 1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <span style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#b45309', background: '#fef3c7', padding: '0.125rem 0.375rem', borderRadius: '3px' }}>
+                        <span style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--warning)', background: 'var(--warning-bg)', padding: '0.125rem 0.375rem', borderRadius: '3px' }}>
                           Postponed {task.postponeCount || 0} times
                         </span>
                         {task.dueDate && (
@@ -343,7 +343,7 @@ export const LifeReviewModal: React.FC<LifeReviewModalProps> = ({ isOpen, onClos
                         Mark Reviewed
                       </button>
                     </div>
-                    <div style={{ background: '#f8fafc', padding: '0.625rem', borderRadius: '4px', fontSize: '0.8125rem' }}>
+                    <div style={{ background: 'var(--bg-surface-elevated)', border: '1px solid var(--border-subtle)', padding: '0.625rem', borderRadius: '4px', fontSize: '0.8125rem' }}>
                       <span style={{ fontWeight: 600, color: 'var(--text-muted)' }}>Reasoning: </span>
                       {dec.reason}
                     </div>
@@ -357,7 +357,7 @@ export const LifeReviewModal: React.FC<LifeReviewModalProps> = ({ isOpen, onClos
           {step === 5 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
-                <div style={{ background: '#f8fafc', padding: '0.75rem', borderRadius: '6px', textAlign: 'center' }}>
+                <div style={{ background: 'var(--bg-surface-elevated)', border: '1px solid var(--border-subtle)', padding: '0.75rem', borderRadius: '6px', textAlign: 'center' }}>
                   <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)' }}>
                     {closedLoopsCount}
                   </div>
@@ -365,7 +365,7 @@ export const LifeReviewModal: React.FC<LifeReviewModalProps> = ({ isOpen, onClos
                     Loops Closed
                   </div>
                 </div>
-                <div style={{ background: '#f8fafc', padding: '0.75rem', borderRadius: '6px', textAlign: 'center' }}>
+                <div style={{ background: 'var(--bg-surface-elevated)', border: '1px solid var(--border-subtle)', padding: '0.75rem', borderRadius: '6px', textAlign: 'center' }}>
                   <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)' }}>
                     {reviewedCommitmentsCount}
                   </div>
@@ -373,7 +373,7 @@ export const LifeReviewModal: React.FC<LifeReviewModalProps> = ({ isOpen, onClos
                     Promises Checked
                   </div>
                 </div>
-                <div style={{ background: '#f8fafc', padding: '0.75rem', borderRadius: '6px', textAlign: 'center' }}>
+                <div style={{ background: 'var(--bg-surface-elevated)', border: '1px solid var(--border-subtle)', padding: '0.75rem', borderRadius: '6px', textAlign: 'center' }}>
                   <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)' }}>
                     {cleanedTasksCount}
                   </div>

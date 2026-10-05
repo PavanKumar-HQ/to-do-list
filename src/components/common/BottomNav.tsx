@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, Inbox, Calendar, Wallet, MoreHorizontal } from 'lucide-react';
+import { Home, Inbox, Calendar, Wallet, CheckSquare } from 'lucide-react';
 import { db } from '../../db/db';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { getTodayDateString } from '../../utils/dates';
@@ -7,7 +7,7 @@ import { getTodayDateString } from '../../utils/dates';
 interface BottomNavProps {
   currentScreen: string;
   onSelectScreen: (screen: string) => void;
-  onOpenMoreSheet: () => void;
+  onOpenMoreSheet?: () => void;
 }
 
 export const BottomNav: React.FC<BottomNavProps> = ({
@@ -24,10 +24,10 @@ export const BottomNav: React.FC<BottomNavProps> = ({
 
   const navItems = [
     { id: 'home', label: 'Home', icon: Home },
-    { id: 'inbox', label: 'Inbox', icon: Inbox, badge: pendingInboxCount > 0 ? pendingInboxCount : undefined },
+    { id: 'tasks', label: 'Tasks', icon: CheckSquare },
     { id: 'calendar', label: 'Calendar', icon: Calendar },
     { id: 'money', label: 'Money', icon: Wallet },
-    { id: 'more', label: 'More', icon: MoreHorizontal, isAction: true }
+    { id: 'inbox', label: 'Inbox', icon: Inbox, badge: pendingInboxCount > 0 ? pendingInboxCount : undefined }
   ];
 
   return (
@@ -38,8 +38,10 @@ export const BottomNav: React.FC<BottomNavProps> = ({
         left: 0,
         right: 0,
         height: 'var(--bottom-bar-height)',
-        background: 'var(--bg-app)',
-        borderTop: '1px solid var(--border-subtle)',
+        background: 'var(--glass-surface)',
+        backdropFilter: 'var(--glass-blur)',
+        WebkitBackdropFilter: 'var(--glass-blur)',
+        borderTop: '1px solid var(--glass-border)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-around',
@@ -55,13 +57,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
         return (
           <button
             key={item.id}
-            onClick={() => {
-              if (item.isAction) {
-                onOpenMoreSheet();
-              } else {
-                onSelectScreen(item.id);
-              }
-            }}
+            onClick={() => onSelectScreen(item.id)}
             style={{
               flex: 1,
               height: '100%',

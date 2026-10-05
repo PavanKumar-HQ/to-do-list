@@ -6,9 +6,12 @@
 import { db } from '../db/db';
 import type { ReminderItem } from '../types';
 import { eventBus } from './eventBus';
+import { getTodayDateString } from '../utils/dates';
+import { testAlarmSound } from './soundService';
 
 let activeTimer: ReturnType<typeof setTimeout> | null = null;
 let nextTimerTimestamp: number | null = null;
+const recentlyFiredIds = new Set<string>();
 
 export interface NotificationSupportInfo {
   supported: boolean;
@@ -183,22 +186,39 @@ export async function refreshNextReminderTimer() {
   }
 
   const now = new Date();
-  const todayStr = now.toISOString().split('T')[0];
+  const todayStr = getTodayDateString();
 
-  // Targeted query for today and future active reminders
+  // Indexed query for today and future active reminders
   const activeReminders = await db.reminders
-    .filter(r => !r.deletedAt && r.status === 'active' && r.date >= todayStr)
+    .where('date')
+    .aboveOrEqual(todayStr)
+    .filter(r => !r.deletedAt && (r.status === 'active' || r.status === 'snoozed'))
     .toArray();
 
   let earliestTime: number | null = null;
   let earliestReminder: ReminderItem | null = null;
 
   for (const r of activeReminders) {
-    const timeStr = r.time || '09:00';
-    const targetDate = new Date(`${r.date}T${timeStr}:00`);
-    const targetTimestamp = targetDate.getTime();
+    let targetTimestamp: number;
+    const isSnoozedFuture = r.snoozedUntil && new Date(r.snoozedUntil).getTime() > now.getTime();
 
-    if (targetTimestamp > now.getTime()) {
+    if (isSnoozedFuture) {
+      targetTimestamp = new Date(r.snoozedUntil!).getTime();
+    } else {
+      const parts = r.date.split('-').map(Number);
+      const timeParts = (r.time || '09:00').split(':').map(Number);
+      const targetDate = new Date(parts[0], parts[1] - 1, parts[2], timeParts[0] || 0, timeParts[1] || 0, 0);
+      targetTimestamp = targetDate.getTime();
+    }
+
+    // Check if due right now (or within the last 2 minutes) and hasn't fired in this session
+    // Only fire if not actively snoozed in the future
+    if (!isSnoozedFuture && r.date === todayStr && targetTimestamp <= now.getTime() && (now.getTime() - targetTimestamp) <= 120000) {
+      if (!recentlyFiredIds.has(r.id)) {
+        recentlyFiredIds.add(r.id);
+        fireReminder(r);
+      }
+    } else if (targetTimestamp > now.getTime()) {
       if (earliestTime === null || targetTimestamp < earliestTime) {
         earliestTime = targetTimestamp;
         earliestReminder = r;
@@ -221,11 +241,68 @@ export async function refreshNextReminderTimer() {
   }
 }
 
+// 15-second heartbeat to ensure near and due alarms never stall
+if (typeof window !== 'undefined') {
+  setInterval(() => {
+    refreshNextReminderTimer();
+  }, 15000);
+}
+
+/**
+ * Dispatch a manual test notification to verify audio and native notification delivery
+ */
+export async function dispatchTestNotification(): Promise<{ success: boolean; message: string }> {
+  testAlarmSound().catch(() => playGentleChime());
+
+  if (!('Notification' in window)) {
+    return { success: false, message: 'Native notifications not supported on this browser. Audio chime tested.' };
+  }
+
+  if (Notification.permission === 'denied') {
+    return { success: false, message: 'Notifications are blocked in browser settings. Audio chime tested.' };
+  }
+
+  if (Notification.permission === 'default') {
+    const perm = await requestNotificationPermission();
+    if (perm !== 'granted') {
+      return { success: false, message: 'Notification permission not granted. Audio chime tested.' };
+    }
+  }
+
+  await dispatchNativeNotification(
+    'test_notification_' + Date.now(),
+    'Life OS Alert Active',
+    'Local notifications and reminders are working properly.',
+    { type: 'test' }
+  );
+
+  return { success: true, message: 'Test notification sent and alarm sound played.' };
+}
+
 async function fireReminder(reminder: ReminderItem) {
+  recentlyFiredIds.add(reminder.id);
+
+  // If in background, play chime or test alarm sound so user is alerted even if screen is away
+  if (typeof document !== 'undefined' && document.visibilityState !== 'visible') {
+    testAlarmSound().catch(() => playGentleChime());
+  }
+
+  // Emit in-app alert for immediate on-screen presentation (which handles foreground alarm ringing)
+  eventBus.emit('IN_APP_ALERT', {
+    type: 'IN_APP_ALERT',
+    entityId: reminder.id,
+    data: {
+      id: reminder.id,
+      title: reminder.title,
+      time: reminder.time,
+      date: reminder.date
+    }
+  });
+
   await dispatchNativeNotification(
     `reminder:${reminder.id}`,
-    reminder.title,
-    `Reminder due at ${reminder.time || 'now'}`,
+    `Alarm: ${reminder.title}`,
+    `Due at ${reminder.time || 'now'}`,
     { reminderId: reminder.id }
   );
 
@@ -302,10 +379,12 @@ export async function handleNotificationAction(action: string, reminderId: strin
     await db.reminders.update(reminderId, { status: 'dismissed', updatedAt: new Date().toISOString() });
     cancelReminder(reminderId);
   } else if (action === 'snooze_10m') {
+    recentlyFiredIds.delete(reminderId);
     const tenMinsLater = new Date(Date.now() + 10 * 60000);
     const newDate = tenMinsLater.toISOString().split('T')[0];
     const newTime = tenMinsLater.toTimeString().slice(0, 5);
     await db.reminders.update(reminderId, {
+      status: 'snoozed',
       date: newDate,
       time: newTime,
       snoozedUntil: tenMinsLater.toISOString(),
@@ -334,6 +413,8 @@ export const notificationService = {
   rescheduleReminder,
   refreshNextReminderTimer,
   checkMissedReminders,
-  handleNotificationAction
+  handleNotificationAction,
+  dispatchTestNotification,
+  playGentleChime
 };
 

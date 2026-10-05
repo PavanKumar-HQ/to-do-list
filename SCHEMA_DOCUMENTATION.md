@@ -30,7 +30,7 @@ Every primary entity implements the following lifecycle fields where appropriate
 ## 2. Dexie Stores & Indexes Definition
 
 ### Current Database Name: `PersonalLifeOS_DB`
-Current Schema Version: `3`
+Current Schema Version: `4`
 
 | Store Name | Primary Key | Indexed Fields | Description |
 | :--- | :--- | :--- | :--- |
@@ -40,8 +40,11 @@ Current Schema Version: `3`
 | `decisions` | `id` | `id, reviewDate, status, createdAt, deletedAt` | Personal reasoning, alternatives, and review triggers |
 | `openLoops` | `id` | `id, loopType, sourceEntityId, waitingOnPersonId, status, createdAt, deletedAt` | Unresolved intentions and waiting items |
 | `dependencies` | `id` | `id, blockerId, blockedId, createdAt` | Execution blocker relationships |
+| `futureMessages` | `id` | `id, openDate, isOpened, createdAt, deletedAt` | Temporal messages to future self |
+| `reviewSessions` | `id` | `id, reviewType, completedAt` | Life review audit history and reflections |
+| `lifeContexts` | `id` | `id, name, isArchived, createdAt` | High-level life dimensions and domains |
 | `tasks` | `id` | `id, status, priority, category, dueDate, recurrence, linkedPersonId, createdAt, completedAt, deletedAt` | Tasks, checklists, recurrence series, consequence |
-| `reminders` | `id` | `id, date, status, recurrence, linkedType, linkedId, createdAt, deletedAt` | Local-time reminders and notification triggers |
+| `reminders` | `id` | `id, date, status, recurrence, linkedType, linkedId, createdAt, deletedAt` | Local-time reminders and ringing alarm triggers |
 | `notes` | `id` | `id, category, isPinned, createdAt, archivedAt, deletedAt` | Notes, checklists, rich text contents, temporal triggers |
 | `ideas` | `id` | `id, category, status, isPinned, createdAt, deletedAt` | Raw ideas with lifecycle states |
 | `dontForget` | `id` | `id, triggerDate, priority, isPinned, isDismissed, createdAt, deletedAt` | Floating sticky reminders and critical items |
@@ -61,7 +64,7 @@ Current Schema Version: `3`
 | `attachments` | `id` | `id, name, mimeType, createdAt, deletedAt` | Safe Base64 binary assets with ref counting |
 | `voiceNotes` | `id` | `id, linkedType, linkedId, createdAt, deletedAt` | Audio recordings and metadata |
 | `templates` | `id` | `id, type, createdAt` | Built-in checklists and routine templates |
-| `settings` | `id` | `id` | Application preferences and backup metadata |
+| `settings` | `id` | `id` | Preferences, reminderTone, and backup metadata |
 | `auditHistory` | `id` | `id, action, entityType, entityId, timestamp` | Lightweight audit log of write actions |
 
 ---
@@ -134,3 +137,5 @@ Current Schema Version: `3`
 ## 6. Migration History
 * **Schema Version 1**: Initial release covering tasks, reminders, notes, ideas, dont_forget, people, followups, events, lists, goals, routines, journal, expenses, income, budgets, creditCards, recurringExpenses, savingsGoals, attachments, voiceNotes, templates, settings, and auditHistory.
 * **Schema Version 2**: Added first-class `inbox` store for universal capture and `relationships` store for structured cross-entity graph edges.
+* **Schema Version 3**: Added `commitments` (promises to people), `decisions` (reasoning engine), `openLoops` (unresolved thoughts/waiting), and `dependencies` (blocker graph).
+* **Schema Version 4**: Added `futureMessages` (time capsules), `reviewSessions` (weekly/monthly guided reviews), and `lifeContexts` (360-degree life dimensions).
