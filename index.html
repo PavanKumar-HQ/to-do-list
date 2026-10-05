@@ -18,16 +18,12 @@
     <script>
       (function() {
         try {
-          var saved = localStorage.getItem('theme');
-          if (saved === 'dark') {
-            document.documentElement.setAttribute('data-theme', 'dark');
-          } else {
-            document.documentElement.setAttribute('data-theme', 'light');
-          }
+          document.documentElement.setAttribute('data-theme', 'light');
+          localStorage.setItem('theme', 'light');
         } catch (e) {}
       })();
     </script>
-    <script type="module" crossorigin src="./assets/index-LSw17G27.js"></script>
+    <script type="module" crossorigin src="./assets/index-DFlF96No.js"></script>
     <link rel="modulepreload" crossorigin href="./assets/rolldown-runtime-hePW80VL.js">
     <link rel="modulepreload" crossorigin href="./assets/vendor-dexie-Cz-ZPqAr.js">
     <link rel="modulepreload" crossorigin href="./assets/vendor-icons-ClBIqZgM.js">
