@@ -68,7 +68,7 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
 
   const renderNavGroup = (title: string, items: typeof lifeNav) => (
     <div style={{ marginBottom: '10px' }}>
-      <div style={{ padding: '4px 12px', fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+      <div style={{ padding: '4px 12px', fontSize: '11px', fontWeight: 600, color: 'var(--text-tertiary)', letterSpacing: '0.02em' }}>
         {title}
       </div>
       {items.map((item) => {
@@ -102,9 +102,9 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
               <span
                 style={{
                   fontSize: '11px',
-                  fontWeight: 700,
-                  background: item.id === 'inbox' ? 'var(--warning)' : 'var(--accent)',
-                  color: '#ffffff',
+                  fontWeight: 600,
+                  background: item.id === 'inbox' ? 'var(--warning-bg)' : 'var(--bg-surface-elevated)',
+                  color: item.id === 'inbox' ? 'var(--warning)' : 'var(--text-primary)',
                   padding: '1px 6px',
                   borderRadius: '10px'
                 }}
@@ -127,7 +127,7 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
         bottom: 0,
         left: 0,
         background: 'var(--bg-surface)',
-        borderRight: '1px solid var(--border-light)',
+        borderRight: '1px solid var(--border-subtle)',
         display: 'flex',
         flexDirection: 'column',
         zIndex: 600,
@@ -135,30 +135,31 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
       }}
       className="desktop-only-sidebar"
     >
-      <div style={{ padding: '8px 12px 16px 12px', borderBottom: '1px solid var(--border-light)' }}>
+      <div style={{ padding: '8px 12px 16px 12px', borderBottom: '1px solid var(--border-subtle)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <div
             style={{
               width: '28px',
               height: '28px',
               borderRadius: '6px',
-              background: '#1e293b',
+              background: 'var(--text-primary)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: '#ffffff',
+              color: 'var(--bg-app)',
               fontWeight: 700,
-              fontSize: '14px'
+              fontSize: '14px',
+              letterSpacing: '-0.02em'
             }}
           >
-            P
+            K
           </div>
           <div>
-            <div style={{ fontWeight: 600, fontSize: '15px', color: 'var(--text-primary)' }}>
-              Personal Life OS
+            <div style={{ fontWeight: 600, fontSize: '15px', color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>
+              Kanso
             </div>
             <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-              Local-first · Private
+              Personal Life OS
             </div>
           </div>
         </div>
@@ -166,7 +167,7 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
         <button
           onClick={onOpenQuickAdd}
           className="btn btn-primary"
-          style={{ width: '100%', marginTop: '16px', borderRadius: 'var(--radius-md)', gap: '8px' }}
+          style={{ width: '100%', marginTop: '16px', borderRadius: 'var(--radius-sm)', gap: '8px' }}
         >
           <Plus size={18} />
           <span>Quick Capture</span>

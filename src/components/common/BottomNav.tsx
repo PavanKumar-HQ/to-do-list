@@ -38,8 +38,8 @@ export const BottomNav: React.FC<BottomNavProps> = ({
         left: 0,
         right: 0,
         height: 'var(--bottom-bar-height)',
-        background: 'var(--bg-surface)',
-        borderTop: '1px solid var(--border-light)',
+        background: 'var(--bg-app)',
+        borderTop: '1px solid var(--border-subtle)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-around',
@@ -70,25 +70,27 @@ export const BottomNav: React.FC<BottomNavProps> = ({
               alignItems: 'center',
               justifyContent: 'center',
               gap: '3px',
-              color: isActive ? 'var(--accent)' : 'var(--text-secondary)',
+              color: isActive ? 'var(--accent)' : 'var(--text-tertiary)',
               position: 'relative',
               background: 'none',
-              padding: '6px 0'
+              border: 'none',
+              padding: '6px 0',
+              cursor: 'pointer'
             }}
             aria-label={item.label}
           >
             <div style={{ position: 'relative' }}>
-              <Icon size={20} strokeWidth={isActive ? 2.3 : 1.8} />
+              <Icon size={20} strokeWidth={isActive ? 2.2 : 1.7} />
               {item.badge !== undefined && (
                 <span
                   style={{
                     position: 'absolute',
                     top: '-4px',
                     right: '-8px',
-                    background: item.id === 'inbox' ? 'var(--warning)' : 'var(--accent)',
-                    color: '#ffffff',
+                    background: item.id === 'inbox' ? 'var(--warning-bg)' : 'var(--bg-surface-elevated)',
+                    color: item.id === 'inbox' ? 'var(--warning)' : 'var(--text-primary)',
                     fontSize: '10px',
-                    fontWeight: 700,
+                    fontWeight: 600,
                     borderRadius: '10px',
                     padding: '1px 5px',
                     lineHeight: '12px'
@@ -98,7 +100,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
                 </span>
               )}
             </div>
-            <span style={{ fontSize: '11px', fontWeight: isActive ? 600 : 500 }}>
+            <span style={{ fontSize: '11px', fontWeight: isActive ? 600 : 400, color: isActive ? 'var(--accent)' : 'var(--text-tertiary)' }}>
               {item.label}
             </span>
           </button>

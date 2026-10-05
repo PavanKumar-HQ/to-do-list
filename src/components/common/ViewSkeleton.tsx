@@ -1,87 +1,35 @@
-// ViewSkeleton — Calm, subtle content placeholder for route loading (Section 9)
-// Avoids jarring blank screens and heavy spinners; respects prefers-reduced-motion.
-
 import React from 'react';
 
-export const ViewSkeleton: React.FC = () => {
+export const ViewSkeleton: React.FC<{ rows?: number }> = ({ rows = 5 }) => {
   return (
-    <div
-      className="content-max-width"
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '1.25rem',
-        padding: '0.5rem 0',
-        animation: 'fadeIn 0.2s ease forwards'
-      }}
-      aria-busy="true"
-      aria-label="Loading content"
-    >
-      {/* Title skeleton */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-        <div
-          style={{
-            width: '180px',
-            height: '28px',
-            borderRadius: '6px',
-            background: 'var(--bg-subtle)'
-          }}
-        />
-        <div
-          style={{
-            width: '80px',
-            height: '32px',
-            borderRadius: '6px',
-            background: 'var(--bg-subtle)'
-          }}
-        />
+    <div className="page-wrapper" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      {/* Title & subtitle skeleton */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '8px' }}>
+        <div className="skeleton-row" style={{ height: '22px', width: '140px' }} />
+        <div className="skeleton-row" style={{ height: '14px', width: '220px' }} />
       </div>
 
-      {/* Row skeletons */}
-      {[1, 2, 3, 4, 5].map((idx) => (
-        <div
-          key={idx}
-          style={{
-            height: '60px',
-            borderRadius: '8px',
-            background: 'var(--bg-surface)',
-            border: '1px solid var(--border-light)',
-            display: 'flex',
-            alignItems: 'center',
-            padding: '0 1rem',
-            gap: '0.75rem',
-            boxShadow: 'var(--shadow-sm)'
-          }}
-        >
+      {/* Row list skeleton */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        {Array.from({ length: rows }).map((_, i) => (
           <div
+            key={i}
+            className="card"
             style={{
-              width: '18px',
-              height: '18px',
-              borderRadius: '4px',
-              background: 'var(--bg-subtle)'
+              padding: '12px 14px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px'
             }}
-          />
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            <div
-              style={{
-                width: `${40 + (idx * 11) % 45}%`,
-                height: '14px',
-                borderRadius: '4px',
-                background: 'var(--bg-subtle)'
-              }}
-            />
-            <div
-              style={{
-                width: '30%',
-                height: '10px',
-                borderRadius: '3px',
-                background: 'var(--bg-subtle)',
-                opacity: 0.7
-              }}
-            />
+          >
+            <div className="skeleton-row" style={{ width: '18px', height: '18px', borderRadius: '4px', flexShrink: 0 }} />
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <div className="skeleton-row" style={{ height: '14px', width: i % 2 === 0 ? '60%' : '75%' }} />
+              <div className="skeleton-row" style={{ height: '11px', width: '35%' }} />
+            </div>
           </div>
-        </div>
-      ))}
+        ))}
+      </div>
     </div>
   );
 };

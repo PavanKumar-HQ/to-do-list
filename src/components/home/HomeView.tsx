@@ -223,13 +223,13 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigateTo, onOpenQuickAdd
   const getLifeLoadBadge = (level?: string) => {
     switch (level) {
       case 'overloaded':
-        return { label: 'Life Load: Overloaded', bg: '#fee2e2', text: '#991b1b', border: '#fca5a5' };
+        return { label: 'Life Load: Overloaded', bg: 'var(--danger-bg)', text: 'var(--danger)', border: 'var(--danger-border)' };
       case 'heavy':
-        return { label: 'Life Load: Heavy', bg: '#ffedd5', text: '#9a3412', border: '#fed7aa' };
+        return { label: 'Life Load: Heavy', bg: 'var(--warning-bg)', text: 'var(--warning)', border: 'var(--warning-border)' };
       case 'moderate':
-        return { label: 'Life Load: Moderate', bg: '#fef3c7', text: '#92400e', border: '#fde68a' };
+        return { label: 'Life Load: Moderate', bg: 'var(--warning-bg)', text: 'var(--warning)', border: 'var(--warning-border)' };
       default:
-        return { label: 'Life Load: Light', bg: '#ecfdf5', text: '#065f46', border: '#a7f3d0' };
+        return { label: 'Life Load: Light', bg: 'var(--success-bg)', text: 'var(--success)', border: 'var(--success-border)' };
     }
   };
 
@@ -238,40 +238,25 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigateTo, onOpenQuickAdd
   return (
     <div className="content-max-width" style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
       {/* 1. Header with Clean, Professional Typography */}
-      <div style={{ borderBottom: '1px solid var(--border-light)', paddingBottom: '1rem' }}>
+      <div style={{ borderBottom: '1px solid var(--border-subtle)', paddingBottom: '1rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
           <div>
-            <h1 style={{ fontSize: '1.75rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.02em' }}>
+            <h1 style={{ fontSize: '1.75rem', fontWeight: 600, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.02em' }}>
               {formatDisplayDate(todayStr)}
             </h1>
           </div>
 
-          {/* Backup & Inbox Status Pills */}
-          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
-            {inboxCount > 0 && (
-              <button
-                onClick={() => onNavigateTo('inbox')}
-                className="btn btn-sm btn-secondary"
-                style={{ borderRadius: '20px', gap: '0.375rem' }}
-              >
-                <Inbox size={13} color="var(--primary)" />
-                <span>Inbox: {inboxCount} to process</span>
-              </button>
-            )}
-
+          {/* Quick shortcuts */}
+          {inboxCount > 0 && (
             <button
-              onClick={() => onNavigateTo('settings')}
+              onClick={() => onNavigateTo('inbox')}
               className="btn btn-sm btn-secondary"
-              style={{
-                borderRadius: '20px',
-                gap: '0.375rem',
-                color: lastBackup ? 'var(--text-muted)' : 'var(--danger)',
-                borderColor: lastBackup ? 'var(--border-strong)' : 'var(--danger-border)'
-              }}
+              style={{ gap: '0.375rem' }}
             >
-              <span>{lastBackup ? `Backup: ${lastBackup}` : 'No backup yet'}</span>
+              <Inbox size={13} color="var(--accent)" />
+              <span>Inbox ({inboxCount})</span>
             </button>
-          </div>
+          )}
         </div>
       </div>
 
@@ -287,9 +272,11 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigateTo, onOpenQuickAdd
       {/* Arrived Messages from Past Self */}
       {readyFutureMessages.length > 0 && (
         <div
+          className="animate-row-enter"
           style={{
-            background: '#eff6ff',
-            border: '1px solid #bfdbfe',
+            background: 'var(--bg-surface-elevated)',
+            border: '1px solid var(--border-subtle)',
+            borderLeft: '3px solid var(--accent)',
             borderRadius: '8px',
             padding: '0.875rem 1rem',
             display: 'flex',
@@ -298,10 +285,10 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigateTo, onOpenQuickAdd
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
-            <Mail size={18} color="var(--primary)" />
+            <Mail size={18} color="var(--accent)" />
             <div>
-              <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                Message From Past Self Arrived
+              <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--accent)', letterSpacing: '0.04em' }}>
+                Message from past self arrived
               </div>
               <div style={{ fontSize: '0.9375rem', fontWeight: 600, color: 'var(--text-primary)' }}>
                 {readyFutureMessages[0].title}
@@ -313,7 +300,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigateTo, onOpenQuickAdd
             style={{ fontSize: '0.75rem', padding: '0.375rem 0.75rem' }}
             onClick={() => setFutureModalConfig({ isOpen: true, messageToRead: readyFutureMessages[0] })}
           >
-            Read Message
+            Read message
           </button>
         </div>
       )}
@@ -321,22 +308,22 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigateTo, onOpenQuickAdd
       {/* Weekly Review Prompt */}
       {(!lastReviewSession || (new Date().getTime() - new Date(lastReviewSession.completedAt).getTime() > 7 * 86400000)) && (
         <div
+          className="animate-row-enter"
           style={{
             background: 'var(--bg-surface)',
-            border: '1px solid var(--border)',
+            border: '1px solid var(--border-subtle)',
             borderRadius: '8px',
             padding: '0.875rem 1rem',
             display: 'flex',
             justifyContent: 'space-between',
-            alignItems: 'center',
-            boxShadow: 'var(--shadow-sm)'
+            alignItems: 'center'
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
-            <RotateCcw size={18} color="var(--primary)" />
+            <RotateCcw size={18} color="var(--accent)" />
             <div>
               <div style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-                Weekly Life Review Due
+                Weekly life review due
               </div>
               <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                 {lastReviewSession ? `Last completed ${formatDisplayDate(lastReviewSession.completedAt.slice(0, 10))}` : 'Review open loops, commitments, and stagnant backlog.'}
@@ -347,45 +334,45 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigateTo, onOpenQuickAdd
             className="btn btn-sm btn-primary"
             onClick={() => setIsReviewModalOpen(true)}
           >
-            Start Life Review
+            Start life review
           </button>
         </div>
       )}
 
       {/* Momentum (Meaningful Outcomes) - Section 1, 38 */}
       {settings?.momentumEnabled && (
-        <div className="card" style={{ padding: '1rem', background: 'var(--bg-surface)', border: '1px solid var(--border-light)' }}>
+        <div style={{ padding: '0.875rem 1rem', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: '8px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-              <TrendingUp size={16} color="#059669" />
-              <span style={{ fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)' }}>
+              <TrendingUp size={15} color="var(--success)" />
+              <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
                 Overview
               </span>
             </div>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem', marginTop: '0.5rem' }}>
-            <div style={{ background: 'var(--bg-subtle)', padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid var(--border-light)' }}>
+            <div style={{ background: 'var(--bg-surface-elevated)', padding: '0.5rem 0.75rem', borderRadius: '6px' }}>
               <div style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--text-primary)' }}>
                 {closedLoopsCount}
               </div>
-              <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
-                Loops Closed
+              <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>
+                Loops closed
               </div>
             </div>
-            <div style={{ background: 'var(--bg-subtle)', padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid var(--border-light)' }}>
+            <div style={{ background: 'var(--bg-surface-elevated)', padding: '0.5rem 0.75rem', borderRadius: '6px' }}>
               <div style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--text-primary)' }}>
                 {fulfilledCommitmentsCount}
               </div>
-              <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
-                Promises Kept
+              <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>
+                Promises kept
               </div>
             </div>
-            <div style={{ background: 'var(--bg-subtle)', padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid var(--border-light)' }}>
+            <div style={{ background: 'var(--bg-surface-elevated)', padding: '0.5rem 0.75rem', borderRadius: '6px' }}>
               <div style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--text-primary)' }}>
                 {completedTasksCount}
               </div>
-              <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
-                Tasks Completed
+              <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>
+                Tasks completed
               </div>
             </div>
           </div>
@@ -396,45 +383,46 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigateTo, onOpenQuickAdd
       {attentionData.lifeLoad && (
         <div
           style={{
-            background: loadBadge.bg,
+            background: 'var(--bg-surface)',
             border: `1px solid ${loadBadge.border}`,
+            borderLeft: `3px solid ${loadBadge.text}`,
             borderRadius: '8px',
-            padding: '1rem',
+            padding: '0.875rem 1rem',
             display: 'flex',
             flexDirection: 'column',
             gap: '0.5rem'
           }}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: loadBadge.text, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: loadBadge.text, letterSpacing: '0.02em' }}>
               {loadBadge.label}
             </span>
-            <span style={{ fontSize: '0.75rem', color: loadBadge.text }}>
-              Load Score: {attentionData.lifeLoad.score}
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+              Load score: {attentionData.lifeLoad.score}
             </span>
           </div>
-          <p style={{ margin: 0, fontSize: '0.875rem', color: loadBadge.text }}>
+          <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
             {attentionData.lifeLoad.summary}
           </p>
 
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.25rem' }}>
             {attentionData.lifeLoad.breakdown.overdueCount > 0 && (
-              <span style={{ fontSize: '0.75rem', background: 'rgba(255,255,255,0.7)', padding: '0.2rem 0.5rem', borderRadius: '4px', color: loadBadge.text }}>
+              <span style={{ fontSize: '0.75rem', background: 'var(--danger-bg)', padding: '0.2rem 0.5rem', borderRadius: '4px', color: 'var(--danger)' }}>
                 {attentionData.lifeLoad.breakdown.overdueCount} Overdue
               </span>
             )}
             {attentionData.lifeLoad.breakdown.waitingCount > 0 && (
-              <span style={{ fontSize: '0.75rem', background: 'rgba(255,255,255,0.7)', padding: '0.2rem 0.5rem', borderRadius: '4px', color: loadBadge.text }}>
+              <span style={{ fontSize: '0.75rem', background: 'var(--warning-bg)', padding: '0.2rem 0.5rem', borderRadius: '4px', color: 'var(--warning)' }}>
                 {attentionData.lifeLoad.breakdown.waitingCount} Waiting on others
               </span>
             )}
             {attentionData.lifeLoad.breakdown.staleCount > 0 && (
-              <span style={{ fontSize: '0.75rem', background: 'rgba(255,255,255,0.7)', padding: '0.2rem 0.5rem', borderRadius: '4px', color: loadBadge.text }}>
+              <span style={{ fontSize: '0.75rem', background: 'var(--bg-surface-elevated)', padding: '0.2rem 0.5rem', borderRadius: '4px', color: 'var(--text-muted)' }}>
                 {attentionData.lifeLoad.breakdown.staleCount} Going stale
               </span>
             )}
             {attentionData.lifeLoad.breakdown.upcomingPaymentMinor > 0 && (
-              <span style={{ fontSize: '0.75rem', background: 'rgba(255,255,255,0.7)', padding: '0.2rem 0.5rem', borderRadius: '4px', color: loadBadge.text }}>
+              <span style={{ fontSize: '0.75rem', background: 'var(--bg-surface-elevated)', padding: '0.2rem 0.5rem', borderRadius: '4px', color: 'var(--text-secondary)' }}>
                 {formatMoney(attentionData.lifeLoad.breakdown.upcomingPaymentMinor, '₹')} Upcoming payments
               </span>
             )}
@@ -442,41 +430,71 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigateTo, onOpenQuickAdd
         </div>
       )}
 
-      {/* 3. The "Needs Your Attention" Engine (Section 1, 52) */}
+      {/* 3. The "Worth your attention" Engine (Section 1, 52) */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <h2 style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>
-              Needs Your Attention
+              Worth your attention
             </h2>
           </div>
         </div>
 
         {loadingAttention ? (
-          <div className="card" style={{ padding: '2.5rem', textAlign: 'center' }}>
-            <LoadingSpinner message="Checking what needs your attention..." />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+            <div
+              style={{
+                background: 'var(--bg-surface)',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: '8px',
+                padding: '1rem',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.625rem'
+              }}
+            >
+              <div className="skeleton-shimmer" style={{ width: '38%', height: '14px', borderRadius: '4px' }} />
+              <div className="skeleton-shimmer" style={{ width: '68%', height: '12px', borderRadius: '4px' }} />
+            </div>
+            <div
+              style={{
+                background: 'var(--bg-surface)',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: '8px',
+                padding: '1rem',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.625rem'
+              }}
+            >
+              <div className="skeleton-shimmer" style={{ width: '28%', height: '14px', borderRadius: '4px' }} />
+              <div className="skeleton-shimmer" style={{ width: '55%', height: '12px', borderRadius: '4px' }} />
+            </div>
           </div>
         ) : attentionData.attentionItems.length === 0 ? (
-          <div className="card" style={{ padding: '2rem', textAlign: 'center', background: '#f8fafc', border: '1px dashed var(--border-strong)' }}>
-            <div style={{ fontSize: '0.9375rem', fontWeight: 600, color: 'var(--text-primary)' }}>All clear</div>
+          <div style={{ padding: '1.5rem', textAlign: 'center', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: '8px' }}>
+            <div style={{ fontSize: '0.9375rem', fontWeight: 500, color: 'var(--text-primary)' }}>All clear</div>
             <p style={{ margin: '0.25rem 0 0', fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
               No overdue commitments, waiting items, or critical deadlines right now.
             </p>
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
             {attentionData.attentionItems.map((item) => {
               const isCrit = item.severity === 'critical';
               const isHigh = item.severity === 'high';
-              const borderCol = isCrit ? '#ef4444' : isHigh ? '#f59e0b' : 'var(--border)';
+              const borderCol = isCrit ? 'var(--danger)' : isHigh ? 'var(--warning)' : 'var(--border-subtle)';
 
               return (
                 <div
                   key={item.id}
-                  className="card"
+                  className="animate-row-enter"
                   style={{
+                    background: 'var(--bg-surface)',
+                    border: '1px solid var(--border-subtle)',
+                    borderLeft: `3px solid ${borderCol}`,
+                    borderRadius: '8px',
                     padding: '0.875rem 1rem',
-                    borderLeft: `4px solid ${borderCol}`,
                     display: 'flex',
                     flexDirection: 'column',
                     gap: '0.5rem'
@@ -489,18 +507,17 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigateTo, onOpenQuickAdd
                           style={{
                             fontSize: '0.6875rem',
                             fontWeight: 600,
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.05em',
+                            letterSpacing: '0.04em',
                             padding: '0.125rem 0.375rem',
                             borderRadius: '3px',
-                            background: isCrit ? '#fee2e2' : isHigh ? '#fef3c7' : '#f1f5f9',
-                            color: isCrit ? '#991b1b' : isHigh ? '#92400e' : 'var(--text-muted)'
+                            background: isCrit ? 'var(--danger-bg)' : isHigh ? 'var(--warning-bg)' : 'var(--bg-surface-elevated)',
+                            color: isCrit ? 'var(--danger)' : isHigh ? 'var(--warning)' : 'var(--text-muted)'
                           }}
                         >
                           {item.type.replace('_', ' ')}
                         </span>
                         {item.consequence && item.consequence !== 'none' && (
-                          <span style={{ fontSize: '0.6875rem', color: '#b45309', fontWeight: 500 }}>
+                          <span style={{ fontSize: '0.6875rem', color: 'var(--warning)', fontWeight: 500 }}>
                             Consequence: {item.consequence}
                           </span>
                         )}
@@ -515,7 +532,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigateTo, onOpenQuickAdd
                   </div>
 
                   {/* Action buttons */}
-                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.25rem', borderTop: '1px solid var(--border-light)', paddingTop: '0.5rem' }}>
+                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.25rem', borderTop: '1px solid var(--border-subtle)', paddingTop: '0.5rem' }}>
                     {item.suggestedActions.includes('complete') && (
                       <button
                         className="btn btn-sm btn-primary"
@@ -560,14 +577,12 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigateTo, onOpenQuickAdd
       </div>
 
       {/* 4. The "Minimum Day" Focus Engine (Section 10) */}
-      <div className="card" style={{ padding: '1.25rem', borderLeft: '4px solid #d97706' }}>
+      <div style={{ padding: '1rem', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: '8px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <div style={{ width: 26, height: 26, borderRadius: '6px', background: 'rgba(217, 119, 6, 0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Target size={15} color="#d97706" />
-            </div>
-            <span style={{ fontSize: '0.8125rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-primary)' }}>
-              The Minimum Day
+            <Target size={16} color="var(--accent)" />
+            <span style={{ fontSize: '0.9375rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+              Focus for today
             </span>
           </div>
           <button
@@ -576,7 +591,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigateTo, onOpenQuickAdd
             style={{ gap: '0.375rem' }}
           >
             <Filter size={13} />
-            <span>{minimumDayOnly ? 'Show All Tasks' : 'Filter Minimum Day'}</span>
+            <span>{minimumDayOnly ? 'Show all tasks' : 'Filter minimum day'}</span>
           </button>
         </div>
 
@@ -594,7 +609,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigateTo, onOpenQuickAdd
                   alignItems: 'flex-start',
                   gap: '0.625rem',
                   padding: '0.5rem 0',
-                  borderBottom: idx < attentionData.minimumDayTasks.length - 1 ? '1px solid var(--border-light)' : 'none'
+                  borderBottom: idx < attentionData.minimumDayTasks.length - 1 ? '1px solid var(--border-subtle)' : 'none'
                 }}
               >
                 <button
@@ -624,7 +639,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigateTo, onOpenQuickAdd
                     </div>
                   )}
                   {task.consequence && task.consequence !== 'none' && (
-                    <div style={{ fontSize: '0.6875rem', color: '#b45309', fontWeight: 500, marginTop: '0.125rem' }}>
+                    <div style={{ fontSize: '0.6875rem', color: 'var(--warning)', fontWeight: 500, marginTop: '0.125rem' }}>
                       Consequence if missed: {task.consequence}
                     </div>
                   )}
@@ -645,11 +660,11 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigateTo, onOpenQuickAdd
 
       {/* 5. Schedule & Today's Events */}
       {todayEvents.length > 0 && (
-        <div className="card" style={{ padding: '1rem' }}>
+        <div style={{ padding: '1rem', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: '8px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
-            <Calendar size={16} color="var(--primary)" />
+            <Calendar size={16} color="var(--accent)" />
             <h3 style={{ fontSize: '0.9375rem', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>
-              Today's Schedule & Events ({todayEvents.length})
+              Today's schedule ({todayEvents.length})
             </h3>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -661,9 +676,8 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigateTo, onOpenQuickAdd
                   justifyContent: 'space-between',
                   alignItems: 'center',
                   padding: '0.625rem 0.75rem',
-                  background: 'var(--bg-subtle)',
-                  borderRadius: '6px',
-                  border: '1px solid var(--border-light)'
+                  background: 'var(--bg-surface-elevated)',
+                  borderRadius: '6px'
                 }}
               >
                 <div>
@@ -680,7 +694,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigateTo, onOpenQuickAdd
                   style={{ gap: '0.25rem' }}
                 >
                   <Compass size={12} />
-                  <span>Pre-Event Brief</span>
+                  <span>Pre-event brief</span>
                 </button>
               </div>
             ))}
@@ -689,11 +703,11 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigateTo, onOpenQuickAdd
       )}
 
       {/* 6. Money Connected to Life (Section 19, 20) */}
-      <div className="card" style={{ padding: '1.25rem' }}>
+      <div style={{ padding: '1rem', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: '8px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
           <div>
-            <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>
-              Financial Horizon
+            <h3 style={{ fontSize: '0.9375rem', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>
+              Money
             </h3>
           </div>
           <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
@@ -703,33 +717,33 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigateTo, onOpenQuickAdd
               style={{ gap: '0.375rem' }}
             >
               <Plus size={13} />
-              <span>Log Expense</span>
+              <span>Log expense</span>
             </button>
             <button
               onClick={() => onNavigateTo('money')}
               className="btn btn-sm btn-primary"
               style={{ gap: '0.375rem' }}
             >
-              <span>Manage Money</span>
+              <span>Manage</span>
               <ArrowRight size={13} />
             </button>
           </div>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginTop: '0.5rem' }}>
-          <div style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border-light)', padding: '0.875rem', borderRadius: '8px' }}>
-            <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.04em' }}>
-              Spent Today
+          <div style={{ background: 'var(--bg-surface-elevated)', padding: '0.875rem', borderRadius: '6px' }}>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 500 }}>
+              Spent today
             </span>
-            <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)', marginTop: '0.25rem' }}>
+            <div style={{ fontSize: '1.25rem', fontWeight: 600, color: 'var(--text-primary)', marginTop: '0.25rem' }}>
               {formatMoney(todayTotalSpentMinor, '₹')}
             </div>
           </div>
-          <div style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border-light)', padding: '0.875rem', borderRadius: '8px' }}>
-            <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.04em' }}>
-              This Month
+          <div style={{ background: 'var(--bg-surface-elevated)', padding: '0.875rem', borderRadius: '6px' }}>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 500 }}>
+              This month
             </span>
-            <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)', marginTop: '0.25rem' }}>
+            <div style={{ fontSize: '1.25rem', fontWeight: 600, color: 'var(--text-primary)', marginTop: '0.25rem' }}>
               {formatMoney(monthlyTotalSpentMinor, '₹')}
             </div>
           </div>

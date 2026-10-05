@@ -47,20 +47,20 @@ export const Header: React.FC<HeaderProps> = ({
 
   const screenTitle = () => {
     switch (currentScreen) {
-      case 'home': return 'Today & Focus';
+      case 'home': return 'Today';
       case 'tasks': return 'Tasks';
-      case 'loops': return 'Follow-ups & Commitments';
+      case 'loops': return 'Follow-ups';
       case 'reminders': return 'Reminders';
-      case 'notes': return 'Notes & Ideas';
-      case 'money': return 'Money & Budgets';
+      case 'notes': return 'Notes';
+      case 'money': return 'Money';
       case 'calendar': return 'Calendar';
-      case 'journal': return 'Daily Journal';
-      case 'people': return 'People & Contacts';
+      case 'journal': return 'Journal';
+      case 'people': return 'People';
       case 'lists': return 'Lists';
-      case 'goals': return 'Goals & Routines';
-      case 'settings': return 'Settings & Backups';
+      case 'goals': return 'Goals';
+      case 'settings': return 'Settings';
       case 'trash': return 'Trash';
-      default: return 'Personal Life';
+      default: return 'Kanso';
     }
   };
 
@@ -68,8 +68,8 @@ export const Header: React.FC<HeaderProps> = ({
     <header
       style={{
         height: 'var(--header-height)',
-        background: 'var(--bg-surface)',
-        borderBottom: '1px solid var(--border-light)',
+        background: 'var(--bg-app)',
+        borderBottom: '1px solid var(--border-subtle)',
         position: 'sticky',
         top: 0,
         zIndex: 500,
@@ -81,7 +81,7 @@ export const Header: React.FC<HeaderProps> = ({
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <h1 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text-primary)' }}>
+        <h1 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text-primary)', letterSpacing: '-0.02em', margin: 0 }}>
           {screenTitle()}
         </h1>
 
@@ -95,59 +95,37 @@ export const Header: React.FC<HeaderProps> = ({
             Offline
           </span>
         )}
-
-        {isBackupStale && (
-          <button
-            onClick={onOpenSettings}
-            className="badge badge-warning"
-            style={{ fontSize: '11px', padding: '2px 6px', border: 'none', cursor: 'pointer' }}
-            title="You have unbacked-up changes. Tap to export a backup file."
-          >
-            <ShieldAlert size={12} />
-            Backup recommended
-          </button>
-        )}
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
         <button
           onClick={onOpenVoice}
           className="btn-ghost"
-          style={{ width: '40px', height: '40px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          style={{ width: '38px', height: '38px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           aria-label="Record voice note"
           title="Voice Memo"
         >
-          <Mic size={19} />
+          <Mic size={18} />
         </button>
 
         <button
           onClick={onOpenSearch}
           className="btn-ghost"
-          style={{ width: '40px', height: '40px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          style={{ width: '38px', height: '38px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           aria-label="Global search"
-          title="Search all data"
+          title="Search"
         >
-          <Search size={19} />
-        </button>
-
-        <button
-          onClick={onToggleTheme}
-          className="btn-ghost"
-          style={{ width: '40px', height: '40px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-          aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
-          title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
-        >
-          {theme === 'dark' ? <Sun size={19} color="#f59e0b" /> : <Moon size={19} color="#64748b" />}
+          <Search size={18} />
         </button>
 
         <button
           onClick={onOpenSettings}
           className="btn-ghost"
-          style={{ width: '40px', height: '40px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-          aria-label="Settings and backups"
-          title="Settings & Backups"
+          style={{ width: '38px', height: '38px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          aria-label="Settings"
+          title="Settings"
         >
-          <Settings size={19} />
+          <Settings size={18} />
         </button>
       </div>
     </header>

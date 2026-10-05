@@ -258,14 +258,14 @@ export function AppContent() {
           <div className="bottom-sheet" style={{ maxWidth: '480px' }}>
             <div className="sheet-handle" />
             <div style={{ textAlign: 'center', marginBottom: '16px' }}>
-              <div style={{ width: '44px', height: '44px', borderRadius: '10px', background: '#1e293b', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px auto' }}>
-                <Shield size={22} />
+              <div style={{ width: '40px', height: '40px', borderRadius: '8px', background: 'var(--text-primary)', color: 'var(--bg-app)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px auto', fontWeight: 700, fontSize: '18px', letterSpacing: '-0.02em' }}>
+                K
               </div>
-              <h2 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)' }}>
-                Personal Life OS
+              <h2 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>
+                Kanso
               </h2>
               <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                Your private life operating system. All records stay locally on this device in IndexedDB. No accounts, no cloud sync.
+                A calm, private personal workspace. All data is kept locally on this device in IndexedDB.
               </p>
             </div>
 

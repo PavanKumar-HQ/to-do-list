@@ -330,6 +330,15 @@ export interface FollowupItem {
   deletedAt?: string;
 }
 
+export interface EventReminderSchedule {
+  oneDayBefore: boolean;
+  recurringHours?: number; // e.g. 2 for every 2 hours until event/dismissed
+  customTime?: string;
+  enabled: boolean;
+  lastNotifiedAt?: string;
+  isDismissed?: boolean;
+}
+
 export interface EventItem {
   id: string;
   title: string;
@@ -339,7 +348,10 @@ export interface EventItem {
   location?: string;
   notes?: string;
   personId?: string;
+  category?: 'meeting' | 'personal' | 'deadline' | 'travel' | 'health' | 'work' | string;
+  color?: string; // e.g. #3b82f6, #10b981, #f59e0b, #8b5cf6, #f43f5e
   reminderAt?: string;
+  reminderSchedule?: EventReminderSchedule;
   recurrence: RecurrenceType;
   preparationTaskIds?: string[]; // Tasks to do before you go
   followupNotes?: string;

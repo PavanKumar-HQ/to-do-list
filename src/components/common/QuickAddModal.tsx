@@ -18,6 +18,7 @@ import { parseNaturalQuickInput } from '../../utils/naturalParser';
 import { getTodayDateString, getCurrentTimeString } from '../../utils/dates';
 import { toMinorUnits } from '../../utils/currency';
 import { useToast } from './ToastContext';
+import { EventReminderService } from '../../services/eventReminderService';
 import type { EntityType, Priority, PaymentMethod } from '../../types';
 
 interface QuickAddModalProps {
@@ -47,6 +48,9 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
   const [recurrence, setRecurrence] = useState<'none' | 'daily' | 'weekly' | 'monthly'>('none');
   const [personName, setPersonName] = useState('');
   const [eventLocation, setEventLocation] = useState('');
+  const [eventCategory, setEventCategory] = useState<'meeting' | 'personal' | 'deadline' | 'health' | 'travel'>('meeting');
+  const [eventRemindOneDayBefore, setEventRemindOneDayBefore] = useState(true);
+  const [eventRemindEvery2Hours, setEventRemindEvery2Hours] = useState(true);
 
   // Duplicate warning state
   const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
@@ -247,6 +251,13 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
         }
 
         case 'event': {
+          const colorMap: Record<string, string> = {
+            meeting: '#3b82f6',
+            personal: '#10b981',
+            deadline: '#f59e0b',
+            health: '#f43f5e',
+            travel: '#8b5cf6'
+          };
           const newEvent = {
             id: generateId(),
             title: cleanTitle,
@@ -254,13 +265,21 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
             startTime: dueTime || '10:00',
             location: eventLocation.trim() || undefined,
             notes: notes.trim() || undefined,
+            category: eventCategory,
+            color: colorMap[eventCategory] || '#3b82f6',
             recurrence: recurrence || 'none',
+            reminderSchedule: {
+              oneDayBefore: eventRemindOneDayBefore,
+              recurringHours: eventRemindEvery2Hours ? 2 : undefined,
+              enabled: eventRemindOneDayBefore || eventRemindEvery2Hours
+            },
             createdAt: nowIso,
             updatedAt: nowIso
           };
           await db.events.add(newEvent);
+          await EventReminderService.syncEventReminders(newEvent);
           await logAudit('create', 'event', newEvent.id, `Created event: ${cleanTitle}`);
-          showToast(`Event scheduled for ${dueDate}`, { type: 'success' });
+          showToast(`Event scheduled with alerts`, { type: 'success' });
           break;
         }
 
@@ -563,17 +582,83 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
           )}
 
           {activeType === 'event' && (
-            <div>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
-                Location / Link
-              </label>
-              <input
-                type="text"
-                placeholder="e.g. Conference Hall B or Google Meet"
-                value={eventLocation}
-                onChange={(e) => setEventLocation(e.target.value)}
-              />
-            </div>
+            <>
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                  Location / Link
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Conference Hall B or Google Meet"
+                  value={eventLocation}
+                  onChange={(e) => setEventLocation(e.target.value)}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                  Event Type & Color
+                </label>
+                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                  {[
+                    { id: 'meeting', label: 'Meeting', color: '#3b82f6' },
+                    { id: 'personal', label: 'Personal', color: '#10b981' },
+                    { id: 'deadline', label: 'Deadline', color: '#f59e0b' },
+                    { id: 'health', label: 'Health', color: '#f43f5e' },
+                    { id: 'travel', label: 'Travel', color: '#8b5cf6' }
+                  ].map((cat) => {
+                    const isSelected = eventCategory === cat.id;
+                    return (
+                      <button
+                        key={cat.id}
+                        type="button"
+                        onClick={() => setEventCategory(cat.id as any)}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '5px',
+                          padding: '4px 10px',
+                          borderRadius: '16px',
+                          fontSize: '12px',
+                          fontWeight: isSelected ? 600 : 400,
+                          background: isSelected ? `${cat.color}22` : 'var(--bg-surface-elevated)',
+                          color: isSelected ? cat.color : 'var(--text-secondary)',
+                          border: isSelected ? `1.5px solid ${cat.color}` : '1px solid var(--border-subtle)',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: cat.color }} />
+                        <span>{cat.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div style={{ padding: '8px 10px', background: 'var(--bg-surface-elevated)', borderRadius: '6px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                  Smart Reminders
+                </span>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: 'var(--text-primary)', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={eventRemindOneDayBefore}
+                    onChange={(e) => setEventRemindOneDayBefore(e.target.checked)}
+                    style={{ width: '15px', height: '15px' }}
+                  />
+                  <span>1 day before at 09:00 AM</span>
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: 'var(--text-primary)', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={eventRemindEvery2Hours}
+                    onChange={(e) => setEventRemindEvery2Hours(e.target.checked)}
+                    style={{ width: '15px', height: '15px' }}
+                  />
+                  <span>Every 2 hours leading up to event</span>
+                </label>
+              </div>
+            </>
           )}
 
           {/* Date & Priority for Tasks, Reminders, Events */}
