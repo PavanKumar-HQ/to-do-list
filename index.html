@@ -7,9 +7,9 @@
     <meta name="description" content="A calm, private personal workspace for tasks, memory, reminders, and finances. 100% offline, local-first." />
     
     <!-- PWA & Mobile Icons -->
-    <link rel="manifest" href="/manifest.json" />
-    <link rel="icon" type="image/svg+xml" href="/icon-512.svg" />
-    <link rel="apple-touch-icon" href="/icon-512.svg" />
+    <link rel="manifest" href="./manifest.json" />
+    <link rel="icon" type="image/svg+xml" href="./icon-512.svg" />
+    <link rel="apple-touch-icon" href="./icon-512.svg" />
     <meta name="theme-color" content="#000000" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -49,7 +49,7 @@
           }
         } else {
           window.addEventListener('load', function() {
-            navigator.serviceWorker.register('/sw.js').catch(function(err) {
+            navigator.serviceWorker.register('./sw.js').catch(function(err) {
               console.log('SW registration note:', err);
             });
           });

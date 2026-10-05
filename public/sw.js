@@ -1,11 +1,5 @@
 // Service Worker for Personal Life PWA - Offline First
-const CACHE_NAME = 'personal-life-cache-v2';
-const ASSETS_TO_CACHE = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/icon-512.svg'
-];
+const CACHE_NAME = 'personal-life-cache-v3';
 
 self.addEventListener('install', (event) => {
   // In development, skip caching
@@ -13,9 +7,16 @@ self.addEventListener('install', (event) => {
     self.skipWaiting();
     return;
   }
+  const scope = self.registration.scope;
+  const assetsToCache = [
+    scope,
+    new URL('index.html', scope).toString(),
+    new URL('manifest.json', scope).toString(),
+    new URL('icon-512.svg', scope).toString()
+  ];
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS_TO_CACHE);
+      return cache.addAll(assetsToCache);
     }).then(() => self.skipWaiting())
   );
 });
@@ -89,7 +90,8 @@ self.addEventListener('fetch', (event) => {
         }).catch(() => {
           // If navigation request fails, return cached index.html
           if (event.request.mode === 'navigate') {
-            return caches.match('/index.html');
+            const indexUrl = new URL('index.html', self.registration.scope).toString();
+            return caches.match(indexUrl).then(res => res || caches.match(self.registration.scope));
           }
         });
       })
