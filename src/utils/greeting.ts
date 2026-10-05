@@ -10,7 +10,7 @@ export function getTimeAwareGreeting(name?: string, date: Date = new Date()): st
   const hours = date.getHours();
   let prefix = 'Good evening';
 
-  if (hours >= 5 && hours < 12) {
+  if (hours >= 0 && hours < 12) {
     prefix = 'Good morning';
   } else if (hours >= 12 && hours < 17) {
     prefix = 'Good afternoon';

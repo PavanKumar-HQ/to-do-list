@@ -100,6 +100,43 @@ export class ReminderRepository {
   }
 
   /**
+   * Complete reminder - handles recurrence advancement idempotently (Section 19)
+   */
+  public static async complete(id: string): Promise<{ reminder: ReminderItem; nextOccurrence?: string }> {
+    const existing = await db.reminders.get(id);
+    if (!existing) throw new Error(`Reminder ${id} not found.`);
+
+    const now = new Date().toISOString();
+    if (existing.recurrence && existing.recurrence !== 'none') {
+      const { calculateNextOccurrence } = await import('../utils/dates');
+      const nextDate = calculateNextOccurrence(existing.date, existing.recurrence);
+      await db.reminders.update(id, {
+        date: nextDate,
+        status: 'active',
+        snoozedUntil: undefined,
+        snoozeCount: 0,
+        updatedAt: now
+      });
+      await logAudit('complete', 'reminder', id, `Completed occurrence of recurring reminder: ${existing.title}. Advanced to ${nextDate}`);
+      multiTabSync.broadcastMutation('reminder', id, 'update', now);
+      const updated = (await db.reminders.get(id))!;
+      rescheduleReminder(updated);
+      return { reminder: updated, nextOccurrence: nextDate };
+    } else {
+      await db.reminders.update(id, {
+        status: 'completed',
+        snoozedUntil: undefined,
+        updatedAt: now
+      });
+      await logAudit('complete', 'reminder', id, `Completed reminder: ${existing.title}`);
+      multiTabSync.broadcastMutation('reminder', id, 'update', now);
+      cancelReminder(id);
+      const updated = (await db.reminders.get(id))!;
+      return { reminder: updated };
+    }
+  }
+
+  /**
    * Dismiss or complete reminder (Section 19: cancels notification)
    */
   public static async dismiss(id: string): Promise<void> {

@@ -12,12 +12,27 @@ import {
   CommitmentRepository,
   DecisionRepository,
   OpenLoopRepository,
-  SettingsRepository
+  SettingsRepository,
+  RelationshipRepository
 } from '../repositories';
 import { eventBus } from '../services/eventBus';
 import { triggerHaptic } from '../utils/haptics';
 import { scheduleReminder, cancelReminder } from '../services/notificationService';
-import type { TaskItem, ReminderItem, ExpenseItem, NoteItem, PersonItem, OpenLoopItem, CommitmentItem, EventItem } from '../types';
+import type {
+  TaskItem,
+  ReminderItem,
+  ExpenseItem,
+  NoteItem,
+  PersonItem,
+  OpenLoopItem,
+  CommitmentItem,
+  EventItem,
+  GoalItem,
+  CustomListItem,
+  IncomeItem,
+  BudgetItem,
+  EntityType
+} from '../types';
 
 export const api = {
   tasks: {
@@ -91,10 +106,10 @@ export const api = {
       return reminder;
     },
     complete: async (id: string) => {
-      await db.reminders.update(id, { status: 'completed', updatedAt: new Date().toISOString() });
-      await cancelReminder(id);
+      const res = await ReminderRepository.complete(id);
       eventBus.emit('REMINDER_MUTATED', { type: 'REMINDER_MUTATED', entityId: id, action: 'complete' });
       triggerHaptic('success');
+      return res;
     },
     snooze: async (id: string, minutes = 10) => {
       const targetTime = new Date(Date.now() + minutes * 60000);
@@ -244,6 +259,224 @@ export const api = {
       await logAudit('delete', 'event', id, `Moved event ${id} to trash`);
       eventBus.emit('EVENT_MUTATED', { type: 'EVENT_MUTATED', entityId: id, action: 'delete' });
       triggerHaptic('heavy');
+    }
+  },
+
+  people: {
+    create: async (input: Partial<PersonItem>) => {
+      const person = await PersonRepository.create(input);
+      eventBus.emit('PERSON_MUTATED', { type: 'PERSON_MUTATED', entityId: person.id, action: 'create' });
+      triggerHaptic('light');
+      return person;
+    },
+    update: async (id: string, updates: Partial<PersonItem>) => {
+      const person = await PersonRepository.update(id, updates);
+      eventBus.emit('PERSON_MUTATED', { type: 'PERSON_MUTATED', entityId: id, action: 'update' });
+      triggerHaptic('light');
+      return person;
+    },
+    delete: async (id: string) => {
+      await PersonRepository.softDelete(id);
+      eventBus.emit('PERSON_MUTATED', { type: 'PERSON_MUTATED', entityId: id, action: 'delete' });
+      triggerHaptic('heavy');
+    }
+  },
+
+  goals: {
+    create: async (input: Partial<GoalItem>) => {
+      const now = new Date().toISOString();
+      const id = input.id || generateId();
+      const goal: GoalItem = {
+        id,
+        title: (input.title || 'Goal').trim(),
+        description: input.description?.trim(),
+        why: input.why?.trim(),
+        nextAction: input.nextAction?.trim(),
+        targetAmount: input.targetAmount || 100,
+        currentAmount: input.currentAmount || 0,
+        unit: input.unit || '%',
+        deadline: input.deadline,
+        status: input.status || 'active',
+        milestones: input.milestones || [],
+        createdAt: input.createdAt || now,
+        updatedAt: now
+      };
+      await db.goals.add(goal);
+      await logAudit('create', 'goal', id, `Created goal: ${goal.title}`);
+      eventBus.emit('GOAL_MUTATED', { type: 'GOAL_MUTATED', entityId: id, action: 'create' });
+      triggerHaptic('light');
+      return goal;
+    },
+    update: async (id: string, updates: Partial<GoalItem>) => {
+      const now = new Date().toISOString();
+      await db.goals.update(id, { ...updates, updatedAt: now });
+      await logAudit('update', 'goal', id, `Updated goal: ${id}`);
+      eventBus.emit('GOAL_MUTATED', { type: 'GOAL_MUTATED', entityId: id, action: 'update' });
+      triggerHaptic('light');
+      return (await db.goals.get(id))!;
+    },
+    recordProgress: async (id: string, newAmount: number) => {
+      const existing = await db.goals.get(id);
+      if (!existing) throw new Error(`Goal ${id} not found.`);
+      const now = new Date().toISOString();
+      const status = newAmount >= existing.targetAmount ? 'completed' : existing.status;
+      await db.goals.update(id, { currentAmount: newAmount, status, lastActivityAt: now, updatedAt: now });
+      await logAudit('update', 'goal', id, `Updated progress for ${existing.title}: ${newAmount}/${existing.targetAmount}`);
+      eventBus.emit('GOAL_MUTATED', { type: 'GOAL_MUTATED', entityId: id, action: 'update' });
+      triggerHaptic(status === 'completed' ? 'success' : 'light');
+    },
+    delete: async (id: string) => {
+      const now = new Date().toISOString();
+      await db.goals.update(id, { deletedAt: now, updatedAt: now });
+      await logAudit('delete', 'goal', id, `Moved goal ${id} to trash`);
+      eventBus.emit('GOAL_MUTATED', { type: 'GOAL_MUTATED', entityId: id, action: 'delete' });
+      triggerHaptic('heavy');
+    }
+  },
+
+  lists: {
+    create: async (input: { title: string; category?: string }) => {
+      const now = new Date().toISOString();
+      const id = generateId();
+      const list: CustomListItem = {
+        id,
+        title: input.title.trim(),
+        category: input.category || 'General',
+        isPinned: false,
+        items: [],
+        createdAt: now,
+        updatedAt: now
+      };
+      await db.lists.add(list);
+      await logAudit('create', 'list', id, `Created list: ${list.title}`);
+      eventBus.emit('LIST_MUTATED', { type: 'LIST_MUTATED', entityId: id, action: 'create' });
+      triggerHaptic('light');
+      return list;
+    },
+    addItem: async (listId: string, text: string) => {
+      const list = await db.lists.get(listId);
+      if (!list) throw new Error(`List ${listId} not found.`);
+      const now = new Date().toISOString();
+      const currentItems = list.items || [];
+      const newItem = {
+        id: generateId(),
+        text: text.trim(),
+        completed: false,
+        order: currentItems.length
+      };
+      await db.lists.update(listId, {
+        items: [...currentItems, newItem],
+        updatedAt: now
+      });
+      eventBus.emit('LIST_MUTATED', { type: 'LIST_MUTATED', entityId: listId, action: 'update' });
+      triggerHaptic('light');
+      return newItem;
+    },
+    toggleItem: async (listId: string, itemId: string) => {
+      const list = await db.lists.get(listId);
+      if (!list) return;
+      const now = new Date().toISOString();
+      const currentItems = list.items || [];
+      const updated = currentItems.map((i) => (i.id === itemId ? { ...i, completed: !i.completed } : i));
+      await db.lists.update(listId, { items: updated, updatedAt: now });
+      eventBus.emit('LIST_MUTATED', { type: 'LIST_MUTATED', entityId: listId, action: 'update' });
+      triggerHaptic('light');
+    },
+    deleteItem: async (listId: string, itemId: string) => {
+      const list = await db.lists.get(listId);
+      if (!list) return;
+      const now = new Date().toISOString();
+      const currentItems = list.items || [];
+      const updated = currentItems.filter((i) => i.id !== itemId);
+      await db.lists.update(listId, { items: updated, updatedAt: now });
+      eventBus.emit('LIST_MUTATED', { type: 'LIST_MUTATED', entityId: listId, action: 'update' });
+      triggerHaptic('light');
+    },
+    delete: async (listId: string) => {
+      const now = new Date().toISOString();
+      await db.lists.update(listId, { deletedAt: now, updatedAt: now });
+      await logAudit('delete', 'list', listId, `Moved list ${listId} to trash`);
+      eventBus.emit('LIST_MUTATED', { type: 'LIST_MUTATED', entityId: listId, action: 'delete' });
+      triggerHaptic('heavy');
+    }
+  },
+
+  income: {
+    create: async (input: Partial<IncomeItem>) => {
+      const now = new Date().toISOString();
+      const id = input.id || generateId();
+      const item: IncomeItem = {
+        id,
+        amountMinor: input.amountMinor || 0,
+        currency: input.currency || 'INR',
+        source: input.source || 'General',
+        date: input.date || now.split('T')[0],
+        category: input.category || 'Salary',
+        isRecurring: !!input.isRecurring,
+        notes: input.notes?.trim(),
+        createdAt: input.createdAt || now,
+        updatedAt: now
+      };
+      await db.income.add(item);
+      await logAudit('create', 'income', id, `Recorded income: ${item.source} (${item.amountMinor})`);
+      eventBus.emit('INCOME_MUTATED', { type: 'INCOME_MUTATED', entityId: id, action: 'create' });
+      triggerHaptic('light');
+      return item;
+    },
+    delete: async (id: string) => {
+      const now = new Date().toISOString();
+      await db.income.update(id, { deletedAt: now, updatedAt: now });
+      await logAudit('delete', 'income', id, `Moved income ${id} to trash`);
+      eventBus.emit('INCOME_MUTATED', { type: 'INCOME_MUTATED', entityId: id, action: 'delete' });
+      triggerHaptic('heavy');
+    }
+  },
+
+  budgets: {
+    setBudget: async (month: string, category: string, budgetAmountMinor: number) => {
+      const existing = await db.budgets.filter((b) => b.month === month && b.category === category).first();
+      const now = new Date().toISOString();
+      if (existing) {
+        await db.budgets.update(existing.id, { budgetAmountMinor, updatedAt: now });
+        await logAudit('update', 'budget', existing.id, `Updated budget for ${category} (${month})`);
+      } else {
+        const id = generateId();
+        await db.budgets.add({ id, month, category, budgetAmountMinor, createdAt: now, updatedAt: now });
+        await logAudit('create', 'budget', id, `Set budget for ${category} (${month})`);
+      }
+      eventBus.emit('BUDGET_MUTATED', { type: 'BUDGET_MUTATED', entityId: month, action: 'update' });
+      triggerHaptic('light');
+    }
+  },
+
+  relationships: {
+    link: async (sourceType: EntityType, sourceId: string, targetType: EntityType, targetId: string, label?: string) => {
+      const rel = await RelationshipRepository.createRelationship(sourceType, sourceId, targetType, targetId, label);
+      eventBus.emit('RELATIONSHIP_MUTATED', { type: 'RELATIONSHIP_MUTATED', entityId: rel.id, action: 'create' });
+      return rel;
+    },
+    unlink: async (id: string) => {
+      await RelationshipRepository.removeRelationship(id);
+      eventBus.emit('RELATIONSHIP_MUTATED', { type: 'RELATIONSHIP_MUTATED', entityId: id, action: 'delete' });
+    }
+  },
+
+  trash: {
+    restore: async (type: EntityType, id: string) => {
+      const now = new Date().toISOString();
+      switch (type) {
+        case 'task': await db.tasks.update(id, { deletedAt: undefined, updatedAt: now }); break;
+        case 'reminder': await db.reminders.update(id, { deletedAt: undefined, status: 'active', updatedAt: now }); break;
+        case 'event': await db.events.update(id, { deletedAt: undefined, updatedAt: now }); break;
+        case 'note': await db.notes.update(id, { deletedAt: undefined, updatedAt: now }); break;
+        case 'expense': await db.expenses.update(id, { deletedAt: undefined, updatedAt: now }); break;
+        case 'income': await db.income.update(id, { deletedAt: undefined, updatedAt: now }); break;
+        case 'person': await db.people.update(id, { deletedAt: undefined, updatedAt: now }); break;
+        case 'goal': await db.goals.update(id, { deletedAt: undefined, updatedAt: now }); break;
+        case 'list': await db.lists.update(id, { deletedAt: undefined, updatedAt: now }); break;
+      }
+      await logAudit('restore', type, id, `Restored ${type} from trash`);
+      triggerHaptic('success');
     }
   }
 };

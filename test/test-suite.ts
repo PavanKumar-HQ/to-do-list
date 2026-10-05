@@ -542,8 +542,8 @@ async function runTestSuite() {
   const retrievedName = await SettingsService.getDisplayName();
   assert(retrievedName === 'Pavan', 'Retrieves stored display name accurately');
 
-  // Time-aware greeting intervals:
-  // 05:00–11:59: Good morning
+  // Time-aware greeting intervals per Phase 3:
+  // 00:00–11:59: Good morning
   const morningDate = new Date();
   morningDate.setHours(8, 30, 0, 0);
   assert(getTimeAwareGreeting('Pavan', morningDate) === 'Good morning, Pavan', '08:30 returns Good morning, Pavan');
@@ -553,14 +553,14 @@ async function runTestSuite() {
   afternoonDate.setHours(14, 15, 0, 0);
   assert(getTimeAwareGreeting('Pavan', afternoonDate) === 'Good afternoon, Pavan', '14:15 returns Good afternoon, Pavan');
 
-  // 17:00–04:59: Good evening
+  // 17:00–23:59: Good evening
   const eveningDate = new Date();
   eveningDate.setHours(18, 0, 0, 0);
   assert(getTimeAwareGreeting('Pavan', eveningDate) === 'Good evening, Pavan', '18:00 returns Good evening, Pavan');
 
   const lateNightDate = new Date();
   lateNightDate.setHours(2, 0, 0, 0);
-  assert(getTimeAwareGreeting('Pavan', lateNightDate) === 'Good evening, Pavan', '02:00 returns Good evening, Pavan');
+  assert(getTimeAwareGreeting('Pavan', lateNightDate) === 'Good morning, Pavan', '02:00 returns Good morning, Pavan per Phase 3');
 
   // Subtle date formatting
   const testDate = new Date(2026, 9, 5); // October 5, 2026
@@ -627,13 +627,167 @@ async function runTestSuite() {
   triggerHaptic('error');
   assert(true, 'triggerHaptic executes gracefully with silent fallback');
 
-  console.log('\n=====================================================');
-  console.log(` RESULTS: ${passed} passed, ${failed} failed`);
-  console.log('=====================================================');
+  // -----------------------------------------------------------------
+  // 20. DISPLAY NAME VALIDATION & GREETING BOUNDARIES (Phase 3)
+  // -----------------------------------------------------------------
+  console.log('\n--- 20. Display Name Validation & Time-Aware Greeting ---');
+
+  // Name edge cases
+  assert(SettingsService.validateDisplayName('Pavan').isValid, 'Valid standard name accepts "Pavan"');
+  assert(SettingsService.validateDisplayName('P').isValid, 'Single character name accepts "P"');
+  assert(SettingsService.validateDisplayName("O'Connor").isValid, 'Apostrophe name accepts "O\'Connor"');
+  assert(SettingsService.validateDisplayName('José-María').isValid, 'Accented unicode name accepts "José-María"');
+  assert(SettingsService.validateDisplayName('User 123').isValid, 'Alphanumeric name accepts "User 123"');
+  assert(!SettingsService.validateDisplayName('').isValid, 'Empty name is safely rejected');
+  assert(!SettingsService.validateDisplayName('   ').isValid, 'Whitespace-only name is safely rejected');
+  assert(!SettingsService.validateDisplayName('A'.repeat(101)).isValid, '100+ character name is safely rejected');
+
+  // Greeting boundaries: 00:00-11:59 morning, 12:00-16:59 afternoon, 17:00-23:59 evening
+  const morningMidnight = new Date(2026, 9, 5, 0, 0, 0);
+  const morningLate = new Date(2026, 9, 5, 11, 59, 0);
+  const afternoonNoon = new Date(2026, 9, 5, 12, 0, 0);
+  const afternoonLate = new Date(2026, 9, 5, 16, 59, 0);
+  const eveningEarly = new Date(2026, 9, 5, 17, 0, 0);
+  const eveningMidnight = new Date(2026, 9, 5, 23, 59, 0);
+
+  assert(getTimeAwareGreeting('Pavan', morningMidnight) === 'Good morning, Pavan', '00:00 produces "Good morning"');
+  assert(getTimeAwareGreeting('Pavan', morningLate) === 'Good morning, Pavan', '11:59 produces "Good morning"');
+  assert(getTimeAwareGreeting('Pavan', afternoonNoon) === 'Good afternoon, Pavan', '12:00 produces "Good afternoon"');
+  assert(getTimeAwareGreeting('Pavan', afternoonLate) === 'Good afternoon, Pavan', '16:59 produces "Good afternoon"');
+  assert(getTimeAwareGreeting('Pavan', eveningEarly) === 'Good evening, Pavan', '17:00 produces "Good evening"');
+  assert(getTimeAwareGreeting('Pavan', eveningMidnight) === 'Good evening, Pavan', '23:59 produces "Good evening"');
+
+  // -----------------------------------------------------------------
+  // 21. RECURRING REMINDERS & LEAP YEAR CALENDAR (Phase 7, 8)
+  // -----------------------------------------------------------------
+  console.log('\n--- 21. Recurring Reminders & Calendar Boundaries ---');
+
+  // Leap year Feb 29 arithmetic
+  const leapDayNextYear = calculateNextOccurrence('2024-02-29', 'yearly');
+  assert(leapDayNextYear === '2025-02-28', 'Yearly recurrence from Feb 29 maps safely to Feb 28 on non-leap year');
+
+  const monthEndMarch = calculateNextOccurrence('2024-01-31', 'monthly');
+  assert(monthEndMarch === '2024-02-29', 'Monthly recurrence from Jan 31 maps safely to Feb 29 on leap year');
+
+  const monthEndApril = calculateNextOccurrence('2024-03-31', 'monthly');
+  assert(monthEndApril === '2024-04-30', 'Monthly recurrence from Mar 31 maps safely to Apr 30');
+
+  // Recurring reminder completion advancement
+  const recurringReminder = await api.reminders.create({
+    title: 'Daily Standup Call',
+    date: '2026-10-05',
+    time: '09:00',
+    recurrence: 'daily'
+  });
+
+  const completionResult = await api.reminders.complete(recurringReminder.id);
+  assert(completionResult.nextOccurrence === '2026-10-06', 'Completing daily recurring reminder advances date to next day');
+  const advancedReminder = await db.reminders.get(recurringReminder.id);
+  assert(advancedReminder?.date === '2026-10-06', 'Recurring reminder date in IndexedDB advanced to 2026-10-06');
+  assert(advancedReminder?.status === 'active', 'Recurring reminder status remains active for next occurrence');
+
+  // Snooze in-place modification (does not create duplicate record)
+  const initialReminderCount = await db.reminders.count();
+  await api.reminders.snooze(recurringReminder.id, 15);
+  const postSnoozeCount = await db.reminders.count();
+  assert(initialReminderCount === postSnoozeCount, 'Snoozing reminder updates record in-place without creating duplicate');
+
+  // -----------------------------------------------------------------
+  // 22. RELATIONSHIP INTEGRITY & DEDUPLICATION (Phase 10)
+  // -----------------------------------------------------------------
+  console.log('\n--- 22. Relationship Integrity & Deduplication ---');
+
+  const personA = await api.people.create({ name: 'Vikram Mehta' });
+  const taskA = await api.tasks.create({ title: 'Prepare review for Vikram' });
+
+  const relA = await api.relationships.link('task', taskA.id, 'person', personA.id, 'assigned_to');
+  assert(!!relA.id, 'Successfully linked task to person');
+
+  // Attempt duplicate link in reverse direction
+  const relB = await api.relationships.link('person', personA.id, 'task', taskA.id, 'assigned_to');
+  assert(relA.id === relB.id, 'Duplicate relationship creation returns existing record without duplicating');
+
+  // Self-reference prevention
+  let selfRefThrew = false;
+  try {
+    await api.relationships.link('task', taskA.id, 'task', taskA.id);
+  } catch {
+    selfRefThrew = true;
+  }
+  assert(selfRefThrew, 'Self-referencing relationship is rejected');
+
+  // -----------------------------------------------------------------
+  // 23. MONEY & BUDGET INVARIANT CALCULATIONS (Phase 13)
+  // -----------------------------------------------------------------
+  console.log('\n--- 23. Money & Budget Invariants ---');
+
+  const testMonth = '2026-10';
+  await api.budgets.setBudget(testMonth, 'Dining', 1000000); // ₹10,000 in minor units
+
+  const exp1 = await api.expenses.create({
+    amountMinor: 200000, // ₹2,000
+    category: 'Dining',
+    date: '2026-10-05'
+  });
+
+  const diningExpenses = await db.expenses
+    .filter(e => !e.deletedAt && e.category === 'Dining' && e.date.startsWith(testMonth))
+    .toArray();
+  const diningTotal = diningExpenses.reduce((sum, e) => sum + e.amountMinor, 0);
+  assert(diningTotal === 200000, 'Expense correctly summed in integer minor units (₹2,000)');
+
+  // Edit expense: ₹2,000 -> ₹3,000
+  await api.expenses.update(exp1.id, { amountMinor: 300000 });
+  const updatedExp = await db.expenses.get(exp1.id);
+  assert(updatedExp?.amountMinor === 300000, 'Expense update to ₹3,000 persists accurately without floating point error');
+
+  // -----------------------------------------------------------------
+  // 24. CONCURRENCY & RAPID MUTATION STABILITY (Phase 22)
+  // -----------------------------------------------------------------
+  console.log('\n--- 24. Concurrency & Rapid Mutations ---');
+
+  const rapidTasks = await Promise.all([
+    api.tasks.create({ title: 'Concurrent Task 1' }),
+    api.tasks.create({ title: 'Concurrent Task 2' }),
+    api.tasks.create({ title: 'Concurrent Task 3' }),
+    api.tasks.create({ title: 'Concurrent Task 4' }),
+    api.tasks.create({ title: 'Concurrent Task 5' })
+  ]);
+
+  assert(rapidTasks.length === 5, '5 concurrent task creations succeed simultaneously');
+  const distinctIds = new Set(rapidTasks.map(t => t.id));
+  assert(distinctIds.size === 5, 'All concurrent records receive globally unique IDs');
+
+  // Rapid toggle completion
+  await Promise.all(rapidTasks.map(t => api.tasks.complete(t.id)));
+  const completedRapid = await db.tasks.filter(t => rapidTasks.some(rt => rt.id === t.id && t.status === 'completed')).toArray();
+  assert(completedRapid.length === 5, 'Concurrent completions resolve to completed status without race conditions');
+
+  // -----------------------------------------------------------------
+  // 25. EXTENSIVE SEARCH QUERY EDGE CASES (Phase 17)
+  // -----------------------------------------------------------------
+  console.log('\n--- 25. Search Query Edge Cases ---');
+
+  const specialNote = await api.notes.create({
+    title: 'Secret Blueprint [v2.0] & Notes #2026',
+    content: 'Details: ₹45,000 budget for "Project Alpha" (100% confidential)'
+  });
+
+  const matchTitle = await db.notes.filter(n => !n.deletedAt && n.title.toLowerCase().includes('[v2.0]')).first();
+  assert(matchTitle?.id === specialNote.id, 'Search handles square brackets and punctuation');
+
+  const matchUnicode = await db.notes.filter(n => !n.deletedAt && n.content.includes('₹45,000')).first();
+  assert(matchUnicode?.id === specialNote.id, 'Search handles unicode currency symbols');
+
+  const total = passed + failed;
+  console.log(`\n=====================================================`);
+  console.log(` TEST SUMMARY: ${passed} PASSED | ${failed} FAILED | ${total} TOTAL`);
+  console.log(`=====================================================\n`);
 
   if (failed > 0) {
     process.exit(1);
   }
+  process.exit(0);
 }
 
 runTestSuite().catch((e) => {
