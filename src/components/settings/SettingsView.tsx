@@ -35,9 +35,11 @@ import {
 import { getStorageMetrics, formatBytes, type StorageEstimateResult } from '../../services/storageService';
 import { requestNotificationPermission, dispatchTestNotification, playGentleChime } from '../../services/notificationService';
 import { COMMON_CURRENCIES } from '../../utils/currency';
-import { formatDisplayDate } from '../../utils/dates';
 import { useToast } from '../common/ToastContext';
 import { SettingsService, SettingsServiceError } from '../../services/settingsService';
+import { AnimalAvatar, ANIMAL_AVATARS, getAnimalAvatar } from '../../utils/avatars';
+import { formatDisplayDate } from '../../utils/dates';
+import { ACCENT_PALETTE, resolveAccent, applyAccentToDocument } from '../../utils/theme';
 import type { BackupPreviewSummary, BackupPayload, AppSettings } from '../../types';
 
 type ActiveSettingsSection = 'overview' | 'appearance' | 'notifications' | 'backup' | 'privacy' | 'support' | 'about';
@@ -101,11 +103,12 @@ export const SettingsView: React.FC = () => {
     showToast(res.message, { type: res.success ? 'success' : 'info' });
   };
 
-  // Display Name state
+  // Display Name & Avatar state
   const [displayNameInput, setDisplayNameInput] = useState('');
   const [displayNameInitialized, setDisplayNameInitialized] = useState(false);
   const [isEditingName, setIsEditingName] = useState(false);
   const [isSavingName, setIsSavingName] = useState(false);
+  const [isAvatarPickerOpen, setIsAvatarPickerOpen] = useState(false);
 
   useEffect(() => {
     if (settings?.displayName && !displayNameInitialized) {
@@ -258,7 +261,7 @@ export const SettingsView: React.FC = () => {
   }, [settings]);
 
   const currentTheme = settings?.theme || 'dark';
-  const currentAccent = settings?.accentColor || '#14b8a6';
+  const activeAccent = resolveAccent(settings?.accentColor);
   const userName = settings?.displayName || 'Pavan';
 
   return (
@@ -286,13 +289,13 @@ export const SettingsView: React.FC = () => {
         </div>
       </div>
 
-      {/* Profile Card matching Image 3 */}
+      {/* Profile Card with Animal Avatar */}
       <div
         className="card"
         style={{
           display: 'flex',
-          alignItems: 'center',
-          gap: '16px',
+          flexDirection: 'column',
+          gap: '12px',
           padding: '16px 20px',
           marginBottom: '20px',
           borderRadius: '20px',
@@ -300,71 +303,154 @@ export const SettingsView: React.FC = () => {
           border: '1px solid var(--border-subtle)'
         }}
       >
-        <div
-          style={{
-            width: '56px',
-            height: '56px',
-            borderRadius: '50%',
-            background: 'rgba(255, 255, 255, 0.12)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexShrink: 0
-          }}
-        >
-          <User size={28} color="var(--text-secondary)" />
-        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div
+            onClick={() => setIsAvatarPickerOpen(!isAvatarPickerOpen)}
+            style={{
+              cursor: 'pointer',
+              position: 'relative',
+              borderRadius: '50%',
+              transition: 'transform 0.15s ease'
+            }}
+            title="Click to choose animal avatar"
+          >
+            <AnimalAvatar avatarId={settings?.avatarId} size={56} />
+            <div
+              style={{
+                position: 'absolute',
+                bottom: 0,
+                right: 0,
+                width: '18px',
+                height: '18px',
+                borderRadius: '50%',
+                background: 'var(--accent)',
+                color: '#fff',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '10px'
+              }}
+            >
+              ✎
+            </div>
+          </div>
 
-        <div style={{ flex: 1 }}>
-          {isEditingName ? (
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-              <input
-                type="text"
-                value={displayNameInput}
-                onChange={(e) => setDisplayNameInput(e.target.value)}
-                style={{
-                  fontSize: '16px',
-                  fontWeight: 600,
-                  padding: '6px 10px',
-                  borderRadius: '8px',
-                  background: 'var(--bg-surface)',
-                  border: '1px solid var(--border-subtle)'
-                }}
-                autoFocus
-              />
+          <div style={{ flex: 1 }}>
+            {isEditingName ? (
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <input
+                  type="text"
+                  value={displayNameInput}
+                  onChange={(e) => setDisplayNameInput(e.target.value)}
+                  style={{
+                    fontSize: '16px',
+                    fontWeight: 600,
+                    padding: '6px 10px',
+                    borderRadius: '8px',
+                    background: 'var(--bg-surface)',
+                    border: '1px solid var(--border-subtle)'
+                  }}
+                  autoFocus
+                />
+                <button
+                  onClick={handleSaveDisplayName}
+                  className="btn btn-sm btn-primary"
+                  disabled={isSavingName}
+                >
+                  Save
+                </button>
+                <button
+                  onClick={() => setIsEditingName(false)}
+                  className="btn btn-sm btn-ghost"
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <h3 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>
+                  {userName}
+                </h3>
+                <button
+                  onClick={() => setIsEditingName(true)}
+                  className="btn-ghost"
+                  style={{ padding: '2px', color: 'var(--text-tertiary)' }}
+                  title="Edit name"
+                >
+                  <Edit2 size={13} />
+                </button>
+              </div>
+            )}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
+              <span style={{ fontSize: '13px', color: 'var(--text-tertiary)' }}>
+                Avatar: {getAnimalAvatar(settings?.avatarId).name}
+              </span>
               <button
-                onClick={handleSaveDisplayName}
-                className="btn btn-sm btn-primary"
-                disabled={isSavingName}
-              >
-                Save
-              </button>
-              <button
-                onClick={() => setIsEditingName(false)}
-                className="btn btn-sm btn-ghost"
-              >
-                Cancel
-              </button>
-            </div>
-          ) : (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <h3 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>
-                {userName}
-              </h3>
-              <button
-                onClick={() => setIsEditingName(true)}
+                type="button"
+                onClick={() => setIsAvatarPickerOpen(!isAvatarPickerOpen)}
                 className="btn-ghost"
-                style={{ padding: '2px', color: 'var(--text-tertiary)' }}
-                title="Edit name"
+                style={{ fontSize: '11px', color: 'var(--accent)', padding: '0 4px', textDecoration: 'underline' }}
               >
-                <Edit2 size={13} />
+                {isAvatarPickerOpen ? 'Hide' : 'Change Avatar'}
               </button>
             </div>
-          )}
-          <div style={{ fontSize: '13px', color: 'var(--text-tertiary)', marginTop: '2px' }}>
-            Kanso
           </div>
         </div>
+
+        {/* Animal Avatar Picker Tray */}
+        {isAvatarPickerOpen && (
+          <div
+            style={{
+              paddingTop: '12px',
+              borderTop: '1px solid var(--border-subtle)',
+              marginTop: '4px'
+            }}
+          >
+            <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '8px' }}>
+              Choose your Animal Avatar:
+            </div>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(8, 1fr)',
+                gap: '8px',
+                textAlign: 'center'
+              }}
+            >
+              {ANIMAL_AVATARS.map((a) => {
+                const isSelected = (settings?.avatarId || 'fox') === a.id;
+                return (
+                  <button
+                    key={a.id}
+                    type="button"
+                    onClick={async () => {
+                      await db.settings.update('current_settings', { avatarId: a.id });
+                      showToast(`Avatar updated to ${a.name}!`, { type: 'success' });
+                    }}
+                    style={{
+                      background: isSelected ? a.bgColor : 'transparent',
+                      border: isSelected ? `2px solid ${a.borderColor}` : '1px solid var(--border-subtle)',
+                      borderRadius: '12px',
+                      padding: '6px 2px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: '2px',
+                      transition: 'all 0.15s ease'
+                    }}
+                    title={a.name}
+                  >
+                    <span style={{ fontSize: '22px', lineHeight: 1 }}>{a.emoji}</span>
+                    <span style={{ fontSize: '9px', fontWeight: 600, color: isSelected ? a.borderColor : 'var(--text-secondary)' }}>
+                      {a.name}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* 1. OVERVIEW: GROUPED LIST CARD MATCHING IMAGE 3 */}
@@ -651,35 +737,36 @@ export const SettingsView: React.FC = () => {
               Accent Color
             </label>
             <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-              {[
-                { name: 'Teal', color: '#14b8a6' },
-                { name: 'Sky', color: '#0ea5e9' },
-                { name: 'Indigo', color: '#6366f1' },
-                { name: 'Purple', color: '#a855f7' },
-                { name: 'Rose', color: '#f43f5e' },
-                { name: 'Emerald', color: '#10b981' }
-              ].map((accent) => (
-                <button
-                  key={accent.color}
-                  type="button"
-                  onClick={() => updateSetting('accentColor', accent.color)}
-                  style={{
-                    width: '38px',
-                    height: '38px',
-                    borderRadius: '50%',
-                    background: accent.color,
-                    border: currentAccent === accent.color ? '3px solid #ffffff' : 'none',
-                    boxShadow: currentAccent === accent.color ? '0 0 10px rgba(255,255,255,0.4)' : 'none',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                  }}
-                  title={accent.name}
-                >
-                  {currentAccent === accent.color && <Check size={16} color="#ffffff" />}
-                </button>
-              ))}
+              {ACCENT_PALETTE.map((accent) => {
+                const isSelected = activeAccent.id === accent.id;
+                return (
+                  <button
+                    key={accent.id}
+                    type="button"
+                    onClick={() => {
+                      applyAccentToDocument(accent.id);
+                      updateSetting('accentColor', accent.id);
+                    }}
+                    style={{
+                      width: '40px',
+                      height: '40px',
+                      borderRadius: '50%',
+                      background: accent.hex,
+                      border: isSelected ? '3px solid #ffffff' : '2px solid transparent',
+                      boxShadow: isSelected ? `0 0 14px ${accent.hex}90` : 'none',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      transform: isSelected ? 'scale(1.12)' : 'scale(1)',
+                      transition: 'all 0.15s ease'
+                    }}
+                    title={accent.name}
+                  >
+                    {isSelected && <Check size={18} color="#ffffff" strokeWidth={3} />}
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>

@@ -23,6 +23,7 @@ import { getTodayDateString, getRelativeDateLabel, calculateNextOccurrence } fro
 import { useToast } from '../common/ToastContext';
 import { ContextModal } from '../common/ContextModal';
 import { checkUpcomingTasksAndNotify } from '../../services/notificationService';
+import { TaskRepository } from '../../repositories';
 import type { TaskItem, TaskStatus, Priority, RecurrenceType, Subtask, EntityType } from '../../types';
 
 export const TasksView: React.FC<{ onOpenQuickAdd: (type: any) => void }> = ({ onOpenQuickAdd }) => {
@@ -187,6 +188,28 @@ export const TasksView: React.FC<{ onOpenQuickAdd: (type: any) => void }> = ({ o
     }
   };
 
+  const [inlineTaskTitle, setInlineTaskTitle] = useState('');
+
+  const handleInlineCreateTask = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanTitle = inlineTaskTitle.trim();
+    if (!cleanTitle) return;
+
+    try {
+      const taskDueDate = activeTab === 'today' ? todayStr : undefined;
+      await TaskRepository.create({
+        title: cleanTitle,
+        dueDate: taskDueDate,
+        priority: 'medium',
+        status: activeTab === 'inbox' ? 'inbox' : 'todo'
+      });
+      setInlineTaskTitle('');
+      showToast(`Task created: ${cleanTitle}`, { type: 'success' });
+    } catch (err: any) {
+      showToast(err.message || 'Failed to create task', { type: 'error' });
+    }
+  };
+
   return (
     <div className="page-wrapper">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
@@ -214,6 +237,46 @@ export const TasksView: React.FC<{ onOpenQuickAdd: (type: any) => void }> = ({ o
           </button>
         </div>
       </div>
+
+      {/* Fast Inline Task Capture */}
+      <form
+        onSubmit={handleInlineCreateTask}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+          padding: '10px 14px',
+          marginBottom: '16px',
+          background: 'var(--bg-surface-elevated)',
+          border: '1.5px solid var(--border-subtle)',
+          borderRadius: '14px'
+        }}
+      >
+        <Plus size={18} color="var(--primary)" style={{ flexShrink: 0 }} />
+        <input
+          type="text"
+          placeholder={activeTab === 'today' ? 'Add a task for Today... (press Enter)' : 'Add a new task... (press Enter)'}
+          value={inlineTaskTitle}
+          onChange={(e) => setInlineTaskTitle(e.target.value)}
+          style={{
+            flex: 1,
+            background: 'transparent',
+            border: 'none',
+            outline: 'none',
+            fontSize: '14px',
+            color: 'var(--text-primary)',
+            padding: 0
+          }}
+        />
+        <button
+          type="submit"
+          className="btn btn-primary btn-sm"
+          disabled={!inlineTaskTitle.trim()}
+          style={{ borderRadius: 'var(--radius-full)', padding: '5px 14px', fontSize: '12px' }}
+        >
+          Add Task
+        </button>
+      </form>
 
       {/* Tabs */}
       <div

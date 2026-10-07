@@ -573,6 +573,7 @@ export interface AppSettings {
   momentumEnabled?: boolean;
   displayName?: string;
   displayNameUpdatedAt?: string;
+  avatarId?: string;
   reminderTone?: string;
 }
 

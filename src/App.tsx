@@ -12,6 +12,7 @@ import { ViewSkeleton } from './components/common/ViewSkeleton';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { InAppReminderAlert } from './components/common/InAppReminderAlert';
 import { AppInstallNotificationPrompt } from './components/common/AppInstallNotificationPrompt';
+import { applyAccentToDocument } from './utils/theme';
 
 // Core HomeView is loaded eagerly for instant first paint
 import { HomeView } from './components/home/HomeView';
@@ -102,9 +103,7 @@ export function AppContent() {
   }, [settings?.theme]);
 
   useEffect(() => {
-    if (settings?.accentColor) {
-      document.documentElement.setAttribute('data-accent', settings.accentColor);
-    }
+    applyAccentToDocument(settings?.accentColor);
   }, [settings?.accentColor]);
 
   // Handle background notification actions sent from Service Worker (Section 37, 44)

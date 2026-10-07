@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { db } from '../../db/db';
 import { useLiveQuery } from 'dexie-react-hooks';
+import { AnimalAvatar } from '../../utils/avatars';
 
 interface DesktopSidebarProps {
   currentScreen: string;
@@ -42,6 +43,10 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
       .filter((t) => !t.deletedAt && t.status !== 'completed' && t.status !== 'archived')
       .count();
   }, []) || 0;
+
+  const settings = useLiveQuery(async () => {
+    return db.settings.get('app_settings');
+  }, []);
 
   // Calm logical grouping per Section 37
   const homeNav = [
@@ -153,23 +158,7 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
     >
       <div style={{ padding: '8px 12px 16px 12px', borderBottom: '1px solid var(--border-subtle)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <div
-            style={{
-              width: '28px',
-              height: '28px',
-              borderRadius: '6px',
-              background: 'var(--text-primary)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'var(--bg-app)',
-              fontWeight: 700,
-              fontSize: '14px',
-              letterSpacing: '-0.02em'
-            }}
-          >
-            K
-          </div>
+          <AnimalAvatar avatarId={settings?.avatarId} size={28} />
           <div>
             <div style={{ fontWeight: 600, fontSize: '15px', color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>
               Life OS

@@ -154,6 +154,15 @@
 [data-accent='yellow'] { --accent: #eab308; --accent-hover: #facc15; --accent-light: rgba(234, 179, 8, 0.12); }
 [data-accent='slate'] { --accent: #94a3b8; --accent-hover: #cbd5e1; --accent-light: rgba(148, 163, 184, 0.14); }
 
+/* Hex fallback selectors for data-accent */
+[data-accent='#6366f1'] { --accent: #6366f1; --accent-hover: #4f46e5; --accent-light: rgba(99, 102, 241, 0.16); }
+[data-accent='#0ea5e9'] { --accent: #0ea5e9; --accent-hover: #0284c7; --accent-light: rgba(14, 165, 233, 0.16); }
+[data-accent='#14b8a6'] { --accent: #14b8a6; --accent-hover: #0d9488; --accent-light: rgba(20, 184, 166, 0.16); }
+[data-accent='#a855f7'] { --accent: #a855f7; --accent-hover: #9333ea; --accent-light: rgba(168, 85, 247, 0.16); }
+[data-accent='#f43f5e'] { --accent: #f43f5e; --accent-hover: #e11d48; --accent-light: rgba(244, 63, 94, 0.16); }
+[data-accent='#10b981'] { --accent: #10b981; --accent-hover: #059669; --accent-light: rgba(16, 185, 129, 0.16); }
+[data-accent='#f97316'] { --accent: #f97316; --accent-hover: #ea580c; --accent-light: rgba(249, 115, 22, 0.16); }
+
 /* ==========================================================================
    RESET & CORE PRIMITIVES
    ========================================================================== */

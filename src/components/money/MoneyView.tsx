@@ -153,6 +153,15 @@ export const MoneyView: React.FC<{ onOpenQuickAdd: (type: any) => void }> = ({ o
     return Object.entries(map).sort((a, b) => b[1] - a[1]);
   }, [expenses]);
 
+  const expensesByCategory = React.useMemo(() => {
+    const map: Record<string, ExpenseItem[]> = {};
+    expenses.forEach((e) => {
+      if (!map[e.category]) map[e.category] = [];
+      map[e.category].push(e);
+    });
+    return map;
+  }, [expenses]);
+
   // Actions
   const handleDeleteExpense = async (id: string, amountMinor: number) => {
     await db.expenses.update(id, { deletedAt: new Date().toISOString() });
@@ -160,13 +169,11 @@ export const MoneyView: React.FC<{ onOpenQuickAdd: (type: any) => void }> = ({ o
     eventBus.emit('EXPENSE_MUTATED', { type: 'EXPENSE_MUTATED', entityId: id });
     showToast(`Expense of ${formatMoney(amountMinor)} deleted`, {
       type: 'info',
-      action: {
-        label: 'Undo',
-        onClick: async () => {
-          await db.expenses.update(id, { deletedAt: undefined, updatedAt: new Date().toISOString() });
-          eventBus.emit('EXPENSE_MUTATED', { type: 'EXPENSE_MUTATED', entityId: id });
-          showToast('Expense restored', { type: 'success' });
-        }
+      actionLabel: 'Undo',
+      onAction: async () => {
+        await db.expenses.update(id, { deletedAt: undefined, updatedAt: new Date().toISOString() });
+        eventBus.emit('EXPENSE_MUTATED', { type: 'EXPENSE_MUTATED', entityId: id });
+        showToast('Expense restored', { type: 'success' });
       }
     });
   };
@@ -365,7 +372,7 @@ export const MoneyView: React.FC<{ onOpenQuickAdd: (type: any) => void }> = ({ o
       >
         {[
           { id: 'overview', label: 'Overview' },
-          { id: 'expenses', label: 'Expenses' },
+          { id: 'expenses', label: expenses.length > 0 ? `Expenses (${expenses.length})` : 'Expenses' },
           { id: 'budget', label: 'Budgets' },
           { id: 'recurring', label: 'Recurring' },
           { id: 'cards', label: 'Credit Cards' },
@@ -410,10 +417,26 @@ export const MoneyView: React.FC<{ onOpenQuickAdd: (type: any) => void }> = ({ o
                 </div>
               </div>
 
-              <div style={{ background: 'var(--bg-subtle)', padding: '12px', borderRadius: 'var(--radius-md)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--danger)' }}>
-                  <ArrowUpRight size={16} />
-                  <span>Total Expenses</span>
+              <div
+                onClick={() => setActiveTab('expenses')}
+                style={{
+                  background: 'var(--bg-subtle)',
+                  padding: '12px',
+                  borderRadius: 'var(--radius-md)',
+                  cursor: 'pointer',
+                  border: '1px solid var(--border-subtle)',
+                  transition: 'background 0.15s ease'
+                }}
+                title="Click to view & edit all expenses"
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--danger)' }}>
+                    <ArrowUpRight size={16} />
+                    <span>Total Expenses</span>
+                  </div>
+                  <span style={{ fontSize: '11.5px', color: 'var(--accent)', fontWeight: 600 }}>
+                    Edit / Manage →
+                  </span>
                 </div>
                 <div style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)', marginTop: '4px' }}>
                   {formatMoney(totalExpenseMinor)}
@@ -487,7 +510,7 @@ export const MoneyView: React.FC<{ onOpenQuickAdd: (type: any) => void }> = ({ o
             )}
           </div>
 
-          {/* Top Categories */}
+          {/* Top Categories with Direct In-Place Edit Actions */}
           {categorySpending.length > 0 && (
             <div className="card" style={{ padding: '16px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
@@ -497,28 +520,115 @@ export const MoneyView: React.FC<{ onOpenQuickAdd: (type: any) => void }> = ({ o
                 <button
                   type="button"
                   onClick={() => setActiveTab('expenses')}
-                  className="btn-ghost"
-                  style={{ fontSize: '12px', color: 'var(--accent)', padding: '2px 6px' }}
+                  className="btn btn-secondary btn-sm"
+                  style={{ fontSize: '12px', padding: '4px 10px', gap: '4px' }}
                 >
-                  View All Expenses →
+                  <span>All Expenses ({expenses.length}) →</span>
                 </button>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 {categorySpending.map(([cat, amountMinor]) => {
                   const percent = totalExpenseMinor > 0 ? Math.round((amountMinor / totalExpenseMinor) * 100) : 0;
+                  const catExpenses = expensesByCategory[cat] || [];
                   return (
                     <div
                       key={cat}
-                      onClick={() => setActiveTab('expenses')}
-                      style={{ cursor: 'pointer', padding: '4px', borderRadius: '6px', transition: 'background 0.15s ease' }}
-                      title={`Click to view all ${cat} expenses`}
+                      style={{
+                        padding: '12px',
+                        borderRadius: '10px',
+                        background: 'var(--bg-subtle)',
+                        border: '1px solid var(--border-subtle)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '8px'
+                      }}
                     >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '3px' }}>
-                        <span style={{ fontWeight: 500 }}>{cat}</span>
-                        <span style={{ fontWeight: 600 }}>{formatMoney(amountMinor)} ({percent}%)</span>
+                      <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', marginBottom: '4px' }}>
+                          <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                            {cat} <span style={{ fontSize: '11px', fontWeight: 500, color: 'var(--text-muted)' }}>({catExpenses.length} {catExpenses.length === 1 ? 'transaction' : 'transactions'})</span>
+                          </span>
+                          <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
+                            {formatMoney(amountMinor)} <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 400 }}>({percent}%)</span>
+                          </span>
+                        </div>
+                        <div style={{ width: '100%', height: '6px', background: 'var(--border-subtle)', borderRadius: '3px', overflow: 'hidden' }}>
+                          <div style={{ height: '100%', width: `${percent}%`, background: 'var(--accent)' }} />
+                        </div>
                       </div>
-                      <div style={{ width: '100%', height: '6px', background: 'var(--bg-subtle)', borderRadius: '3px', overflow: 'hidden' }}>
-                        <div style={{ height: '100%', width: `${percent}%`, background: 'var(--accent)' }} />
+
+                      {/* Transactions in this category with immediate Edit button */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '4px' }}>
+                        {catExpenses.map((exp) => (
+                          <div
+                            key={exp.id}
+                            style={{
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              padding: '8px 10px',
+                              background: 'var(--bg-surface)',
+                              borderRadius: '8px',
+                              border: '1px solid var(--border-subtle)'
+                            }}
+                          >
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                              <span style={{ fontWeight: 600, fontSize: '13px', color: 'var(--text-primary)' }}>
+                                {exp.notes || exp.category}
+                              </span>
+                              <div style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'flex', gap: '6px' }}>
+                                <span>{formatDisplayDate(exp.date)}</span>
+                                <span style={{ textTransform: 'uppercase' }}>• {exp.paymentMethod}</span>
+                                {exp.isBusiness && <span style={{ color: 'var(--accent)' }}>• Business</span>}
+                              </div>
+                            </div>
+
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <span style={{ fontWeight: 700, fontSize: '13.5px', color: 'var(--danger)', marginRight: '4px' }}>
+                                -{formatMoney(exp.amountMinor)}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleOpenEditExpense(exp);
+                                }}
+                                className="btn btn-secondary btn-sm"
+                                style={{ padding: '3px 10px', fontSize: '12px', height: '28px', gap: '4px', fontWeight: 600 }}
+                                title="Edit this expense"
+                              >
+                                <Edit2 size={12} />
+                                <span>Edit</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDuplicateExpense(exp.id);
+                                }}
+                                className="btn-ghost"
+                                style={{ color: 'var(--text-muted)', padding: '4px' }}
+                                title="Duplicate expense"
+                              >
+                                <Copy size={13} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (confirm(`Delete expense of ${formatMoney(exp.amountMinor)}?`)) {
+                                    handleDeleteExpense(exp.id, exp.amountMinor);
+                                  }
+                                }}
+                                className="btn-ghost"
+                                style={{ color: 'var(--danger)', padding: '4px' }}
+                                title="Delete expense"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     </div>
                   );

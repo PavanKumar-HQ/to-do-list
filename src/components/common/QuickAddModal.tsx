@@ -138,27 +138,6 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
       return;
     }
 
-    // Duplicate check for tasks & reminders
-    if (!forceDuplicate) {
-      if (activeType === 'task') {
-        const existing = await db.tasks
-          .filter((t) => !t.deletedAt && t.title.toLowerCase() === cleanTitle.toLowerCase())
-          .first();
-        if (existing) {
-          setDuplicateWarning(`A task with the title "${cleanTitle}" already exists.`);
-          return;
-        }
-      } else if (activeType === 'reminder') {
-        const existing = await db.reminders
-          .filter((r) => !r.deletedAt && r.title.toLowerCase() === cleanTitle.toLowerCase())
-          .first();
-        if (existing) {
-          setDuplicateWarning(`A reminder with the title "${cleanTitle}" already exists.`);
-          return;
-        }
-      }
-    }
-
     setIsSubmitting(true);
     const nowIso = new Date().toISOString();
 
