@@ -17,8 +17,16 @@ const ToastContext = createContext<ToastContextType | undefined>(undefined);
 
 export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  const lastToastRef = React.useRef<{ message: string; timestamp: number }>({ message: '', timestamp: 0 });
 
   const showToast = useCallback((message: string, options?: { actionLabel?: string; onAction?: () => void; type?: ToastMessage['type'] }) => {
+    const now = Date.now();
+    // Debounce duplicate identical toast messages triggered simultaneously
+    if (lastToastRef.current.message === message && now - lastToastRef.current.timestamp < 2000) {
+      return;
+    }
+    lastToastRef.current = { message, timestamp: now };
+
     const id = Math.random().toString(36).substring(2, 9);
     const newToast: ToastMessage = {
       id,

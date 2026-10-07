@@ -17,6 +17,7 @@ import {
   PenTool,
   Heart,
   FolderLock,
+  FolderSearch,
   Share2
 } from 'lucide-react';
 
@@ -54,13 +55,14 @@ export const MoreSheetModal: React.FC<MoreSheetModalProps> = ({
       items: [
         { id: 'notes', label: 'Notes & Ideas', icon: FileText },
         { id: 'canvas', label: 'Canvas Visual Studio', icon: PenTool },
-        { id: 'journal', label: 'Daily Journal', icon: BookOpen }
+        { id: 'journal', label: 'Daily Journal', icon: BookOpen },
+        { id: 'vault', label: 'Where Did I Put That? (Vault)', icon: FolderSearch }
       ]
     },
     {
       title: 'People & Family',
       items: [
-        { id: 'people', label: 'People & Waiting', icon: Users },
+        { id: 'people', label: 'Personal CRM & Memory', icon: Users },
         { id: 'loops', label: 'Follow-ups & Loops', icon: ListTodo },
         { id: 'family', label: 'Family Care', icon: Heart }
       ]
@@ -69,7 +71,7 @@ export const MoreSheetModal: React.FC<MoreSheetModalProps> = ({
       title: 'Money & Assets',
       items: [
         { id: 'money', label: 'Money & Warranties', icon: Wallet },
-        { id: 'documents', label: 'Documents Vault', icon: FolderLock }
+        { id: 'documents', label: 'Documents Archive', icon: FolderLock }
       ]
     },
     {

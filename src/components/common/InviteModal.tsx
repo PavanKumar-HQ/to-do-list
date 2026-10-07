@@ -41,8 +41,8 @@ export const InviteModal: React.FC<InviteModalProps> = ({ isOpen, onClose }) => 
   const handleGenerateInvite = async () => {
     try {
       const invite = await InviteRepository.createInvite(duration);
-      showToast(`Generated secure invite link (${duration})`, { type: 'success' });
-      copyLink(invite);
+      await copyLink(invite, true);
+      showToast(`Secure invite link generated & copied to clipboard! (${duration})`, { type: 'success' });
     } catch (err: any) {
       showToast('Failed to create invite', { type: 'error' });
     }
@@ -55,17 +55,21 @@ export const InviteModal: React.FC<InviteModalProps> = ({ isOpen, onClose }) => 
     return `${base}#invite=${token}`;
   };
 
-  const copyLink = async (invite: InviteItem) => {
+  const copyLink = async (invite: InviteItem, silent: boolean = false) => {
     const url = getFullInviteUrl(invite.token);
     try {
       if (navigator.clipboard) {
         await navigator.clipboard.writeText(url);
       }
       setCopiedToken(invite.token);
-      showToast('Invite link copied to clipboard!', { type: 'success' });
+      if (!silent) {
+        showToast('Invite link copied to clipboard!', { type: 'success' });
+      }
       setTimeout(() => setCopiedToken(null), 3000);
     } catch {
-      showToast(`Copy URL: ${url}`);
+      if (!silent) {
+        showToast(`Copy URL: ${url}`);
+      }
     }
   };
 

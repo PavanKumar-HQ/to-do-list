@@ -36,6 +36,9 @@ import type {
   CareReminderItem,
   DocumentItem,
   InviteItem,
+  VaultResourceItem,
+  MeetingNoteItem,
+  ConversationLogItem,
   AppSettings,
   AuditHistoryEntry,
   EntityType
@@ -78,6 +81,9 @@ export class PersonalLifeDatabase extends Dexie {
   careReminders!: EntityTable<CareReminderItem, 'id'>;
   documents!: EntityTable<DocumentItem, 'id'>;
   invites!: EntityTable<InviteItem, 'id'>;
+  vaultResources!: EntityTable<VaultResourceItem, 'id'>;
+  meetingNotes!: EntityTable<MeetingNoteItem, 'id'>;
+  conversationLogs!: EntityTable<ConversationLogItem, 'id'>;
   settings!: EntityTable<AppSettings, 'id'>;
   auditHistory!: EntityTable<AuditHistoryEntry, 'id'>;
 
@@ -139,6 +145,13 @@ export class PersonalLifeDatabase extends Dexie {
       careReminders: 'id, familyMemberId, reminderType, dueDate, status, createdAt, deletedAt',
       documents: 'id, title, category, relatedEntityType, relatedEntityId, createdAt, deletedAt',
       invites: 'id, token, expiresAt, createdAt'
+    });
+
+    // Version 6 adds "Where Did I Put That?" vault, meeting notes & transcripts, and personal CRM conversation memory
+    this.version(6).stores({
+      vaultResources: 'id, title, category, isPinned, createdAt, deletedAt',
+      meetingNotes: 'id, title, personId, meetingDate, createdAt, deletedAt',
+      conversationLogs: 'id, personId, date, createdAt, deletedAt'
     });
   }
 }

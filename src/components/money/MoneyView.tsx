@@ -406,13 +406,13 @@ export const MoneyView: React.FC<{ onOpenQuickAdd: (type: any) => void }> = ({ o
               />
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
-              <div style={{ background: 'var(--bg-subtle)', padding: '12px', borderRadius: 'var(--radius-md)' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', marginBottom: '12px' }}>
+              <div style={{ background: 'var(--bg-subtle)', padding: '14px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--success)' }}>
-                  <ArrowDownLeft size={16} />
-                  <span>Total Income</span>
+                  <ArrowDownLeft size={16} style={{ flexShrink: 0 }} />
+                  <span style={{ fontWeight: 600 }}>Total Income</span>
                 </div>
-                <div style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)', marginTop: '4px' }}>
+                <div style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text-primary)', marginTop: '6px' }}>
                   {formatMoney(totalIncomeMinor)}
                 </div>
               </div>
@@ -421,24 +421,24 @@ export const MoneyView: React.FC<{ onOpenQuickAdd: (type: any) => void }> = ({ o
                 onClick={() => setActiveTab('expenses')}
                 style={{
                   background: 'var(--bg-subtle)',
-                  padding: '12px',
+                  padding: '14px',
                   borderRadius: 'var(--radius-md)',
                   cursor: 'pointer',
                   border: '1px solid var(--border-subtle)',
-                  transition: 'background 0.15s ease'
+                  transition: 'all 0.15s ease'
                 }}
                 title="Click to view & edit all expenses"
               >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--danger)' }}>
-                    <ArrowUpRight size={16} />
-                    <span>Total Expenses</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--danger)', minWidth: 0 }}>
+                    <ArrowUpRight size={16} style={{ flexShrink: 0 }} />
+                    <span style={{ fontWeight: 600, whiteSpace: 'nowrap' }}>Total Expenses</span>
                   </div>
-                  <span style={{ fontSize: '11.5px', color: 'var(--accent)', fontWeight: 600 }}>
-                    Edit / Manage →
+                  <span style={{ fontSize: '11px', color: 'var(--accent)', fontWeight: 600, background: 'var(--accent-light)', padding: '2px 8px', borderRadius: '6px', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                    Manage →
                   </span>
                 </div>
-                <div style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)', marginTop: '4px' }}>
+                <div style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text-primary)', marginTop: '6px' }}>
                   {formatMoney(totalExpenseMinor)}
                 </div>
               </div>

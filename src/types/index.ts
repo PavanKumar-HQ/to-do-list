@@ -802,6 +802,9 @@ export interface BackupPayload {
     careReminders?: CareReminderItem[];
     documents?: DocumentItem[];
     invites?: InviteItem[];
+    vaultResources?: VaultResourceItem[];
+    meetingNotes?: MeetingNoteItem[];
+    conversationLogs?: ConversationLogItem[];
     settings?: AppSettings;
     auditHistory?: AuditHistoryEntry[];
   };
@@ -850,5 +853,69 @@ export interface BackupPreviewSummary {
     careReminders?: number;
     documents?: number;
     invites?: number;
+    vaultResources?: number;
+    meetingNotes?: number;
+    conversationLogs?: number;
   };
+}
+
+// "Where Did I Put That?" — Resource & Credential Hint Vault
+export type VaultCategory = 'website' | 'github_repo' | 'document' | 'tool' | 'credential_hint';
+
+export interface VaultResourceItem {
+  id: string;
+  title: string;
+  category: VaultCategory;
+  url?: string;
+  locationHint?: string; // Where is it kept? (e.g., "Folder in Google Drive / Brandex Docs")
+  usernameHint?: string; // e.g. "pavankumar@gmail.com" or "GitHub SSO" (NO PASSWORDS)
+  notes?: string;
+  tags: string[];
+  isPinned?: boolean;
+  lastAccessedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt?: string;
+}
+
+// Meeting / Conversation Memory & Gemini AI Meeting Notes
+export interface MeetingPromiseItem {
+  id: string;
+  what: string;
+  who: 'me' | 'them';
+  completed: boolean;
+  convertedToTaskId?: string;
+}
+
+export interface MeetingNoteItem {
+  id: string;
+  title: string;
+  personId?: string;
+  personName?: string;
+  meetingDate: string; // YYYY-MM-DD
+  durationMinutes?: number;
+  rawTranscript: string;
+  englishTranscript: string;
+  detectedLanguage?: string;
+  summary: string;
+  keyTakeaways: string[];
+  promisesMade: MeetingPromiseItem[];
+  decisions: string[];
+  tags: string[];
+  createdAt: string;
+  updatedAt: string;
+  deletedAt?: string;
+}
+
+export interface ConversationLogItem {
+  id: string;
+  personId: string;
+  date: string; // YYYY-MM-DD
+  topic: string;
+  notes: string;
+  promises?: string;
+  nextFollowupDate?: string;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt?: string;
 }

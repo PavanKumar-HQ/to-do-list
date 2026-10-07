@@ -153,6 +153,9 @@ export async function createBackupPayload(password?: string): Promise<BackupPayl
     careReminders,
     documents,
     invites,
+    vaultResources,
+    meetingNotes,
+    conversationLogs,
     settings,
     auditHistory
   ] = await Promise.all([
@@ -191,6 +194,9 @@ export async function createBackupPayload(password?: string): Promise<BackupPayl
     db.careReminders.toArray(),
     db.documents.toArray(),
     db.invites.toArray(),
+    db.vaultResources.toArray(),
+    db.meetingNotes.toArray(),
+    db.conversationLogs.toArray(),
     db.settings.get('current_settings'),
     db.auditHistory.toArray()
   ]);
@@ -230,7 +236,10 @@ export async function createBackupPayload(password?: string): Promise<BackupPayl
     familyMembers.length +
     careReminders.length +
     documents.length +
-    invites.length;
+    invites.length +
+    vaultResources.length +
+    meetingNotes.length +
+    conversationLogs.length;
 
   const tablesData = {
     inbox,
@@ -268,6 +277,9 @@ export async function createBackupPayload(password?: string): Promise<BackupPayl
     careReminders,
     documents,
     invites,
+    vaultResources,
+    meetingNotes,
+    conversationLogs,
     settings,
     auditHistory
   };
@@ -535,7 +547,10 @@ export async function validateAndPreviewBackup(fileContent: string): Promise<{
       familyMembers: Array.isArray(t.familyMembers) ? t.familyMembers.length : 0,
       careReminders: Array.isArray(t.careReminders) ? t.careReminders.length : 0,
       documents: Array.isArray(t.documents) ? t.documents.length : 0,
-      invites: Array.isArray(t.invites) ? t.invites.length : 0
+      invites: Array.isArray(t.invites) ? t.invites.length : 0,
+      vaultResources: Array.isArray(t.vaultResources) ? t.vaultResources.length : 0,
+      meetingNotes: Array.isArray(t.meetingNotes) ? t.meetingNotes.length : 0,
+      conversationLogs: Array.isArray(t.conversationLogs) ? t.conversationLogs.length : 0
     };
 
     const totalRecords = Object.values(counts).reduce((a, b) => a + b, 0);
@@ -605,6 +620,9 @@ async function writeTablesToDb(t: any, mode: 'replace' | 'merge') {
     db.careReminders,
     db.documents,
     db.invites,
+    db.vaultResources,
+    db.meetingNotes,
+    db.conversationLogs,
     db.settings,
     db.auditHistory
   ], async () => {
@@ -645,6 +663,9 @@ async function writeTablesToDb(t: any, mode: 'replace' | 'merge') {
         db.careReminders.clear(),
         db.documents.clear(),
         db.invites.clear(),
+        db.vaultResources.clear(),
+        db.meetingNotes.clear(),
+        db.conversationLogs.clear(),
         db.auditHistory.clear()
       ]);
     }
@@ -684,6 +705,9 @@ async function writeTablesToDb(t: any, mode: 'replace' | 'merge') {
     if (t.careReminders?.length) await db.careReminders.bulkPut(t.careReminders);
     if (t.documents?.length) await db.documents.bulkPut(t.documents);
     if (t.invites?.length) await db.invites.bulkPut(t.invites);
+    if (t.vaultResources?.length) await db.vaultResources.bulkPut(t.vaultResources);
+    if (t.meetingNotes?.length) await db.meetingNotes.bulkPut(t.meetingNotes);
+    if (t.conversationLogs?.length) await db.conversationLogs.bulkPut(t.conversationLogs);
     if (t.auditHistory?.length) await db.auditHistory.bulkPut(t.auditHistory);
 
     if (t.settings) {
@@ -807,7 +831,10 @@ function getZeroCounts() {
     familyMembers: 0,
     careReminders: 0,
     documents: 0,
-    invites: 0
+    invites: 0,
+    vaultResources: 0,
+    meetingNotes: 0,
+    conversationLogs: 0
   };
 }
 
@@ -847,6 +874,9 @@ function getZeroTables() {
     familyMembers: [],
     careReminders: [],
     documents: [],
-    invites: []
+    invites: [],
+    vaultResources: [],
+    meetingNotes: [],
+    conversationLogs: []
   };
 }

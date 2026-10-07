@@ -16,6 +16,7 @@ import {
   PenTool,
   Heart,
   FolderLock,
+  FolderSearch,
   Bell,
   Share2
 } from 'lucide-react';
@@ -65,12 +66,13 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
   const memoryNav = [
     { id: 'notes', label: 'Notes & Ideas', icon: FileText },
     { id: 'canvas', label: 'Canvas Studio', icon: PenTool },
-    { id: 'journal', label: 'Daily Journal', icon: BookOpen }
+    { id: 'journal', label: 'Daily Journal', icon: BookOpen },
+    { id: 'vault', label: 'Resource Vault (Where Did I Put That?)', icon: FolderSearch }
   ];
 
   const peopleNav = [
-    { id: 'people', label: 'People & Waiting', icon: Users },
-    { id: 'loops', label: 'Follow-ups', icon: ListTodo },
+    { id: 'people', label: 'Personal CRM & Memory', icon: Users },
+    { id: 'loops', label: 'Follow-ups & Loops', icon: ListTodo },
     { id: 'family', label: 'Family Care', icon: Heart }
   ];
 

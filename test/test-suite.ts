@@ -1086,6 +1086,93 @@ async function runTestSuite() {
   await notificationService.cancelTaskNotification(upcomingTask.id);
   assert(true, 'cancelTaskNotification executed gracefully without exceptions');
 
+  // -----------------------------------------------------------------
+  // 35. "WHERE DID I PUT THAT?" RESOURCE VAULT
+  // -----------------------------------------------------------------
+  console.log('\n--- 35. "Where Did I Put That?" Resource Vault ---');
+
+  const vaultItem = {
+    id: generateId(),
+    title: 'Brandex Design System & Tokens',
+    category: 'github_repo' as const,
+    url: 'https://github.com/PavanKumar-HQ/brandex-digital-canvas',
+    locationHint: '~/Downloads/brandex-digital-canvas-main',
+    usernameHint: 'GitHub SSO / pavankumar',
+    tags: ['brandex', 'design', 'repo'],
+    isPinned: true,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+
+  await db.vaultResources.add(vaultItem);
+  const savedVaultItem = await db.vaultResources.get(vaultItem.id);
+  assert(savedVaultItem !== undefined, 'Vault resource item saved successfully');
+  assert(savedVaultItem?.title === 'Brandex Design System & Tokens', 'Vault item title matches');
+  assert(savedVaultItem?.category === 'github_repo', 'Vault item category matches');
+  assert(savedVaultItem?.usernameHint === 'GitHub SSO / pavankumar', 'Credential hint preserved without storing passwords');
+
+  // -----------------------------------------------------------------
+  // 36. MEETING MEMORY & GEMINI NOTES TAKER
+  // -----------------------------------------------------------------
+  console.log('\n--- 36. Meeting Memory & Gemini Notes Taker ---');
+
+  const meetingItem: any = {
+    id: generateId(),
+    title: 'Q4 Product Strategy & Architecture',
+    meetingDate: todayStr,
+    durationMinutes: 45,
+    rawTranscript: 'We discussed the upcoming roadmap. I will deliver the offline vault by Friday.',
+    englishTranscript: 'We discussed the upcoming roadmap. I will deliver the offline vault by Friday.',
+    detectedLanguage: 'en-US',
+    summary: 'Discussion regarding Q4 features including resource vault and Gemini meeting memory.',
+    keyTakeaways: ['Aligned on offline-first architecture', 'Agreed on Friday milestone'],
+    promisesMade: [
+      { id: generateId(), what: 'Deliver offline vault by Friday', who: 'me' as const, completed: false }
+    ],
+    decisions: ['Proceed with IndexedDB Version 6 schema'],
+    tags: ['strategy', 'roadmap'],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+
+  await db.meetingNotes.add(meetingItem);
+  const savedMeeting = await db.meetingNotes.get(meetingItem.id);
+  assert(savedMeeting !== undefined, 'Meeting notes saved successfully');
+  assert(savedMeeting?.promisesMade?.length === 1, 'Promises made tracked in meeting notes');
+  assert(savedMeeting?.promisesMade[0].who === 'me', 'Action item assigned to correct party');
+
+  // -----------------------------------------------------------------
+  // 37. PERSONAL CRM & CONVERSATION LOGS
+  // -----------------------------------------------------------------
+  console.log('\n--- 37. Personal CRM & Conversation Logs ---');
+
+  const crmPerson = {
+    id: generateId(),
+    name: 'Sarah Jenkins',
+    relationship: 'Colleague',
+    notes: 'Senior Product Architect at Brandex',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+  await db.people.add(crmPerson);
+
+  const convoLog = {
+    id: generateId(),
+    personId: crmPerson.id,
+    date: todayStr,
+    topic: 'Brandex Canvas Sync',
+    notes: 'Discussed vector canvas and meeting transcription integration.',
+    promises: 'I promised: Send API specs by tomorrow',
+    nextFollowupDate: todayStr,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+  await db.conversationLogs.add(convoLog);
+
+  const savedConvo = await db.conversationLogs.get(convoLog.id);
+  assert(savedConvo !== undefined, 'Conversation memory logged successfully');
+  assert(savedConvo?.personId === crmPerson.id, 'Conversation linked to personal CRM contact');
+
   const total = passed + failed;
   console.log(`\n=====================================================`);
   console.log(` TEST SUMMARY: ${passed} PASSED | ${failed} FAILED | ${total} TOTAL`);

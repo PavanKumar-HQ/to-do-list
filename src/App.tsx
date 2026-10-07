@@ -35,6 +35,7 @@ const OpenLoopsView = lazyRetry(() => import('./components/loops/OpenLoopsView')
 const CanvasView = lazyRetry(() => import('./components/canvas/CanvasView').then(m => ({ default: m.CanvasView })), 'CanvasView');
 const FamilyView = lazyRetry(() => import('./components/family/FamilyView').then(m => ({ default: m.FamilyView })), 'FamilyView');
 const DocumentsView = lazyRetry(() => import('./components/documents/DocumentsView').then(m => ({ default: m.DocumentsView })), 'DocumentsView');
+const VaultView = lazyRetry(() => import('./components/vault/VaultView').then(m => ({ default: m.VaultView })), 'VaultView');
 
 // Heavy Modals code-split
 const GlobalSearchModal = lazyRetry(() => import('./components/common/GlobalSearchModal').then(m => ({ default: m.GlobalSearchModal })), 'GlobalSearchModal');
@@ -51,11 +52,14 @@ import {
   checkMissedReminders,
   checkUpcomingTasksAndNotify
 } from './services/notificationService';
+import { useToast } from './components/common/ToastContext';
+import { checkForAppUpdateOnBoot, registerServiceWorkerUpdateListener, APP_VERSION } from './services/updateService';
 import { eventBus } from './services/eventBus';
 import { useLiveQuery } from 'dexie-react-hooks';
 import type { EntityType } from './types';
 
 export function AppContent() {
+  const { showToast } = useToast();
   const [currentScreen, setCurrentScreen] = useState('home');
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   const [quickAddType, setQuickAddType] = useState<EntityType>('task');
@@ -90,6 +94,27 @@ export function AppContent() {
     refreshNextReminderTimer();
     checkMissedReminders();
     checkUpcomingTasksAndNotify();
+
+    // Check for App Updates and alert user
+    checkForAppUpdateOnBoot((version) => {
+      showToast(`🎉 App updated to v${version} with the latest features!`, { type: 'success' });
+    });
+
+    registerServiceWorkerUpdateListener(() => {
+      showToast('✨ New version available!', {
+        type: 'info',
+        actionLabel: 'Refresh',
+        onAction: () => {
+          if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistration().then((reg) => {
+              reg?.waiting?.postMessage({ type: 'SKIP_WAITING' });
+            });
+          }
+          window.location.reload();
+        }
+      });
+    });
+
     // Force light theme
     document.documentElement.setAttribute('data-theme', 'light');
     localStorage.setItem('theme', 'light');
@@ -253,6 +278,9 @@ export function AppContent() {
         break;
       case 'documents':
         content = <DocumentsView />;
+        break;
+      case 'vault':
+        content = <VaultView />;
         break;
       case 'trash':
         content = <TrashView />;
