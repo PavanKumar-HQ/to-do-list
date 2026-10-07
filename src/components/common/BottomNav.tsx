@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, CheckSquare, Target, FolderSearch, MoreHorizontal, Flame } from 'lucide-react';
+import { Home, CheckSquare, Target, Folder, MoreHorizontal } from 'lucide-react';
 import { db } from '../../db/db';
 import { useLiveQuery } from 'dexie-react-hooks';
 
@@ -26,7 +26,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
     { id: 'home', label: 'Home', icon: Home },
     { id: 'goals', label: 'Habits & Plan', icon: Target, badge: habitsCount > 0 ? habitsCount : undefined },
     { id: 'tasks', label: 'Tasks', icon: CheckSquare, badge: pendingTasksCount > 0 ? pendingTasksCount : undefined },
-    { id: 'vault', label: 'Vault', icon: FolderSearch },
+    { id: 'vault', label: 'Vault', icon: Folder },
     { id: 'more', label: 'More', icon: MoreHorizontal, isMore: true }
   ];
 

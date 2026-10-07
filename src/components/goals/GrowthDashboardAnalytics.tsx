@@ -104,8 +104,8 @@ export const GrowthDashboardAnalytics: React.FC = () => {
         {/* Habit Streak Card */}
         <div
           style={{
-            background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.08) 0%, rgba(245, 158, 11, 0.08) 100%)',
-            border: '1px solid rgba(239, 68, 68, 0.2)',
+            background: 'var(--bg-surface)',
+            border: '1px solid var(--border-subtle)',
             borderRadius: 'var(--radius-lg)',
             padding: '16px',
             display: 'flex',
@@ -128,8 +128,8 @@ export const GrowthDashboardAnalytics: React.FC = () => {
         {/* Daily Planner Card */}
         <div
           style={{
-            background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(139, 92, 246, 0.08) 100%)',
-            border: '1px solid rgba(59, 130, 246, 0.2)',
+            background: 'var(--bg-surface)',
+            border: '1px solid var(--border-subtle)',
             borderRadius: 'var(--radius-lg)',
             padding: '16px',
             display: 'flex',
@@ -153,8 +153,8 @@ export const GrowthDashboardAnalytics: React.FC = () => {
         {/* Savings Goal Card */}
         <div
           style={{
-            background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(5, 150, 105, 0.08) 100%)',
-            border: '1px solid rgba(16, 185, 129, 0.2)',
+            background: 'var(--bg-surface)',
+            border: '1px solid var(--border-subtle)',
             borderRadius: 'var(--radius-lg)',
             padding: '16px',
             display: 'flex',
@@ -177,8 +177,8 @@ export const GrowthDashboardAnalytics: React.FC = () => {
         {/* Study Planner Card */}
         <div
           style={{
-            background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.08) 0%, rgba(236, 72, 153, 0.08) 100%)',
-            border: '1px solid rgba(139, 92, 246, 0.2)',
+            background: 'var(--bg-surface)',
+            border: '1px solid var(--border-subtle)',
             borderRadius: 'var(--radius-lg)',
             padding: '16px',
             display: 'flex',

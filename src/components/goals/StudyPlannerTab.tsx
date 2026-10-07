@@ -202,8 +202,8 @@ export const StudyPlannerTab: React.FC = () => {
       {/* Top Banner with Study Overview */}
       <div
         style={{
-          background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(139, 92, 246, 0.08) 100%)',
-          border: '1px solid rgba(59, 130, 246, 0.2)',
+          background: 'var(--bg-surface)',
+          border: '1px solid var(--border-subtle)',
           borderRadius: 'var(--radius-lg)',
           padding: '20px',
           display: 'flex',
@@ -218,16 +218,15 @@ export const StudyPlannerTab: React.FC = () => {
             style={{
               width: '46px',
               height: '46px',
-              borderRadius: '12px',
-              background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+              borderRadius: '14px',
+              background: '#8b5cf6',
               color: '#ffffff',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 4px 12px rgba(59, 130, 246, 0.25)'
+              justifyContent: 'center'
             }}
           >
-            <GraduationCap size={24} />
+            <GraduationCap size={24} strokeWidth={2.2} />
           </div>
           <div>
             <div style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)' }}>

@@ -45,7 +45,7 @@ export const InviteLandingModal: React.FC<InviteLandingModalProps> = ({
         {/* Banner Header */}
         <div
           style={{
-            background: 'linear-gradient(135deg, var(--accent) 0%, #4f46e5 100%)',
+            background: 'var(--accent)',
             padding: '28px 24px 24px 24px',
             color: '#ffffff',
             position: 'relative'

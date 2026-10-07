@@ -179,7 +179,7 @@ export const InviteModal: React.FC<InviteModalProps> = ({ isOpen, onClose }) => 
               >
                 <div
                   style={{
-                    background: 'linear-gradient(135deg, var(--accent) 0%, #4f46e5 100%)',
+                    background: 'var(--accent)',
                     padding: '18px 16px',
                     color: '#ffffff'
                   }}

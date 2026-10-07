@@ -198,8 +198,8 @@ export const HabitTrackerTab: React.FC = () => {
       {/* Top Banner with Today's Streak Summary */}
       <div
         style={{
-          background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.08) 0%, rgba(245, 158, 11, 0.08) 100%)',
-          border: '1px solid rgba(239, 68, 68, 0.2)',
+          background: 'var(--bg-surface)',
+          border: '1px solid var(--border-subtle)',
           borderRadius: 'var(--radius-lg)',
           padding: '18px 20px',
           display: 'flex',
@@ -214,16 +214,15 @@ export const HabitTrackerTab: React.FC = () => {
             style={{
               width: '46px',
               height: '46px',
-              borderRadius: '12px',
-              background: 'linear-gradient(135deg, #f59e0b, #ef4444)',
+              borderRadius: '14px',
+              background: '#ef4444',
               color: '#ffffff',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 4px 12px rgba(239, 68, 68, 0.25)'
+              justifyContent: 'center'
             }}
           >
-            <Flame size={24} />
+            <Flame size={24} strokeWidth={2.2} />
           </div>
           <div>
             <div style={{ fontSize: '17px', fontWeight: 700, color: 'var(--text-primary)' }}>

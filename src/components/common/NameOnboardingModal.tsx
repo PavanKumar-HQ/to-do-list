@@ -10,7 +10,8 @@ import {
   FileText,
   Target,
   Clock,
-  Lightbulb
+  Lightbulb,
+  Sparkles
 } from 'lucide-react';
 import { SettingsService } from '../../services/settingsService';
 import { db } from '../../db/db';
@@ -126,23 +127,19 @@ export const NameOnboardingModal: React.FC<NameOnboardingModalProps> = ({ onComp
             >
               <div
                 style={{
-                  position: 'absolute',
-                  inset: 0,
-                  borderRadius: '50%',
-                  background: 'radial-gradient(circle at 35% 35%, rgba(13, 148, 136, 0.3) 0%, rgba(20, 184, 166, 0.15) 50%, rgba(255, 255, 255, 0) 80%)',
-                  filter: 'blur(16px)'
+                  width: '72px',
+                  height: '72px',
+                  borderRadius: '20px',
+                  background: 'var(--accent)',
+                  color: '#ffffff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.12)'
                 }}
-              />
-              <div
-                style={{
-                  width: '74px',
-                  height: '74px',
-                  borderRadius: '50% 50% 45% 55% / 55% 45% 55% 45%',
-                  background: 'linear-gradient(135deg, #ccfbf1 0%, #2dd4bf 45%, #0d9488 100%)',
-                  boxShadow: 'inset 0 2px 6px rgba(255, 255, 255, 0.8), 0 8px 32px rgba(13, 148, 136, 0.25)',
-                  border: '1.5px solid rgba(255, 255, 255, 0.8)'
-                }}
-              />
+              >
+                <Sparkles size={36} strokeWidth={2} />
+              </div>
             </div>
 
             {/* Saral Branding */}

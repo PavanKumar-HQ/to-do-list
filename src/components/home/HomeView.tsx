@@ -796,250 +796,316 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigateTo, onOpenQuickAdd
           </button>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '10px' }}>
-          {/* 1. Habit Tracker */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(135px, 1fr))', gap: '12px' }}>
+          {/* 1. Daily Planner */}
           <button
             onClick={() => onNavigateTo('goals')}
             style={{
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'flex-start',
-              gap: '6px',
-              padding: '12px',
-              borderRadius: '12px',
-              background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.08) 0%, rgba(245, 158, 11, 0.08) 100%)',
-              border: '1px solid rgba(239, 68, 68, 0.2)',
+              gap: '12px',
+              padding: '16px',
+              borderRadius: '16px',
+              background: 'var(--bg-surface)',
+              border: '1px solid var(--border-subtle)',
               cursor: 'pointer',
               textAlign: 'left',
-              transition: 'transform 0.15s ease, box-shadow 0.15s ease'
+              transition: 'transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease'
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.borderColor = 'var(--border-strong)';
               e.currentTarget.style.boxShadow = 'var(--shadow-sm)';
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.borderColor = 'var(--border-subtle)';
               e.currentTarget.style.boxShadow = 'none';
             }}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
-              <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: '#ef4444', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Flame size={15} />
+            <div
+              style={{
+                width: '46px',
+                height: '46px',
+                borderRadius: '14px',
+                background: '#f59e0b',
+                color: '#ffffff',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0
+              }}
+            >
+              <Sun size={24} strokeWidth={2.2} />
+            </div>
+            <div>
+              <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.2 }}>
+                Daily
               </div>
-              <span style={{ fontSize: '11px', fontWeight: 700, color: '#ef4444' }}>
-                {habitsList.length > 0 ? `${habitsList.filter(h => h.streak > 0).length} active` : 'New'}
-              </span>
-            </div>
-            <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>
-              Habit Tracker
-            </div>
-            <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-              Streaks & Punchcard
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '3px' }}>
+                Time Blocks
+              </div>
             </div>
           </button>
 
-          {/* 2. Daily Planner */}
+          {/* 2. Study Planner */}
           <button
             onClick={() => onNavigateTo('goals')}
             style={{
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'flex-start',
-              gap: '6px',
-              padding: '12px',
-              borderRadius: '12px',
-              background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.08) 0%, rgba(59, 130, 246, 0.08) 100%)',
-              border: '1px solid rgba(245, 158, 11, 0.2)',
+              gap: '12px',
+              padding: '16px',
+              borderRadius: '16px',
+              background: 'var(--bg-surface)',
+              border: '1px solid var(--border-subtle)',
               cursor: 'pointer',
               textAlign: 'left',
-              transition: 'transform 0.15s ease, box-shadow 0.15s ease'
+              transition: 'transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease'
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.borderColor = 'var(--border-strong)';
               e.currentTarget.style.boxShadow = 'var(--shadow-sm)';
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.borderColor = 'var(--border-subtle)';
               e.currentTarget.style.boxShadow = 'none';
             }}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
-              <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: '#f59e0b', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Sun size={15} />
+            <div
+              style={{
+                width: '46px',
+                height: '46px',
+                borderRadius: '14px',
+                background: '#8b5cf6',
+                color: '#ffffff',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0
+              }}
+            >
+              <GraduationCap size={24} strokeWidth={2.2} />
+            </div>
+            <div>
+              <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.2 }}>
+                Study
               </div>
-              <span style={{ fontSize: '11px', fontWeight: 700, color: '#f59e0b' }}>
-                3 Blocks
-              </span>
-            </div>
-            <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>
-              Daily Planner
-            </div>
-            <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-              Time Blocks & Timer
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '3px' }}>
+                Syllabus
+              </div>
             </div>
           </button>
 
-          {/* 3. Savings Goals */}
+          {/* 3. Visual Analytics */}
           <button
             onClick={() => onNavigateTo('goals')}
             style={{
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'flex-start',
-              gap: '6px',
-              padding: '12px',
-              borderRadius: '12px',
-              background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(59, 130, 246, 0.08) 100%)',
-              border: '1px solid rgba(16, 185, 129, 0.2)',
+              gap: '12px',
+              padding: '16px',
+              borderRadius: '16px',
+              background: 'var(--bg-surface)',
+              border: '1px solid var(--border-subtle)',
               cursor: 'pointer',
               textAlign: 'left',
-              transition: 'transform 0.15s ease, box-shadow 0.15s ease'
+              transition: 'transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease'
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.borderColor = 'var(--border-strong)';
               e.currentTarget.style.boxShadow = 'var(--shadow-sm)';
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.borderColor = 'var(--border-subtle)';
               e.currentTarget.style.boxShadow = 'none';
             }}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
-              <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: '#10b981', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <PiggyBank size={15} />
+            <div
+              style={{
+                width: '46px',
+                height: '46px',
+                borderRadius: '14px',
+                background: '#10b981',
+                color: '#ffffff',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0
+              }}
+            >
+              <BarChart3 size={24} strokeWidth={2.2} />
+            </div>
+            <div>
+              <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.2 }}>
+                Visual
               </div>
-              <span style={{ fontSize: '11px', fontWeight: 700, color: '#10b981' }}>
-                {savingsList.length} Goals
-              </span>
-            </div>
-            <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>
-              Savings Goals
-            </div>
-            <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-              Monthly Run-Rate
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '3px' }}>
+                Metrics
+              </div>
             </div>
           </button>
 
-          {/* 4. Study Planner */}
+          {/* 4. Habit Tracker */}
           <button
             onClick={() => onNavigateTo('goals')}
             style={{
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'flex-start',
-              gap: '6px',
-              padding: '12px',
-              borderRadius: '12px',
-              background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.08) 0%, rgba(236, 72, 153, 0.08) 100%)',
-              border: '1px solid rgba(139, 92, 246, 0.2)',
+              gap: '12px',
+              padding: '16px',
+              borderRadius: '16px',
+              background: 'var(--bg-surface)',
+              border: '1px solid var(--border-subtle)',
               cursor: 'pointer',
               textAlign: 'left',
-              transition: 'transform 0.15s ease, box-shadow 0.15s ease'
+              transition: 'transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease'
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.borderColor = 'var(--border-strong)';
               e.currentTarget.style.boxShadow = 'var(--shadow-sm)';
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.borderColor = 'var(--border-subtle)';
               e.currentTarget.style.boxShadow = 'none';
             }}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
-              <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: '#8b5cf6', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <GraduationCap size={15} />
+            <div
+              style={{
+                width: '46px',
+                height: '46px',
+                borderRadius: '14px',
+                background: '#ef4444',
+                color: '#ffffff',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0
+              }}
+            >
+              <Flame size={24} strokeWidth={2.2} />
+            </div>
+            <div>
+              <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.2 }}>
+                Habits
               </div>
-              <span style={{ fontSize: '11px', fontWeight: 700, color: '#8b5cf6' }}>
-                {studyList.length} Subjects
-              </span>
-            </div>
-            <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>
-              Study Planner
-            </div>
-            <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-              Syllabus & Chapters
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '3px' }}>
+                Streaks
+              </div>
             </div>
           </button>
 
-          {/* 5. Personal Vault ("Where Did I Put That?") */}
+          {/* 5. Savings Goals */}
+          <button
+            onClick={() => onNavigateTo('goals')}
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'flex-start',
+              gap: '12px',
+              padding: '16px',
+              borderRadius: '16px',
+              background: 'var(--bg-surface)',
+              border: '1px solid var(--border-subtle)',
+              cursor: 'pointer',
+              textAlign: 'left',
+              transition: 'transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.borderColor = 'var(--border-strong)';
+              e.currentTarget.style.boxShadow = 'var(--shadow-sm)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.borderColor = 'var(--border-subtle)';
+              e.currentTarget.style.boxShadow = 'none';
+            }}
+          >
+            <div
+              style={{
+                width: '46px',
+                height: '46px',
+                borderRadius: '14px',
+                background: '#ec4899',
+                color: '#ffffff',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0
+              }}
+            >
+              <PiggyBank size={24} strokeWidth={2.2} />
+            </div>
+            <div>
+              <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.2 }}>
+                Savings
+              </div>
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '3px' }}>
+                Run-Rate
+              </div>
+            </div>
+          </button>
+
+          {/* 6. Personal Vault */}
           <button
             onClick={() => onNavigateTo('vault')}
             style={{
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'flex-start',
-              gap: '6px',
-              padding: '12px',
-              borderRadius: '12px',
-              background: 'linear-gradient(135deg, rgba(6, 182, 212, 0.08) 0%, rgba(59, 130, 246, 0.08) 100%)',
-              border: '1px solid rgba(6, 182, 212, 0.2)',
+              gap: '12px',
+              padding: '16px',
+              borderRadius: '16px',
+              background: 'var(--bg-surface)',
+              border: '1px solid var(--border-subtle)',
               cursor: 'pointer',
               textAlign: 'left',
-              transition: 'transform 0.15s ease, box-shadow 0.15s ease'
+              transition: 'transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease'
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.borderColor = 'var(--border-strong)';
               e.currentTarget.style.boxShadow = 'var(--shadow-sm)';
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.borderColor = 'var(--border-subtle)';
               e.currentTarget.style.boxShadow = 'none';
             }}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
-              <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: '#06b6d4', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <FolderSearch size={15} />
+            <div
+              style={{
+                width: '46px',
+                height: '46px',
+                borderRadius: '14px',
+                background: '#06b6d4',
+                color: '#ffffff',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0
+              }}
+            >
+              <FolderSearch size={24} strokeWidth={2.2} />
+            </div>
+            <div>
+              <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.2 }}>
+                Vault
               </div>
-              <span style={{ fontSize: '11px', fontWeight: 700, color: '#06b6d4' }}>
-                {vaultList.length} Items
-              </span>
-            </div>
-            <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>
-              Where Did I Put That?
-            </div>
-            <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-              Keys, Buds & Vault ({vaultList.length})
-            </div>
-          </button>
-
-          {/* 6. Dashboard Analytics */}
-          <button
-            onClick={() => onNavigateTo('goals')}
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'flex-start',
-              gap: '6px',
-              padding: '12px',
-              borderRadius: '12px',
-              background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(139, 92, 246, 0.08) 100%)',
-              border: '1px solid rgba(16, 185, 129, 0.2)',
-              cursor: 'pointer',
-              textAlign: 'left',
-              transition: 'transform 0.15s ease, box-shadow 0.15s ease'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'translateY(-2px)';
-              e.currentTarget.style.boxShadow = 'var(--shadow-sm)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = 'none';
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
-              <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: '#10b981', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <BarChart3 size={15} />
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '3px' }}>
+                Where Is It?
               </div>
-              <span style={{ fontSize: '11px', fontWeight: 700, color: '#10b981' }}>
-                Pictorial
-              </span>
-            </div>
-            <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>
-              Visual Analytics
-            </div>
-            <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-              Heatmaps & Graphs
             </div>
           </button>
         </div>

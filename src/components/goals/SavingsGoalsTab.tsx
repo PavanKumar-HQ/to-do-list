@@ -165,8 +165,8 @@ export const SavingsGoalsTab: React.FC = () => {
       {/* Top Banner with Savings Overview */}
       <div
         style={{
-          background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(59, 130, 246, 0.08) 100%)',
-          border: '1px solid rgba(16, 185, 129, 0.2)',
+          background: 'var(--bg-surface)',
+          border: '1px solid var(--border-subtle)',
           borderRadius: 'var(--radius-lg)',
           padding: '20px',
           display: 'flex',
@@ -181,16 +181,15 @@ export const SavingsGoalsTab: React.FC = () => {
             style={{
               width: '46px',
               height: '46px',
-              borderRadius: '12px',
-              background: 'linear-gradient(135deg, #10b981, #059669)',
+              borderRadius: '14px',
+              background: '#10b981',
               color: '#ffffff',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 4px 12px rgba(16, 185, 129, 0.25)'
+              justifyContent: 'center'
             }}
           >
-            <PiggyBank size={24} />
+            <PiggyBank size={24} strokeWidth={2.2} />
           </div>
           <div>
             <div style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)' }}>
@@ -310,7 +309,7 @@ export const SavingsGoalsTab: React.FC = () => {
                       style={{
                         height: '100%',
                         width: `${percent}%`,
-                        background: isCompleted ? '#10b981' : 'linear-gradient(90deg, #10b981, #3b82f6)',
+                        background: '#10b981',
                         borderRadius: '4px',
                         transition: 'width 0.3s ease'
                       }}
