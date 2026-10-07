@@ -26,7 +26,6 @@ const NotesView = lazyRetry(() => import('./components/notes/NotesView').then(m 
 const MoneyView = lazyRetry(() => import('./components/money/MoneyView').then(m => ({ default: m.MoneyView })), 'MoneyView');
 const CalendarView = lazyRetry(() => import('./components/calendar/CalendarView').then(m => ({ default: m.CalendarView })), 'CalendarView');
 const JournalView = lazyRetry(() => import('./components/journal/JournalView').then(m => ({ default: m.JournalView })), 'JournalView');
-const PeopleView = lazyRetry(() => import('./components/people/PeopleView').then(m => ({ default: m.PeopleView })), 'PeopleView');
 const ListsView = lazyRetry(() => import('./components/lists/ListsView').then(m => ({ default: m.ListsView })), 'ListsView');
 const GoalsView = lazyRetry(() => import('./components/goals/GoalsView').then(m => ({ default: m.GoalsView })), 'GoalsView');
 const TrashView = lazyRetry(() => import('./components/trash/TrashView').then(m => ({ default: m.TrashView })), 'TrashView');
@@ -260,9 +259,6 @@ export function AppContent() {
         break;
       case 'journal':
         content = <JournalView />;
-        break;
-      case 'people':
-        content = <PeopleView />;
         break;
       case 'lists':
         content = <ListsView />;

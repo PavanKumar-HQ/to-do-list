@@ -337,16 +337,17 @@ export const VaultView: React.FC = () => {
         </div>
 
         {/* Categories Bar */}
-        <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '4px' }}>
+        <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
           <button
             onClick={() => setSelectedCategory('all')}
             className={`btn btn-sm ${selectedCategory === 'all' ? 'btn-primary' : 'btn-secondary'}`}
-            style={{ borderRadius: 'var(--radius-full)', padding: '4px 12px', fontSize: '12px' }}
+            style={{ borderRadius: 'var(--radius-full)', padding: '6px 14px', fontSize: '12.5px', whiteSpace: 'nowrap' }}
           >
             All Items ({resources.length})
           </button>
           {CATEGORIES.map((cat) => {
             const Icon = cat.icon;
+            const isSelected = selectedCategory === cat.id;
             const count = resources.filter(r => {
               let c = r.category as string;
               if (c === 'website' || c === 'github_repo' || c === 'tool') c = 'website_tech';
@@ -358,10 +359,18 @@ export const VaultView: React.FC = () => {
               <button
                 key={cat.id}
                 onClick={() => setSelectedCategory(cat.id)}
-                className={`btn btn-sm ${selectedCategory === cat.id ? 'btn-primary' : 'btn-secondary'}`}
-                style={{ borderRadius: 'var(--radius-full)', padding: '4px 12px', fontSize: '12px', gap: '6px' }}
+                className={`btn btn-sm ${isSelected ? 'btn-primary' : 'btn-secondary'}`}
+                style={{
+                  borderRadius: 'var(--radius-full)',
+                  padding: '6px 14px',
+                  fontSize: '12.5px',
+                  gap: '6px',
+                  whiteSpace: 'nowrap',
+                  display: 'inline-flex',
+                  alignItems: 'center'
+                }}
               >
-                <Icon size={14} style={{ color: selectedCategory === cat.id ? '#ffffff' : cat.color }} />
+                <Icon size={14} style={{ flexShrink: 0, color: isSelected ? 'inherit' : 'var(--text-secondary)' }} />
                 <span>{cat.label}</span>
                 {count > 0 && <span style={{ opacity: 0.8 }}>({count})</span>}
               </button>
@@ -375,10 +384,11 @@ export const VaultView: React.FC = () => {
         <div
           style={{
             textAlign: 'center',
-            padding: '48px 24px',
+            padding: '48px 24px 60px 24px',
             background: 'var(--bg-surface)',
             borderRadius: 'var(--radius-lg)',
-            border: '1px dashed var(--border-subtle)'
+            border: '1px dashed var(--border-subtle)',
+            marginBottom: '40px'
           }}
         >
           <FolderSearch size={44} style={{ color: 'var(--text-muted)', margin: '0 auto 12px', opacity: 0.5 }} />

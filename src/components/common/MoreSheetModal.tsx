@@ -60,11 +60,10 @@ export const MoreSheetModal: React.FC<MoreSheetModalProps> = ({
       ]
     },
     {
-      title: 'People & Family',
+      title: 'Family & Follow-ups',
       items: [
-        { id: 'people', label: 'Personal CRM & Memory', icon: Users },
-        { id: 'loops', label: 'Follow-ups & Loops', icon: ListTodo },
-        { id: 'family', label: 'Family Care', icon: Heart }
+        { id: 'family', label: 'Family Care', icon: Heart },
+        { id: 'loops', label: 'Follow-ups & Loops', icon: ListTodo }
       ]
     },
     {

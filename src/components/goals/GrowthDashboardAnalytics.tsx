@@ -64,18 +64,18 @@ export const GrowthDashboardAnalytics: React.FC = () => {
     };
   });
 
-  // 2. Daily Planner Time-Block Metrics
-  const morningTasks = tasks.filter((t) => t.timeBlock === 'morning' || (!t.timeBlock && t.priority === 'high'));
-  const afternoonTasks = tasks.filter((t) => t.timeBlock === 'afternoon' || (!t.timeBlock && t.priority === 'medium'));
-  const eveningTasks = tasks.filter((t) => t.timeBlock === 'evening' || (!t.timeBlock && t.priority === 'low'));
+  // 2. Daily Planner Time-Block Metrics (strictly tasks assigned to time blocks)
+  const morningTasks = tasks.filter((t) => t.timeBlock === 'morning');
+  const afternoonTasks = tasks.filter((t) => t.timeBlock === 'afternoon');
+  const eveningTasks = tasks.filter((t) => t.timeBlock === 'evening');
 
   const morningDone = morningTasks.filter((t) => t.status === 'completed').length;
   const afternoonDone = afternoonTasks.filter((t) => t.status === 'completed').length;
   const eveningDone = eveningTasks.filter((t) => t.status === 'completed').length;
 
-  const p1Tasks = tasks.filter((t) => t.priorityCode === 'P1' || t.priority === 'high');
-  const p2Tasks = tasks.filter((t) => t.priorityCode === 'P2' || t.priority === 'medium');
-  const p3Tasks = tasks.filter((t) => t.priorityCode === 'P3' || t.priority === 'low');
+  const p1Tasks = tasks.filter((t) => t.priorityCode === 'P1');
+  const p2Tasks = tasks.filter((t) => t.priorityCode === 'P2');
+  const p3Tasks = tasks.filter((t) => t.priorityCode === 'P3');
 
   const p1Done = p1Tasks.filter((t) => t.status === 'completed').length;
   const p2Done = p2Tasks.filter((t) => t.status === 'completed').length;

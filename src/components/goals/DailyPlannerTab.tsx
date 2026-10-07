@@ -165,10 +165,11 @@ export const DailyPlannerTab: React.FC = () => {
 
   const isToday = selectedDate === getTodayDateString();
 
-  // Distribute tasks into time blocks (or default morning/unassigned)
-  const morningTasks = tasks.filter((t) => t.timeBlock === 'morning' || (!t.timeBlock && t.priority === 'high'));
-  const afternoonTasks = tasks.filter((t) => t.timeBlock === 'afternoon' || (!t.timeBlock && t.priority === 'medium'));
-  const eveningTasks = tasks.filter((t) => t.timeBlock === 'evening' || (!t.timeBlock && t.priority === 'low'));
+  // Distribute tasks strictly into their assigned time blocks
+  const morningTasks = tasks.filter((t) => t.timeBlock === 'morning');
+  const afternoonTasks = tasks.filter((t) => t.timeBlock === 'afternoon');
+  const eveningTasks = tasks.filter((t) => t.timeBlock === 'evening');
+  const unassignedTasks = tasks.filter((t) => !t.timeBlock);
 
   const totalTasks = tasks.length;
   const completedTasks = tasks.filter((t) => t.status === 'completed').length;
