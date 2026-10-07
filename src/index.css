@@ -520,10 +520,8 @@ input:focus, textarea:focus, select:focus {
   position: sticky;
   top: 0;
   z-index: 500;
-  background: var(--glass-surface);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  border-bottom: 1px solid var(--glass-border);
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 @media (min-width: 768px) {
@@ -555,38 +553,39 @@ input:focus, textarea:focus, select:focus {
 }
 
 /* ==========================================================================
-   MODAL & BOTTOM SHEET — RESTRAINED APPLE LIQUID GLASS
+   MODAL & BOTTOM SHEET — SOLID OPAQUE HIGH-CONTRAST SURFACES
    ========================================================================== */
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.65);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: rgba(0, 0, 0, 0.75);
   z-index: 1000;
   display: flex;
-  align-items: flex-end; /* Bottom sheet on mobile */
+  align-items: center;
   justify-content: center;
   animation: fadeIn 0.15s ease;
+  padding: 16px;
 }
 
-@media (min-width: 640px) {
-  .modal-overlay {
-    align-items: center; /* Centered modal on tablet/desktop */
-    padding: 20px;
-  }
+.modal-content {
+  background: var(--bg-surface) !important;
+  color: var(--text-primary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+  width: 100%;
+  position: relative;
+  z-index: 1001;
 }
 
 .bottom-sheet {
-  background: var(--glass-elevated);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
+  background: var(--bg-surface) !important;
   width: 100%;
   max-width: 560px;
   border-radius: 16px 16px 0 0;
-  border-top: 1px solid var(--glass-border);
+  border-top: 1px solid var(--border-subtle);
   padding: 18px 20px;
-  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.5);
   max-height: 88vh;
   display: flex;
   flex-direction: column;

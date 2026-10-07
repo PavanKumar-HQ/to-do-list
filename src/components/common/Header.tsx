@@ -62,7 +62,7 @@ export const Header: React.FC<HeaderProps> = ({
       case 'habits': return 'Habit Tracker';
       case 'daily': return 'Daily Planner';
       case 'study': return 'Study Planner';
-      case 'vault': return 'Where Did I Put That?';
+      case 'vault': return 'Vault';
       case 'settings': return 'Settings';
       case 'trash': return 'Trash';
       default: return 'Saral';
@@ -74,10 +74,8 @@ export const Header: React.FC<HeaderProps> = ({
       className="app-header"
       style={{
         height: 'var(--header-height)',
-        background: 'var(--glass-surface)',
-        backdropFilter: 'var(--glass-blur)',
-        WebkitBackdropFilter: 'var(--glass-blur)',
-        borderBottom: '1px solid var(--glass-border)',
+        background: 'var(--bg-surface)',
+        borderBottom: '1px solid var(--border-subtle)',
         position: 'sticky',
         top: 0,
         zIndex: 500,

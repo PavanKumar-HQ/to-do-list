@@ -67,7 +67,7 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
     { id: 'notes', label: 'Notes & Ideas', icon: FileText },
     { id: 'canvas', label: 'Canvas Studio', icon: PenTool },
     { id: 'journal', label: 'Daily Journal', icon: BookOpen },
-    { id: 'vault', label: 'Resource Vault (Where Did I Put That?)', icon: FolderSearch }
+    { id: 'vault', label: 'Vault', icon: FolderSearch }
   ];
 
   const peopleNav = [

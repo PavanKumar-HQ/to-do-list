@@ -56,7 +56,7 @@ export const MoreSheetModal: React.FC<MoreSheetModalProps> = ({
         { id: 'notes', label: 'Notes & Ideas', icon: FileText },
         { id: 'canvas', label: 'Canvas Visual Studio', icon: PenTool },
         { id: 'journal', label: 'Daily Journal', icon: BookOpen },
-        { id: 'vault', label: 'Where Did I Put That? (Vault)', icon: FolderSearch }
+        { id: 'vault', label: 'Vault', icon: FolderSearch }
       ]
     },
     {
