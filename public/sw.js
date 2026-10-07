@@ -1,5 +1,5 @@
 // Service Worker for Kanso PWA - Offline First
-const CACHE_NAME = 'kanso-cache-v6';
+const CACHE_NAME = 'kanso-cache-v8';
 
 self.addEventListener('install', (event) => {
   // In development, skip caching
@@ -63,21 +63,31 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // If local origin request, try cache first, fall back to network, then offline shell
+  // Handle local origin requests
   if (url.origin === location.origin) {
+    // 1. Navigation requests (HTML) -> Network-First (with cache fallback) so latest deploy manifest is always fetched
+    if (event.request.mode === 'navigate' || url.pathname.endsWith('.html') || url.pathname === self.registration.scope) {
+      event.respondWith(
+        fetch(event.request)
+          .then((networkResponse) => {
+            if (networkResponse && networkResponse.status === 200) {
+              const responseToCache = networkResponse.clone();
+              caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseToCache));
+            }
+            return networkResponse;
+          })
+          .catch(() => {
+            const indexUrl = new URL('index.html', self.registration.scope).toString();
+            return caches.match(indexUrl).then((res) => res || caches.match(self.registration.scope));
+          })
+      );
+      return;
+    }
+
+    // 2. Static hashed chunks & assets -> Cache-first with network fallback
     event.respondWith(
       caches.match(event.request).then((cachedResponse) => {
         if (cachedResponse) {
-          // Fetch update in background (stale-while-revalidate for local assets)
-          fetch(event.request).then((networkResponse) => {
-            if (networkResponse && networkResponse.status === 200) {
-              caches.open(CACHE_NAME).then((cache) => {
-                cache.put(event.request, networkResponse);
-              });
-            }
-          }).catch(() => {
-            // Network fetch failed, cached response already served
-          });
           return cachedResponse;
         }
 
@@ -89,12 +99,6 @@ self.addEventListener('fetch', (event) => {
             });
           }
           return networkResponse;
-        }).catch(() => {
-          // If navigation request fails, return cached index.html
-          if (event.request.mode === 'navigate') {
-            const indexUrl = new URL('index.html', self.registration.scope).toString();
-            return caches.match(indexUrl).then(res => res || caches.match(self.registration.scope));
-          }
         });
       })
     );

@@ -13,32 +13,33 @@ import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { InAppReminderAlert } from './components/common/InAppReminderAlert';
 import { AppInstallNotificationPrompt } from './components/common/AppInstallNotificationPrompt';
 import { applyAccentToDocument } from './utils/theme';
+import { lazyRetry } from './utils/lazyRetry';
 
 // Core HomeView is loaded eagerly for instant first paint
 import { HomeView } from './components/home/HomeView';
 
-// Secondary views are code-split & lazy-loaded on demand (Section 51, 52)
-const InboxView = React.lazy(() => import('./components/inbox/InboxView').then(m => ({ default: m.InboxView })));
-const TasksView = React.lazy(() => import('./components/tasks/TasksView').then(m => ({ default: m.TasksView })));
-const RemindersView = React.lazy(() => import('./components/reminders/RemindersView').then(m => ({ default: m.RemindersView })));
-const NotesView = React.lazy(() => import('./components/notes/NotesView').then(m => ({ default: m.NotesView })));
-const MoneyView = React.lazy(() => import('./components/money/MoneyView').then(m => ({ default: m.MoneyView })));
-const CalendarView = React.lazy(() => import('./components/calendar/CalendarView').then(m => ({ default: m.CalendarView })));
-const JournalView = React.lazy(() => import('./components/journal/JournalView').then(m => ({ default: m.JournalView })));
-const PeopleView = React.lazy(() => import('./components/people/PeopleView').then(m => ({ default: m.PeopleView })));
-const ListsView = React.lazy(() => import('./components/lists/ListsView').then(m => ({ default: m.ListsView })));
-const GoalsView = React.lazy(() => import('./components/goals/GoalsView').then(m => ({ default: m.GoalsView })));
-const TrashView = React.lazy(() => import('./components/trash/TrashView').then(m => ({ default: m.TrashView })));
-const SettingsView = React.lazy(() => import('./components/settings/SettingsView').then(m => ({ default: m.SettingsView })));
-const OpenLoopsView = React.lazy(() => import('./components/loops/OpenLoopsView').then(m => ({ default: m.OpenLoopsView })));
-const CanvasView = React.lazy(() => import('./components/canvas/CanvasView').then(m => ({ default: m.CanvasView })));
-const FamilyView = React.lazy(() => import('./components/family/FamilyView').then(m => ({ default: m.FamilyView })));
-const DocumentsView = React.lazy(() => import('./components/documents/DocumentsView').then(m => ({ default: m.DocumentsView })));
+// Secondary views are code-split with automatic deployment chunk retry
+const InboxView = lazyRetry(() => import('./components/inbox/InboxView').then(m => ({ default: m.InboxView })), 'InboxView');
+const TasksView = lazyRetry(() => import('./components/tasks/TasksView').then(m => ({ default: m.TasksView })), 'TasksView');
+const RemindersView = lazyRetry(() => import('./components/reminders/RemindersView').then(m => ({ default: m.RemindersView })), 'RemindersView');
+const NotesView = lazyRetry(() => import('./components/notes/NotesView').then(m => ({ default: m.NotesView })), 'NotesView');
+const MoneyView = lazyRetry(() => import('./components/money/MoneyView').then(m => ({ default: m.MoneyView })), 'MoneyView');
+const CalendarView = lazyRetry(() => import('./components/calendar/CalendarView').then(m => ({ default: m.CalendarView })), 'CalendarView');
+const JournalView = lazyRetry(() => import('./components/journal/JournalView').then(m => ({ default: m.JournalView })), 'JournalView');
+const PeopleView = lazyRetry(() => import('./components/people/PeopleView').then(m => ({ default: m.PeopleView })), 'PeopleView');
+const ListsView = lazyRetry(() => import('./components/lists/ListsView').then(m => ({ default: m.ListsView })), 'ListsView');
+const GoalsView = lazyRetry(() => import('./components/goals/GoalsView').then(m => ({ default: m.GoalsView })), 'GoalsView');
+const TrashView = lazyRetry(() => import('./components/trash/TrashView').then(m => ({ default: m.TrashView })), 'TrashView');
+const SettingsView = lazyRetry(() => import('./components/settings/SettingsView').then(m => ({ default: m.SettingsView })), 'SettingsView');
+const OpenLoopsView = lazyRetry(() => import('./components/loops/OpenLoopsView').then(m => ({ default: m.OpenLoopsView })), 'OpenLoopsView');
+const CanvasView = lazyRetry(() => import('./components/canvas/CanvasView').then(m => ({ default: m.CanvasView })), 'CanvasView');
+const FamilyView = lazyRetry(() => import('./components/family/FamilyView').then(m => ({ default: m.FamilyView })), 'FamilyView');
+const DocumentsView = lazyRetry(() => import('./components/documents/DocumentsView').then(m => ({ default: m.DocumentsView })), 'DocumentsView');
 
 // Heavy Modals code-split
-const GlobalSearchModal = React.lazy(() => import('./components/common/GlobalSearchModal').then(m => ({ default: m.GlobalSearchModal })));
-const VoiceRecorderModal = React.lazy(() => import('./components/common/VoiceRecorderModal').then(m => ({ default: m.VoiceRecorderModal })));
-const InviteModal = React.lazy(() => import('./components/common/InviteModal').then(m => ({ default: m.InviteModal })));
+const GlobalSearchModal = lazyRetry(() => import('./components/common/GlobalSearchModal').then(m => ({ default: m.GlobalSearchModal })), 'GlobalSearchModal');
+const VoiceRecorderModal = lazyRetry(() => import('./components/common/VoiceRecorderModal').then(m => ({ default: m.VoiceRecorderModal })), 'VoiceRecorderModal');
+const InviteModal = lazyRetry(() => import('./components/common/InviteModal').then(m => ({ default: m.InviteModal })), 'InviteModal');
 
 import { db, initializeDatabaseDefaults } from './db/db';
 import { COMMON_CURRENCIES } from './utils/currency';
