@@ -182,14 +182,15 @@ export const SavingsGoalsTab: React.FC = () => {
               width: '46px',
               height: '46px',
               borderRadius: '14px',
-              background: '#10b981',
-              color: '#ffffff',
+              background: 'var(--bg-surface-elevated)',
+              border: '1px solid var(--border-subtle)',
+              color: 'var(--text-primary)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center'
             }}
           >
-            <PiggyBank size={24} strokeWidth={2.2} />
+            <PiggyBank size={24} strokeWidth={2} />
           </div>
           <div>
             <div style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)' }}>

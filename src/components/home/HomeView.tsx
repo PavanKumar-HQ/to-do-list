@@ -829,15 +829,16 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigateTo, onOpenQuickAdd
                 width: '46px',
                 height: '46px',
                 borderRadius: '14px',
-                background: '#f59e0b',
-                color: '#ffffff',
+                background: 'var(--bg-surface-elevated)',
+                border: '1px solid var(--border-subtle)',
+                color: 'var(--text-primary)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 flexShrink: 0
               }}
             >
-              <Sun size={24} strokeWidth={2.2} />
+              <Sun size={24} strokeWidth={2} />
             </div>
             <div>
               <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.2 }}>
@@ -881,15 +882,16 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigateTo, onOpenQuickAdd
                 width: '46px',
                 height: '46px',
                 borderRadius: '14px',
-                background: '#8b5cf6',
-                color: '#ffffff',
+                background: 'var(--bg-surface-elevated)',
+                border: '1px solid var(--border-subtle)',
+                color: 'var(--text-primary)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 flexShrink: 0
               }}
             >
-              <GraduationCap size={24} strokeWidth={2.2} />
+              <GraduationCap size={24} strokeWidth={2} />
             </div>
             <div>
               <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.2 }}>
@@ -933,15 +935,16 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigateTo, onOpenQuickAdd
                 width: '46px',
                 height: '46px',
                 borderRadius: '14px',
-                background: '#10b981',
-                color: '#ffffff',
+                background: 'var(--bg-surface-elevated)',
+                border: '1px solid var(--border-subtle)',
+                color: 'var(--text-primary)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 flexShrink: 0
               }}
             >
-              <BarChart3 size={24} strokeWidth={2.2} />
+              <BarChart3 size={24} strokeWidth={2} />
             </div>
             <div>
               <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.2 }}>
@@ -985,15 +988,16 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigateTo, onOpenQuickAdd
                 width: '46px',
                 height: '46px',
                 borderRadius: '14px',
-                background: '#ef4444',
-                color: '#ffffff',
+                background: 'var(--bg-surface-elevated)',
+                border: '1px solid var(--border-subtle)',
+                color: 'var(--text-primary)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 flexShrink: 0
               }}
             >
-              <Flame size={24} strokeWidth={2.2} />
+              <Flame size={24} strokeWidth={2} />
             </div>
             <div>
               <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.2 }}>
@@ -1037,15 +1041,16 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigateTo, onOpenQuickAdd
                 width: '46px',
                 height: '46px',
                 borderRadius: '14px',
-                background: '#ec4899',
-                color: '#ffffff',
+                background: 'var(--bg-surface-elevated)',
+                border: '1px solid var(--border-subtle)',
+                color: 'var(--text-primary)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 flexShrink: 0
               }}
             >
-              <PiggyBank size={24} strokeWidth={2.2} />
+              <PiggyBank size={24} strokeWidth={2} />
             </div>
             <div>
               <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.2 }}>
@@ -1089,15 +1094,16 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigateTo, onOpenQuickAdd
                 width: '46px',
                 height: '46px',
                 borderRadius: '14px',
-                background: '#06b6d4',
-                color: '#ffffff',
+                background: 'var(--bg-surface-elevated)',
+                border: '1px solid var(--border-subtle)',
+                color: 'var(--text-primary)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 flexShrink: 0
               }}
             >
-              <FolderSearch size={24} strokeWidth={2.2} />
+              <FolderSearch size={24} strokeWidth={2} />
             </div>
             <div>
               <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.2 }}>
