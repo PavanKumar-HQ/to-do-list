@@ -391,6 +391,18 @@ export const TasksView: React.FC<{ onOpenQuickAdd: (type: any) => void }> = ({ o
                         </span>
                       )}
 
+                      {task.priority && task.priority !== 'medium' && (
+                        <span className={`badge ${task.priority === 'high' ? 'badge-danger' : 'badge-neutral'}`} style={{ fontSize: '11px', textTransform: 'capitalize' }}>
+                          {task.priority}
+                        </span>
+                      )}
+
+                      {task.tags && task.tags.length > 0 && task.tags.map((t) => (
+                        <span key={t} className="badge badge-accent" style={{ fontSize: '11px' }}>
+                          #{t}
+                        </span>
+                      ))}
+
                       {task.goalId && goalMap.get(task.goalId) && (
                         <span className="badge badge-accent" style={{ fontSize: '11px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
                           <Target size={11} />
