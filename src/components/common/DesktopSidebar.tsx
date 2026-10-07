@@ -16,7 +16,8 @@ import {
   PenTool,
   Heart,
   FolderLock,
-  Bell
+  Bell,
+  Share2
 } from 'lucide-react';
 import { db } from '../../db/db';
 import { useLiveQuery } from 'dexie-react-hooks';
@@ -32,7 +33,8 @@ interface DesktopSidebarProps {
 export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
   currentScreen,
   onSelectScreen,
-  onOpenQuickAdd
+  onOpenQuickAdd,
+  onOpenInvite
 }) => {
   const pendingInboxCount = useLiveQuery(async () => {
     return db.inbox.filter((i) => !i.deletedAt && !i.isProcessed).count();
@@ -188,6 +190,43 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
         {renderNavGroup('Goals', goalsNav)}
         {renderNavGroup('System', systemNav)}
       </div>
+
+      {onOpenInvite && (
+        <div style={{ paddingTop: '12px', borderTop: '1px solid var(--border-subtle)', marginTop: 'auto' }}>
+          <button
+            onClick={onOpenInvite}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              padding: '9px 12px',
+              borderRadius: 'var(--radius-sm)',
+              color: 'var(--text-secondary)',
+              background: 'var(--bg-surface-elevated)',
+              fontWeight: 500,
+              fontSize: '13px',
+              textAlign: 'left',
+              width: '100%',
+              border: '1px solid var(--border-subtle)',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'var(--accent-light)';
+              e.currentTarget.style.color = 'var(--accent)';
+              e.currentTarget.style.borderColor = 'var(--accent)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'var(--bg-surface-elevated)';
+              e.currentTarget.style.color = 'var(--text-secondary)';
+              e.currentTarget.style.borderColor = 'var(--border-subtle)';
+            }}
+          >
+            <Share2 size={16} />
+            <span>Invite & Share App</span>
+          </button>
+        </div>
+      )}
     </aside>
   );
 };

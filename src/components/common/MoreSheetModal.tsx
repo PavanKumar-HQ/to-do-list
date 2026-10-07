@@ -110,19 +110,6 @@ export const MoreSheetModal: React.FC<MoreSheetModalProps> = ({
           </button>
         </div>
 
-        {onOpenInvite && (
-          <button
-            onClick={() => {
-              onClose();
-              onOpenInvite();
-            }}
-            className="flex items-center gap-2 w-full p-2.5 mb-4 text-xs font-semibold rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 hover:bg-indigo-500/20 transition"
-          >
-            <Share2 className="w-4 h-4" />
-            <span>Invite / Share App (Private)</span>
-          </button>
-        )}
-
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', overflowY: 'auto', flex: 1, paddingRight: '2px' }}>
           {sections.map((sec) => (
             <div key={sec.title}>
@@ -167,6 +154,34 @@ export const MoreSheetModal: React.FC<MoreSheetModalProps> = ({
             </div>
           ))}
         </div>
+
+        {onOpenInvite && (
+          <div style={{ paddingTop: '12px', marginTop: '12px', borderTop: '1px solid var(--border-subtle)' }}>
+            <button
+              onClick={() => {
+                onClose();
+                onOpenInvite();
+              }}
+              className="btn btn-secondary"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                width: '100%',
+                padding: '10px 12px',
+                fontSize: '12.5px',
+                fontWeight: 600,
+                borderRadius: '8px',
+                color: 'var(--accent)',
+                border: '1px solid var(--border-subtle)'
+              }}
+            >
+              <Share2 size={16} />
+              <span>Invite & Share App</span>
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

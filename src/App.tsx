@@ -41,6 +41,7 @@ const GlobalSearchModal = lazyRetry(() => import('./components/common/GlobalSear
 const VoiceRecorderModal = lazyRetry(() => import('./components/common/VoiceRecorderModal').then(m => ({ default: m.VoiceRecorderModal })), 'VoiceRecorderModal');
 const InviteModal = lazyRetry(() => import('./components/common/InviteModal').then(m => ({ default: m.InviteModal })), 'InviteModal');
 
+import { InviteLandingModal } from './components/common/InviteLandingModal';
 import { db, initializeDatabaseDefaults } from './db/db';
 import { COMMON_CURRENCIES } from './utils/currency';
 import {
@@ -63,6 +64,7 @@ export function AppContent() {
   const [isVoiceOpen, setIsVoiceOpen] = useState(false);
   const [isMoreSheetOpen, setIsMoreSheetOpen] = useState(false);
   const [isInviteOpen, setIsInviteOpen] = useState(false);
+  const [recipientInviteToken, setRecipientInviteToken] = useState<string | null>(null);
   const [isBooting, setIsBooting] = useState(true);
 
   // Notification permission banner state
@@ -106,6 +108,40 @@ export function AppContent() {
   useEffect(() => {
     applyAccentToDocument(settings?.accentColor);
   }, [settings?.accentColor]);
+
+  // Detect and process invite tokens from URL hash (#invite=...) or query params (?invite=...)
+  useEffect(() => {
+    const parseInviteToken = () => {
+      if (typeof window === 'undefined') return;
+      const hash = window.location.hash || '';
+      const search = window.location.search || '';
+
+      let token: string | null = null;
+      if (hash.includes('invite=')) {
+        const match = hash.match(/invite=([^&]+)/);
+        if (match && match[1]) token = match[1];
+      } else if (search.includes('invite=')) {
+        const params = new URLSearchParams(search);
+        token = params.get('invite');
+      }
+
+      if (token) {
+        setRecipientInviteToken(token);
+      }
+    };
+
+    parseInviteToken();
+    window.addEventListener('hashchange', parseInviteToken);
+    return () => window.removeEventListener('hashchange', parseInviteToken);
+  }, []);
+
+  const handleAcceptInvite = () => {
+    setRecipientInviteToken(null);
+    if (typeof window !== 'undefined' && window.history) {
+      const cleanUrl = window.location.href.split('#')[0].split('?')[0];
+      window.history.replaceState(null, '', cleanUrl);
+    }
+  };
 
   // Handle background notification actions sent from Service Worker (Section 37, 44)
   useEffect(() => {
@@ -348,6 +384,16 @@ export function AppContent() {
         onOpenInvite={() => setIsInviteOpen(true)}
         currentScreen={currentScreen}
       />
+
+      {/* Recipient Onboarding & Preview Modal */}
+      {recipientInviteToken && (
+        <InviteLandingModal
+          isOpen={!!recipientInviteToken}
+          token={recipientInviteToken}
+          onAccept={handleAcceptInvite}
+          onDismiss={handleAcceptInvite}
+        />
+      )}
     </div>
   );
 }
