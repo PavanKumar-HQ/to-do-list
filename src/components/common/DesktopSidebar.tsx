@@ -12,7 +12,11 @@ import {
   Target,
   Settings,
   Trash2,
-  Plus
+  Plus,
+  PenTool,
+  Heart,
+  FolderLock,
+  Bell
 } from 'lucide-react';
 import { db } from '../../db/db';
 import { useLiveQuery } from 'dexie-react-hooks';
@@ -21,6 +25,7 @@ interface DesktopSidebarProps {
   currentScreen: string;
   onSelectScreen: (screen: string) => void;
   onOpenQuickAdd: () => void;
+  onOpenInvite?: () => void;
 }
 
 export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
@@ -38,27 +43,38 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
       .count();
   }, []) || 0;
 
-  const lifeNav = [
-    { id: 'home', label: 'Home', icon: Home },
-    { id: 'inbox', label: 'Universal Inbox', icon: Inbox, badge: pendingInboxCount },
-    { id: 'calendar', label: 'Calendar', icon: Calendar }
-  ];
-
-  const rememberNav = [
-    { id: 'tasks', label: 'Tasks', icon: CheckSquare, badge: pendingTasksCount },
-    { id: 'loops', label: 'Follow-ups & Commitments', icon: ListTodo },
-    { id: 'notes', label: 'Notes & Memory', icon: FileText },
-    { id: 'people', label: 'People & Waiting', icon: Users },
-    { id: 'journal', label: 'Daily Journal', icon: BookOpen }
+  // Calm logical grouping per Section 37
+  const homeNav = [
+    { id: 'home', label: 'Home', icon: Home }
   ];
 
   const planNav = [
-    { id: 'goals', label: 'Goals & Routines', icon: Target },
-    { id: 'lists', label: 'Lists & Checklists', icon: ListTodo }
+    { id: 'tasks', label: 'Tasks', icon: CheckSquare, badge: pendingTasksCount },
+    { id: 'calendar', label: 'Calendar', icon: Calendar },
+    { id: 'reminders', label: 'Reminders', icon: Bell },
+    { id: 'inbox', label: 'Universal Inbox', icon: Inbox, badge: pendingInboxCount }
+  ];
+
+  const memoryNav = [
+    { id: 'notes', label: 'Notes & Ideas', icon: FileText },
+    { id: 'canvas', label: 'Canvas Studio', icon: PenTool },
+    { id: 'journal', label: 'Daily Journal', icon: BookOpen }
+  ];
+
+  const peopleNav = [
+    { id: 'people', label: 'People & Waiting', icon: Users },
+    { id: 'loops', label: 'Follow-ups', icon: ListTodo },
+    { id: 'family', label: 'Family Care', icon: Heart }
   ];
 
   const moneyNav = [
-    { id: 'money', label: 'Money & Budgets', icon: Wallet }
+    { id: 'money', label: 'Money & Warranties', icon: Wallet },
+    { id: 'documents', label: 'Documents Archive', icon: FolderLock }
+  ];
+
+  const goalsNav = [
+    { id: 'goals', label: 'Goals & Routines', icon: Target },
+    { id: 'lists', label: 'Lists & Checklists', icon: ListTodo }
   ];
 
   const systemNav = [
@@ -66,9 +82,9 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
     { id: 'settings', label: 'Settings & Backups', icon: Settings }
   ];
 
-  const renderNavGroup = (title: string, items: typeof lifeNav) => (
+  const renderNavGroup = (title: string, items: typeof planNav) => (
     <div style={{ marginBottom: '10px' }}>
-      <div style={{ padding: '4px 12px', fontSize: '11px', fontWeight: 600, color: 'var(--text-tertiary)', letterSpacing: '0.02em' }}>
+      <div style={{ padding: '4px 12px', fontSize: '11px', fontWeight: 600, color: 'var(--text-tertiary)', letterSpacing: '0.02em', textTransform: 'uppercase' }}>
         {title}
       </div>
       {items.map((item) => {
@@ -156,10 +172,10 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
           </div>
           <div>
             <div style={{ fontWeight: 600, fontSize: '15px', color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>
-              Kanso
+              Life OS
             </div>
             <div style={{ fontSize: '11.5px', color: 'var(--text-muted)' }}>
-              Workspace
+              Personal Workspace
             </div>
           </div>
         </div>
@@ -175,10 +191,12 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '12px 0', display: 'flex', flexDirection: 'column' }}>
-        {renderNavGroup('Life', lifeNav)}
-        {renderNavGroup('Remember', rememberNav)}
+        {renderNavGroup('Home', homeNav)}
         {renderNavGroup('Plan', planNav)}
+        {renderNavGroup('Memory', memoryNav)}
+        {renderNavGroup('People', peopleNav)}
         {renderNavGroup('Money', moneyNav)}
+        {renderNavGroup('Goals', goalsNav)}
         {renderNavGroup('System', systemNav)}
       </div>
     </aside>

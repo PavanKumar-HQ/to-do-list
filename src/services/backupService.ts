@@ -5,7 +5,7 @@ import { LIMITS, safeJsonParse } from './securityService';
 import { IntegrityService } from './integrityService';
 import { multiTabSync } from './multiTabService';
 
-export const CURRENT_SCHEMA_VERSION = 4;
+export const CURRENT_SCHEMA_VERSION = 5;
 export const CURRENT_BACKUP_VERSION = 1;
 export const APP_VERSION = '1.3.0';
 export const BACKUP_FORMAT_IDENTIFIER = 'personal-life-os-backup';
@@ -147,6 +147,12 @@ export async function createBackupPayload(password?: string): Promise<BackupPayl
     futureMessages,
     reviewSessions,
     lifeContexts,
+    canvases,
+    warranties,
+    familyMembers,
+    careReminders,
+    documents,
+    invites,
     settings,
     auditHistory
   ] = await Promise.all([
@@ -179,6 +185,12 @@ export async function createBackupPayload(password?: string): Promise<BackupPayl
     db.futureMessages.toArray(),
     db.reviewSessions.toArray(),
     db.lifeContexts.toArray(),
+    db.canvases.toArray(),
+    db.warranties.toArray(),
+    db.familyMembers.toArray(),
+    db.careReminders.toArray(),
+    db.documents.toArray(),
+    db.invites.toArray(),
     db.settings.get('current_settings'),
     db.auditHistory.toArray()
   ]);
@@ -212,7 +224,13 @@ export async function createBackupPayload(password?: string): Promise<BackupPayl
     dependencies.length +
     futureMessages.length +
     reviewSessions.length +
-    lifeContexts.length;
+    lifeContexts.length +
+    canvases.length +
+    warranties.length +
+    familyMembers.length +
+    careReminders.length +
+    documents.length +
+    invites.length;
 
   const tablesData = {
     inbox,
@@ -244,6 +262,12 @@ export async function createBackupPayload(password?: string): Promise<BackupPayl
     futureMessages,
     reviewSessions,
     lifeContexts,
+    canvases,
+    warranties,
+    familyMembers,
+    careReminders,
+    documents,
+    invites,
     settings,
     auditHistory
   };
@@ -505,7 +529,13 @@ export async function validateAndPreviewBackup(fileContent: string): Promise<{
       dependencies: Array.isArray(t.dependencies) ? t.dependencies.length : 0,
       futureMessages: Array.isArray(t.futureMessages) ? t.futureMessages.length : 0,
       reviewSessions: Array.isArray(t.reviewSessions) ? t.reviewSessions.length : 0,
-      lifeContexts: Array.isArray(t.lifeContexts) ? t.lifeContexts.length : 0
+      lifeContexts: Array.isArray(t.lifeContexts) ? t.lifeContexts.length : 0,
+      canvases: Array.isArray(t.canvases) ? t.canvases.length : 0,
+      warranties: Array.isArray(t.warranties) ? t.warranties.length : 0,
+      familyMembers: Array.isArray(t.familyMembers) ? t.familyMembers.length : 0,
+      careReminders: Array.isArray(t.careReminders) ? t.careReminders.length : 0,
+      documents: Array.isArray(t.documents) ? t.documents.length : 0,
+      invites: Array.isArray(t.invites) ? t.invites.length : 0
     };
 
     const totalRecords = Object.values(counts).reduce((a, b) => a + b, 0);
@@ -569,6 +599,12 @@ async function writeTablesToDb(t: any, mode: 'replace' | 'merge') {
     db.futureMessages,
     db.reviewSessions,
     db.lifeContexts,
+    db.canvases,
+    db.warranties,
+    db.familyMembers,
+    db.careReminders,
+    db.documents,
+    db.invites,
     db.settings,
     db.auditHistory
   ], async () => {
@@ -603,6 +639,12 @@ async function writeTablesToDb(t: any, mode: 'replace' | 'merge') {
         db.futureMessages.clear(),
         db.reviewSessions.clear(),
         db.lifeContexts.clear(),
+        db.canvases.clear(),
+        db.warranties.clear(),
+        db.familyMembers.clear(),
+        db.careReminders.clear(),
+        db.documents.clear(),
+        db.invites.clear(),
         db.auditHistory.clear()
       ]);
     }
@@ -636,6 +678,12 @@ async function writeTablesToDb(t: any, mode: 'replace' | 'merge') {
     if (t.futureMessages?.length) await db.futureMessages.bulkPut(t.futureMessages);
     if (t.reviewSessions?.length) await db.reviewSessions.bulkPut(t.reviewSessions);
     if (t.lifeContexts?.length) await db.lifeContexts.bulkPut(t.lifeContexts);
+    if (t.canvases?.length) await db.canvases.bulkPut(t.canvases);
+    if (t.warranties?.length) await db.warranties.bulkPut(t.warranties);
+    if (t.familyMembers?.length) await db.familyMembers.bulkPut(t.familyMembers);
+    if (t.careReminders?.length) await db.careReminders.bulkPut(t.careReminders);
+    if (t.documents?.length) await db.documents.bulkPut(t.documents);
+    if (t.invites?.length) await db.invites.bulkPut(t.invites);
     if (t.auditHistory?.length) await db.auditHistory.bulkPut(t.auditHistory);
 
     if (t.settings) {
@@ -753,7 +801,13 @@ function getZeroCounts() {
     dependencies: 0,
     futureMessages: 0,
     reviewSessions: 0,
-    lifeContexts: 0
+    lifeContexts: 0,
+    canvases: 0,
+    warranties: 0,
+    familyMembers: 0,
+    careReminders: 0,
+    documents: 0,
+    invites: 0
   };
 }
 
@@ -787,6 +841,12 @@ function getZeroTables() {
     dependencies: [],
     futureMessages: [],
     reviewSessions: [],
-    lifeContexts: []
+    lifeContexts: [],
+    canvases: [],
+    warranties: [],
+    familyMembers: [],
+    careReminders: [],
+    documents: [],
+    invites: []
   };
 }

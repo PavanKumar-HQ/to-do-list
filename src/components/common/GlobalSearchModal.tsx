@@ -15,7 +15,8 @@ import {
   Layers,
   HelpCircle,
   Calendar,
-  CheckCircle2
+  CheckCircle2,
+  ShieldCheck
 } from 'lucide-react';
 import { db } from '../../db/db';
 import { formatMoney } from '../../utils/currency';
@@ -202,6 +203,74 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
           });
         }
 
+        // Canvases
+        if (typeFilter === 'all') {
+          const canvases = await db.canvases
+            .filter((c) => !c.deletedAt && c.name.toLowerCase().includes(term))
+            .limit(10)
+            .toArray();
+          canvases.forEach((c) => {
+            found.push({
+              id: c.id,
+              type: 'canvas',
+              title: c.name,
+              subtitle: `Canvas · Visual drawing with ${c.objects.length} elements`,
+              date: c.updatedAt.slice(0, 10)
+            });
+          });
+        }
+
+        // Warranties
+        if (typeFilter === 'all') {
+          const warranties = await db.warranties
+            .filter((w) => !w.deletedAt && (w.itemName.toLowerCase().includes(term) || (w.brand || '').toLowerCase().includes(term) || (w.serialNumber || '').toLowerCase().includes(term)))
+            .limit(10)
+            .toArray();
+          warranties.forEach((w) => {
+            found.push({
+              id: w.id,
+              type: 'warranty',
+              title: `${w.itemName} ${w.brand ? `(${w.brand})` : ''}`,
+              subtitle: `Warranty · Expires: ${w.warrantyEnd} (${w.status})`,
+              date: w.warrantyEnd
+            });
+          });
+        }
+
+        // Family Members
+        if (typeFilter === 'all' || typeFilter === 'person') {
+          const family = await db.familyMembers
+            .filter((fm) => !fm.deletedAt && (fm.name.toLowerCase().includes(term) || fm.relationship.toLowerCase().includes(term) || (fm.notes || '').toLowerCase().includes(term)))
+            .limit(10)
+            .toArray();
+          family.forEach((fm) => {
+            found.push({
+              id: fm.id,
+              type: 'family_member',
+              title: `${fm.name} · Family`,
+              subtitle: `Family Care · ${fm.relationship} ${fm.notes ? `· ${fm.notes}` : ''}`,
+              date: fm.createdAt.slice(0, 10)
+            });
+          });
+        }
+
+        // Documents
+        if (typeFilter === 'all') {
+          const docs = await db.documents
+            .filter((d) => !d.deletedAt && (d.title.toLowerCase().includes(term) || d.fileName.toLowerCase().includes(term) || (d.notes || '').toLowerCase().includes(term)))
+            .limit(10)
+            .toArray();
+          docs.forEach((d) => {
+            found.push({
+              id: d.id,
+              type: 'document',
+              title: d.title,
+              subtitle: `Document · ${d.category.toUpperCase()} · ${d.fileName}`,
+              date: d.createdAt.slice(0, 10)
+            });
+          });
+        }
+
         setResults(found);
       } catch (err) {
         console.error('Search error:', err);
@@ -224,7 +293,11 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
       case 'note': return <FileText size={16} color="#2563eb" />;
       case 'expense': return <Wallet size={16} color="#dc2626" />;
       case 'person': return <Users size={16} color="#0891b2" />;
+      case 'family_member': return <Users size={16} color="#ec4899" />;
       case 'event': return <Calendar size={16} color="#4f46e5" />;
+      case 'canvas': return <FileText size={16} color="#8b5cf6" />;
+      case 'warranty': return <ShieldCheck size={16} color="#f59e0b" />;
+      case 'document': return <FileText size={16} color="#10b981" />;
       default: return <Search size={16} />;
     }
   };
@@ -236,7 +309,11 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
     else if (item.type === 'note') screen = 'notes';
     else if (item.type === 'expense') screen = 'money';
     else if (item.type === 'person') screen = 'people';
+    else if (item.type === 'family_member') screen = 'family';
     else if (item.type === 'event') screen = 'calendar';
+    else if (item.type === 'canvas') screen = 'canvas';
+    else if (item.type === 'warranty') screen = 'warranties';
+    else if (item.type === 'document') screen = 'documents';
 
     onNavigateTo(screen);
     onClose();

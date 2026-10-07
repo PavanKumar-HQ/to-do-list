@@ -29,7 +29,13 @@ export type EntityType =
   | 'dependency'
   | 'future_message'
   | 'review_session'
-  | 'life_context';
+  | 'life_context'
+  | 'canvas'
+  | 'warranty'
+  | 'family_member'
+  | 'care_reminder'
+  | 'document'
+  | 'invite';
 
 export type Priority = 'low' | 'medium' | 'high';
 export type ConsequenceLevel = 'none' | 'minor' | 'important' | 'significant' | 'critical';
@@ -591,6 +597,154 @@ export interface AuditHistoryEntry {
   timestamp: string;
 }
 
+// Canvas Module Types (Section 17-23)
+export interface CanvasObject {
+  id: string;
+  type: 'stroke' | 'text' | 'shape' | 'arrow' | 'line' | 'image';
+  x: number;
+  y: number;
+  width?: number;
+  height?: number;
+  points?: { x: number; y: number }[];
+  color: string;
+  strokeWidth: number;
+  fill?: string;
+  text?: string;
+  fontSize?: number;
+  shapeType?: 'rectangle' | 'circle';
+  imageDataUrl?: string;
+  createdAt: string;
+}
+
+export interface CanvasItem {
+  id: string;
+  name: string;
+  thumbnail?: string;
+  background?: string;
+  objects: CanvasObject[];
+  relatedEntities?: { entityType: EntityType; entityId: string }[];
+  archivedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt?: string;
+}
+
+// Warranty Module Types (Section 24-26)
+export interface WarrantyItem {
+  id: string;
+  itemName: string;
+  brand?: string;
+  model?: string;
+  serialNumber?: string;
+  purchaseDate: string; // YYYY-MM-DD
+  purchasePriceMinor?: number; // integer minor units
+  currency?: string;
+  seller?: string;
+  warrantyProvider?: string;
+  warrantyStart: string; // YYYY-MM-DD
+  warrantyEnd: string; // YYYY-MM-DD
+  receiptAttachmentId?: string;
+  documentIds?: string[];
+  notes?: string;
+  relatedExpenseId?: string;
+  reminderDaysBefore?: number; // e.g. 30, 14, 7
+  status: 'active' | 'expiring_soon' | 'expired' | 'archived';
+  createdAt: string;
+  updatedAt: string;
+  deletedAt?: string;
+}
+
+// Family Care Module Types (Section 27-30)
+export interface FamilyImportantDate {
+  id: string;
+  label: string; // e.g. "Birthday", "Anniversary"
+  date: string; // YYYY-MM-DD
+}
+
+export interface FamilyMemberItem {
+  id: string;
+  name: string;
+  relationship: string; // e.g. "Mother", "Father", "Spouse", "Child", "Sibling", "Grandparent"
+  phone?: string;
+  email?: string;
+  importantDates: FamilyImportantDate[];
+  notes?: string;
+  documentIds?: string[];
+  createdAt: string;
+  updatedAt: string;
+  deletedAt?: string;
+}
+
+export type CareReminderType =
+  | 'appointment'
+  | 'medication'
+  | 'document_expiry'
+  | 'check_in'
+  | 'call'
+  | 'collect_report'
+  | 'renew'
+  | 'buy_item'
+  | 'other';
+
+export interface CareReminderItem {
+  id: string;
+  familyMemberId: string;
+  familyMemberName: string;
+  title: string;
+  reminderType: CareReminderType;
+  dueDate: string; // YYYY-MM-DD
+  dueTime?: string; // HH:mm
+  notes?: string;
+  status: 'active' | 'completed' | 'snoozed';
+  snoozedUntil?: string;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt?: string;
+}
+
+// Document Management (Section 31)
+export type DocumentCategory =
+  | 'id'
+  | 'govt_id'
+  | 'certificate'
+  | 'warranty'
+  | 'receipt'
+  | 'medical'
+  | 'insurance'
+  | 'agreement'
+  | 'other';
+
+export interface DocumentItem {
+  id: string;
+  title: string;
+  category: DocumentCategory;
+  documentNumber?: string; // Government ID / passport / license number
+  holderName?: string;     // Name printed on document
+  expiryDate?: string;     // Expiry date (YYYY-MM-DD)
+  issueDate?: string;      // Issue date (YYYY-MM-DD)
+  relatedEntityType: EntityType;
+  relatedEntityId: string;
+  attachmentId?: string;
+  fileData?: string; // base64 data url for preview/download
+  fileName: string;
+  fileSize: number;
+  mimeType: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt?: string;
+}
+
+// Invite System (Section 32-35)
+export interface InviteItem {
+  id: string;
+  token: string;
+  durationLabel: '24 hours' | '7 days' | '30 days';
+  expiresAt: string; // ISO string
+  createdAt: string;
+  attributionCount: number;
+}
+
 // Full portable versioned backup package definition (.plife) - Section 24
 export interface BackupPayload {
   format?: string; // 'personal-life-os-backup'
@@ -641,6 +795,12 @@ export interface BackupPayload {
     futureMessages?: FutureMessageItem[];
     reviewSessions?: ReviewSessionItem[];
     lifeContexts?: LifeContextItem[];
+    canvases?: CanvasItem[];
+    warranties?: WarrantyItem[];
+    familyMembers?: FamilyMemberItem[];
+    careReminders?: CareReminderItem[];
+    documents?: DocumentItem[];
+    invites?: InviteItem[];
     settings?: AppSettings;
     auditHistory?: AuditHistoryEntry[];
   };
@@ -683,5 +843,11 @@ export interface BackupPreviewSummary {
     futureMessages?: number;
     reviewSessions?: number;
     lifeContexts?: number;
+    canvases?: number;
+    warranties?: number;
+    familyMembers?: number;
+    careReminders?: number;
+    documents?: number;
+    invites?: number;
   };
 }

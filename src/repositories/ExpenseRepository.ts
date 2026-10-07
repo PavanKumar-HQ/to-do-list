@@ -163,4 +163,34 @@ export class ExpenseRepository {
     const list = await this.queryByMonth(yearMonth);
     return list.reduce((sum, item) => sum + item.amountMinor, 0);
   }
+
+  /**
+   * Get expense by ID
+   */
+  public static async getById(id: string): Promise<ExpenseItem | undefined> {
+    return db.expenses.get(id);
+  }
+
+  /**
+   * Duplicate an expense with new ID and current date
+   */
+  public static async duplicate(id: string): Promise<ExpenseItem> {
+    const existing = await db.expenses.get(id);
+    if (!existing) throw new Error(`Expense ${id} not found.`);
+
+    const now = new Date().toISOString();
+    const duplicated: ExpenseItem = {
+      ...existing,
+      id: generateId(),
+      date: new Date().toISOString().split('T')[0],
+      createdAt: now,
+      updatedAt: now,
+      deletedAt: undefined
+    };
+
+    await db.expenses.add(duplicated);
+    await logAudit('create', 'expense', duplicated.id, `Duplicated expense: ${duplicated.category} (${duplicated.amountMinor})`);
+    multiTabSync.broadcastMutation('expense', duplicated.id, 'create', now);
+    return duplicated;
+  }
 }

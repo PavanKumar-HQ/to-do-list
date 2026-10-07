@@ -63,6 +63,23 @@ export class OpenLoopRepository {
     return (await db.openLoops.get(id))!;
   }
 
+  public static async update(id: string, updates: Partial<OpenLoopItem>): Promise<OpenLoopItem> {
+    const existing = await db.openLoops.get(id);
+    if (!existing) throw new Error(`Open loop ${id} not found.`);
+
+    const now = new Date().toISOString();
+    const cleanUpdates = sanitizeObject({
+      ...updates,
+      updatedAt: now
+    });
+
+    await db.openLoops.update(id, cleanUpdates);
+    await logAudit('update', 'open_loop', id, `Updated loop: ${cleanUpdates.title || existing.title}`);
+    multiTabSync.broadcastMutation('open_loop', id, 'update', now);
+
+    return (await db.openLoops.get(id))!;
+  }
+
   public static async snooze(id: string, untilDate: string): Promise<OpenLoopItem> {
     const existing = await db.openLoops.get(id);
     if (!existing) throw new Error(`Open loop ${id} not found.`);

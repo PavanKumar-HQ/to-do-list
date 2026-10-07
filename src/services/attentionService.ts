@@ -28,7 +28,9 @@ export class AttentionService {
       recurringExpenses,
       notes,
       openLoops,
-      people
+      people,
+      warranties,
+      careReminders
     ] = await Promise.all([
       db.tasks.filter(t => !t.deletedAt && t.status !== 'completed' && t.status !== 'archived').toArray(),
       db.followups.filter(f => !f.deletedAt && f.status !== 'resolved').toArray(),
@@ -38,7 +40,9 @@ export class AttentionService {
       db.recurringExpenses.filter(r => !r.deletedAt && r.isActive).toArray(),
       db.notes.filter(n => !n.deletedAt && !n.archivedAt).toArray(),
       db.openLoops.filter(l => !l.deletedAt && l.status === 'open').toArray(),
-      db.people.filter(p => !p.deletedAt).toArray()
+      db.people.filter(p => !p.deletedAt).toArray(),
+      db.warranties.filter(w => !w.deletedAt && w.status !== 'archived').toArray(),
+      db.careReminders.filter(c => !c.deletedAt && c.status === 'active').toArray()
     ]);
 
     const peopleMap = new Map(people.map(p => [p.id, p.name]));
@@ -183,6 +187,44 @@ export class AttentionService {
           entityType: 'note',
           entityId: n.id,
           suggestedActions: ['open_context', 'archive']
+        });
+      }
+    }
+
+    // 9. EXPIRING WARRANTIES (Section 26, 39)
+    for (const w of warranties) {
+      const daysLeft = Math.ceil((new Date(w.warrantyEnd).getTime() - todayMs) / 86400000);
+      const threshold = w.reminderDaysBefore ?? 30;
+      if (daysLeft >= 0 && daysLeft <= threshold) {
+        attentionItems.push({
+          id: `att_warranty_${w.id}`,
+          type: 'resurface',
+          title: `Warranty expiring: ${w.itemName}`,
+          reason: daysLeft === 0 ? `Warranty expires today!` : `Expires in ${daysLeft} days (${w.warrantyEnd}).`,
+          severity: daysLeft <= 7 ? 'high' : 'medium',
+          entityType: 'warranty',
+          entityId: w.id,
+          date: w.warrantyEnd,
+          suggestedActions: ['open_context']
+        });
+      }
+    }
+
+    // 10. FAMILY CARE REMINDERS (Section 29, 39)
+    for (const cr of careReminders) {
+      const isDue = cr.dueDate <= today;
+      if (isDue) {
+        attentionItems.push({
+          id: `att_care_${cr.id}`,
+          type: 'waiting',
+          title: `Family Care: ${cr.familyMemberName} · ${cr.title}`,
+          reason: `Due: ${cr.dueDate}${cr.dueTime ? ' ' + cr.dueTime : ''} (${cr.reminderType.replace('_', ' ')})`,
+          severity: cr.dueDate < today ? 'critical' : 'high',
+          entityType: 'care_reminder',
+          entityId: cr.id,
+          date: cr.dueDate,
+          actionLabel: 'Complete',
+          suggestedActions: ['complete', 'open_context']
         });
       }
     }

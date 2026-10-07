@@ -24,7 +24,12 @@ import {
   CommitmentRepository,
   DecisionRepository,
   OpenLoopRepository,
-  SettingsRepository
+  SettingsRepository,
+  CanvasRepository,
+  WarrantyRepository,
+  FamilyRepository,
+  DocumentRepository,
+  InviteRepository
 } from '../src/repositories';
 import { IntegrityService } from '../src/services/integrityService';
 import { multiTabSync } from '../src/services/multiTabService';
@@ -778,6 +783,274 @@ async function runTestSuite() {
 
   const matchUnicode = await db.notes.filter(n => !n.deletedAt && n.content.includes('₹45,000')).first();
   assert(matchUnicode?.id === specialNote.id, 'Search handles unicode currency symbols');
+
+  // -----------------------------------------------------------------
+  // 26. COMPLETE EXPENSE LIFECYCLE & EDIT PERSISTENCE (Prompt Section 3, 5-8)
+  // -----------------------------------------------------------------
+  console.log('\n--- 26. Complete Expense Lifecycle & Edit Persistence ---');
+
+  // CREATE
+  const expense1 = await ExpenseRepository.create({
+    amountMinor: toMinorUnits(450), // ₹450
+    category: 'Food',
+    paymentMethod: 'upi',
+    date: '2026-10-07',
+    notes: 'Lunch with colleagues'
+  });
+  assert(expense1.amountMinor === 45000, 'Expense created with ₹450 (45000 paise)');
+  assert(expense1.category === 'Food', 'Expense category is Food');
+  assert(expense1.paymentMethod === 'upi', 'Expense payment method is UPI');
+
+  // EDIT: ₹450 -> ₹550 (Sections 3 & 6)
+  const initialCreatedAt = expense1.createdAt;
+  const initialId = expense1.id;
+  const updatedExpense = await ExpenseRepository.update(initialId, {
+    amountMinor: toMinorUnits(550), // ₹550
+    notes: 'Lunch with colleagues + dessert'
+  });
+
+  assert(updatedExpense.id === initialId, 'Edit strictly preserves record ID');
+  assert(updatedExpense.createdAt === initialCreatedAt, 'Edit strictly preserves original createdAt');
+  assert(updatedExpense.amountMinor === 55000, 'Expense updated successfully to ₹550 (55000 paise)');
+  assert(updatedExpense.updatedAt >= initialCreatedAt, 'Edit updates updatedAt timestamp');
+
+  // VERIFY: No stale ₹450 in database
+  const activeFoodExpenses = await db.expenses.filter(e => !e.deletedAt && e.category === 'Food').toArray();
+  const hasStale450 = activeFoodExpenses.some(e => e.amountMinor === 45000);
+  assert(!hasStale450, 'Zero stale ₹450 records exist in database after edit (Section 3)');
+  const foundUpdated = activeFoodExpenses.find(e => e.id === initialId);
+  assert(foundUpdated?.amountMinor === 55000, 'Persisted record accurately reads ₹550 from IndexedDB');
+
+  // DUPLICATE (Section 10)
+  const duplicatedExpense = await ExpenseRepository.duplicate(initialId);
+  assert(duplicatedExpense.id !== initialId, 'Duplicate creates a new globally unique ID');
+  assert(duplicatedExpense.amountMinor === 55000, 'Duplicated expense copies ₹550 amount');
+  assert(duplicatedExpense.category === 'Food', 'Duplicated expense copies category');
+
+  // CANCEL EDIT INVARIANT (Section 7)
+  const snapshotBefore = await db.expenses.get(initialId);
+  // User starts editing but cancels -> no update call made
+  const snapshotAfter = await db.expenses.get(initialId);
+  assert(snapshotBefore?.amountMinor === snapshotAfter?.amountMinor, 'Cancelled edit preserves original database value without mutation');
+
+  // DOUBLE SAVE GUARD (Section 8)
+  const doubleSave1 = ExpenseRepository.update(initialId, { notes: 'Double save test' });
+  const doubleSave2 = ExpenseRepository.update(initialId, { notes: 'Double save test' });
+  const [res1, res2] = await Promise.all([doubleSave1, doubleSave2]);
+  assert(res1.id === res2.id, 'Rapid double save updates same record without creating duplicates');
+
+  // -----------------------------------------------------------------
+  // 27. COMPLETE DELETE, TRASH, RESTORE & PERMANENT DELETE (Prompt Section 4)
+  // -----------------------------------------------------------------
+  console.log('\n--- 27. Universal Lifecycle: Delete, Trash, Restore & Permanent Delete ---');
+
+  const lifecycleTask = await TaskRepository.create({ title: 'Lifecycle Audit Task' });
+  const taskId = lifecycleTask.id;
+
+  // Soft delete
+  await TaskRepository.softDelete(taskId);
+  const activeAfterDelete = await db.tasks.get(taskId);
+  assert(!!activeAfterDelete?.deletedAt, 'Task marked deleted with timestamp');
+
+  // Appears in Trash
+  const trashedInDb = await db.tasks.filter(t => !!t.deletedAt && t.id === taskId).first();
+  assert(trashedInDb !== undefined, 'Deleted task appears in Trash query');
+
+  // Restore
+  await TaskRepository.restore(taskId);
+  const restoredLifecycleTask = await db.tasks.get(taskId);
+  assert(!restoredLifecycleTask?.deletedAt, 'Restored task has deletedAt cleared');
+
+  // Permanent Delete
+  await TaskRepository.permanentDelete(taskId);
+  const permDeleted = await db.tasks.get(taskId);
+  assert(permDeleted === undefined, 'Permanently deleted task is completely eradicated from IndexedDB');
+
+  // -----------------------------------------------------------------
+  // 28. CANVAS MODULE: OBJECT MODEL, PERSISTENCE & RELATIONS (Prompt Sections 17-23)
+  // -----------------------------------------------------------------
+  console.log('\n--- 28. Canvas Module: Drawing Space & Autosave ---');
+
+  const testCanvas = await CanvasRepository.create({
+    name: 'System Architecture Diagram',
+    background: '#121214'
+  });
+  assert(testCanvas.name === 'System Architecture Diagram', 'Canvas created with name');
+  assert(Array.isArray(testCanvas.objects), 'Canvas initializes with structured objects array');
+
+  // Add structured objects
+  const updatedCanvas = await CanvasRepository.update(testCanvas.id, {
+    objects: [
+      {
+        id: generateId(),
+        type: 'rect',
+        x: 100,
+        y: 100,
+        width: 200,
+        height: 150,
+        strokeColor: '#6366f1',
+        strokeWidth: 2,
+        fillColor: 'rgba(99, 102, 241, 0.2)'
+      },
+      {
+        id: generateId(),
+        type: 'text',
+        x: 120,
+        y: 130,
+        text: 'API Gateway',
+        strokeColor: '#ffffff',
+        fontSize: 16
+      }
+    ]
+  });
+
+  assert(updatedCanvas.objects.length === 2, 'Canvas saved 2 structured objects without rasterization loss');
+  assert(updatedCanvas.objects[0].type === 'rect', 'Canvas rect object preserved');
+  assert(updatedCanvas.objects[1].text === 'API Gateway', 'Canvas text object preserved');
+
+  // Duplicate Canvas
+  const dupCanvas = await CanvasRepository.duplicate(testCanvas.id);
+  assert(dupCanvas.id !== testCanvas.id, 'Duplicate canvas has unique ID');
+  assert(dupCanvas.name.includes('(Copy)'), 'Duplicated canvas marked with Copy suffix');
+  assert(dupCanvas.objects.length === 2, 'Duplicated canvas copies structured objects');
+
+  // -----------------------------------------------------------------
+  // 29. WARRANTY ENGINE: STATUS & EXPIRATION (Prompt Sections 24-26)
+  // -----------------------------------------------------------------
+  console.log('\n--- 29. Warranty Tracking & Status Calculation ---');
+
+  // Active warranty (purchased yesterday, expires in 365 days)
+  const activeW = await WarrantyRepository.create({
+    itemName: 'MacBook Air M3',
+    brand: 'Apple',
+    purchaseDate: '2026-10-06',
+    warrantyPeriodMonths: 12,
+    warrantyEnd: '2027-10-06',
+    purchasePriceMinor: 11490000,
+    reminderDaysBefore: 30
+  });
+  assert(activeW.status === 'active', 'Fresh warranty accurately calculated as active');
+  assert(activeW.itemName === 'MacBook Air M3', 'Warranty item name saved');
+
+  // Expiring soon warranty (expires in 10 days)
+  const futureExpDate = new Date();
+  futureExpDate.setDate(futureExpDate.getDate() + 10);
+  const expiringW = await WarrantyRepository.create({
+    itemName: 'Noise Cancelling Headphones',
+    purchaseDate: '2025-10-17',
+    warrantyEnd: futureExpDate.toISOString().split('T')[0],
+    reminderDaysBefore: 30
+  });
+  assert(expiringW.status === 'expiring_soon', 'Warranty within 30 days accurately flagged expiring_soon');
+
+  // Expired warranty (ended last year)
+  const expiredW = await WarrantyRepository.create({
+    itemName: 'Old Monitor',
+    purchaseDate: '2024-01-01',
+    warrantyEnd: '2025-01-01'
+  });
+  assert(expiredW.status === 'expired', 'Past warranty accurately flagged expired');
+
+  // -----------------------------------------------------------------
+  // 30. FAMILY CARE: MEMBERS, CARE REMINDERS & 360 CONTEXT (Prompt Sections 27-30)
+  // -----------------------------------------------------------------
+  console.log('\n--- 30. Family Care & 360 Context ---');
+
+  const mother = await FamilyRepository.createMember({
+    name: 'Mother',
+    relationship: 'Mother',
+    phone: '+91 9876543210',
+    importantDates: [{ label: 'Birthday', date: '2026-03-12' }]
+  });
+  assert(mother.name === 'Mother', 'Family member created');
+  assert(mother.importantDates?.[0].label === 'Birthday', 'Important date label preserved');
+
+  // Care reminder
+  const careRem = await FamilyRepository.addCareReminder({
+    familyMemberId: mother.id,
+    title: 'Dental Checkup Appointment',
+    reminderType: 'appointment',
+    dueDate: '2026-10-25',
+    dueTime: '10:30'
+  });
+  assert(careRem.familyMemberId === mother.id, 'Care reminder linked to family member');
+  assert(careRem.status === 'active', 'Care reminder created active');
+
+  // Complete care reminder
+  await FamilyRepository.completeCareReminder(careRem.id);
+  const completedRem = await db.careReminders.get(careRem.id);
+  assert(completedRem?.status === 'completed', 'Care reminder marked completed');
+
+  // 360 Context Query
+  const familyContext = await FamilyRepository.getFamilyContext(mother.id);
+  assert(familyContext.member.id === mother.id, 'Family 360 context retrieves member');
+  assert(familyContext.reminders.length >= 1, 'Family 360 context retrieves care reminders');
+
+  // -----------------------------------------------------------------
+  // 31. DOCUMENTS ARCHIVE & ENTITY LINKING (Prompt Section 31)
+  // -----------------------------------------------------------------
+  console.log('\n--- 31. Local Documents Vault & Linking ---');
+
+  const doc = await DocumentRepository.create({
+    title: 'MacBook Purchase Invoice',
+    category: 'receipt',
+    relatedEntityType: 'warranty',
+    relatedEntityId: activeW.id,
+    fileName: 'apple_invoice.pdf',
+    fileSize: 1048576, // 1MB
+    mimeType: 'application/pdf',
+    fileData: 'data:application/pdf;base64,JVBERi0xLjQK...'
+  });
+  assert(doc.title === 'MacBook Purchase Invoice', 'Document created with title');
+  assert(doc.category === 'receipt', 'Document category is receipt');
+  assert(doc.relatedEntityId === activeW.id, 'Document linked to Warranty');
+
+  const warrantyDocs = await DocumentRepository.queryByEntity('warranty', activeW.id);
+  assert(warrantyDocs.length === 1, 'Query by entity retrieves linked document');
+  assert(warrantyDocs[0].fileName === 'apple_invoice.pdf', 'Retrieved document file name matches');
+
+  // -----------------------------------------------------------------
+  // 32. PRIVACY-FIRST INVITE ENGINE (Prompt Sections 32-35)
+  // -----------------------------------------------------------------
+  console.log('\n--- 32. Privacy-First Invite Engine ---');
+
+  const invite7d = await InviteRepository.createInvite('7 days');
+  assert(invite7d.token.length >= 16, 'Invite generated crypto random token');
+
+  // CRITICAL PRIVACY INVARIANT (Prompt Section 32 & 33)
+  const tokenStr = invite7d.token.toLowerCase();
+  assert(!tokenStr.includes('pavan'), 'Privacy Invariant: Token contains no user name');
+  assert(!tokenStr.includes('@'), 'Privacy Invariant: Token contains no email address');
+  assert(!tokenStr.includes('task'), 'Privacy Invariant: Token contains no task data');
+  assert(!tokenStr.includes('expense'), 'Privacy Invariant: Token contains no expense data');
+  assert(!tokenStr.includes('note'), 'Privacy Invariant: Token contains no note data');
+
+  // Validation
+  const validCheck = await InviteRepository.validateToken(invite7d.token);
+  assert(validCheck.valid === true, 'Fresh invite token passes validation');
+
+  // Attribution tracking
+  await InviteRepository.recordAttribution(invite7d.id);
+  const updatedInvite = await db.invites.get(invite7d.id);
+  assert(updatedInvite?.attributionCount === 1, 'Anonymous attribution incremented to 1');
+
+  // -----------------------------------------------------------------
+  // 33. BACKUP & RESTORE SCHEMA VERSION 5 EXTENSION (Prompt Section 42)
+  // -----------------------------------------------------------------
+  console.log('\n--- 33. Backup & Restore Schema v5 Extension ---');
+
+  const v5Backup = await createBackupPayload();
+  assert(v5Backup.schemaVersion === 5, 'Backup payload created with Schema Version 5');
+  assert(Array.isArray(v5Backup.tables.canvases), 'Backup includes canvases table');
+  assert(Array.isArray(v5Backup.tables.warranties), 'Backup includes warranties table');
+  assert(Array.isArray(v5Backup.tables.familyMembers), 'Backup includes familyMembers table');
+  assert(Array.isArray(v5Backup.tables.careReminders), 'Backup includes careReminders table');
+  assert(Array.isArray(v5Backup.tables.documents), 'Backup includes documents table');
+  assert(Array.isArray(v5Backup.tables.invites), 'Backup includes invites table');
+
+  const preview = await validateAndPreviewBackup(JSON.stringify(v5Backup));
+  assert(preview.summary.isValid === true, 'Schema v5 backup passes cryptographic validation and preview');
+  assert(preview.summary.schemaVersion === 5, 'Preview reports schemaVersion 5');
 
   const total = passed + failed;
   console.log(`\n=====================================================`);

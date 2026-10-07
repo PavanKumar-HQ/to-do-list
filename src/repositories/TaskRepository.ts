@@ -245,6 +245,32 @@ export class TaskRepository {
   }
 
   /**
+   * Duplicate a task
+   */
+  public static async duplicate(id: string): Promise<TaskItem> {
+    const existing = await db.tasks.get(id);
+    if (!existing) throw new Error(`Task ${id} not found.`);
+
+    const now = new Date().toISOString();
+    const duplicated: TaskItem = {
+      ...existing,
+      id: generateId(),
+      title: `${existing.title} (Copy)`,
+      status: 'todo',
+      subtasks: (existing.subtasks || []).map(s => ({ ...s, id: generateId(), completed: false })),
+      completedAt: undefined,
+      createdAt: now,
+      updatedAt: now,
+      deletedAt: undefined
+    };
+
+    await db.tasks.add(duplicated);
+    await logAudit('create', 'task', duplicated.id, `Duplicated task: ${duplicated.title}`);
+    multiTabSync.broadcastMutation('task', duplicated.id, 'create', now);
+    return duplicated;
+  }
+
+  /**
    * Query active (non-deleted) tasks
    */
   public static async queryActive(): Promise<TaskItem[]> {

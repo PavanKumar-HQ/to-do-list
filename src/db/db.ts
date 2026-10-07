@@ -30,6 +30,12 @@ import type {
   FutureMessageItem,
   ReviewSessionItem,
   LifeContextItem,
+  CanvasItem,
+  WarrantyItem,
+  FamilyMemberItem,
+  CareReminderItem,
+  DocumentItem,
+  InviteItem,
   AppSettings,
   AuditHistoryEntry,
   EntityType
@@ -66,6 +72,12 @@ export class PersonalLifeDatabase extends Dexie {
   futureMessages!: EntityTable<FutureMessageItem, 'id'>;
   reviewSessions!: EntityTable<ReviewSessionItem, 'id'>;
   lifeContexts!: EntityTable<LifeContextItem, 'id'>;
+  canvases!: EntityTable<CanvasItem, 'id'>;
+  warranties!: EntityTable<WarrantyItem, 'id'>;
+  familyMembers!: EntityTable<FamilyMemberItem, 'id'>;
+  careReminders!: EntityTable<CareReminderItem, 'id'>;
+  documents!: EntityTable<DocumentItem, 'id'>;
+  invites!: EntityTable<InviteItem, 'id'>;
   settings!: EntityTable<AppSettings, 'id'>;
   auditHistory!: EntityTable<AuditHistoryEntry, 'id'>;
 
@@ -117,6 +129,16 @@ export class PersonalLifeDatabase extends Dexie {
       futureMessages: 'id, openDate, isOpened, createdAt, deletedAt',
       reviewSessions: 'id, reviewType, completedAt',
       lifeContexts: 'id, name, isArchived, createdAt'
+    });
+
+    // Version 5 adds canvas, warranty, family members, care reminders, documents, invites
+    this.version(5).stores({
+      canvases: 'id, name, createdAt, updatedAt, archivedAt, deletedAt',
+      warranties: 'id, itemName, brand, warrantyEnd, status, createdAt, deletedAt',
+      familyMembers: 'id, name, relationship, createdAt, deletedAt',
+      careReminders: 'id, familyMemberId, reminderType, dueDate, status, createdAt, deletedAt',
+      documents: 'id, title, category, relatedEntityType, relatedEntityId, createdAt, deletedAt',
+      invites: 'id, token, expiresAt, createdAt'
     });
   }
 }
@@ -311,6 +333,14 @@ async function recordExists(type: EntityType, id: string): Promise<boolean> {
       case 'expense': return !!(await db.expenses.get(id));
       case 'goal': return !!(await db.goals.get(id));
       case 'list': return !!(await db.lists.get(id));
+      case 'canvas': return !!(await db.canvases.get(id));
+      case 'warranty': return !!(await db.warranties.get(id));
+      case 'family_member': return !!(await db.familyMembers.get(id));
+      case 'care_reminder': return !!(await db.careReminders.get(id));
+      case 'document': return !!(await db.documents.get(id));
+      case 'commitment': return !!(await db.commitments.get(id));
+      case 'decision': return !!(await db.decisions.get(id));
+      case 'open_loop': return !!(await db.openLoops.get(id));
       default: return true;
     }
   } catch {

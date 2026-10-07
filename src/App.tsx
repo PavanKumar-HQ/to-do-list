@@ -31,10 +31,14 @@ const GoalsView = React.lazy(() => import('./components/goals/GoalsView').then(m
 const TrashView = React.lazy(() => import('./components/trash/TrashView').then(m => ({ default: m.TrashView })));
 const SettingsView = React.lazy(() => import('./components/settings/SettingsView').then(m => ({ default: m.SettingsView })));
 const OpenLoopsView = React.lazy(() => import('./components/loops/OpenLoopsView').then(m => ({ default: m.OpenLoopsView })));
+const CanvasView = React.lazy(() => import('./components/canvas/CanvasView').then(m => ({ default: m.CanvasView })));
+const FamilyView = React.lazy(() => import('./components/family/FamilyView').then(m => ({ default: m.FamilyView })));
+const DocumentsView = React.lazy(() => import('./components/documents/DocumentsView').then(m => ({ default: m.DocumentsView })));
 
 // Heavy Modals code-split
 const GlobalSearchModal = React.lazy(() => import('./components/common/GlobalSearchModal').then(m => ({ default: m.GlobalSearchModal })));
 const VoiceRecorderModal = React.lazy(() => import('./components/common/VoiceRecorderModal').then(m => ({ default: m.VoiceRecorderModal })));
+const InviteModal = React.lazy(() => import('./components/common/InviteModal').then(m => ({ default: m.InviteModal })));
 
 import { db, initializeDatabaseDefaults } from './db/db';
 import { COMMON_CURRENCIES } from './utils/currency';
@@ -52,6 +56,7 @@ export function AppContent() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isVoiceOpen, setIsVoiceOpen] = useState(false);
   const [isMoreSheetOpen, setIsMoreSheetOpen] = useState(false);
+  const [isInviteOpen, setIsInviteOpen] = useState(false);
   const [isBooting, setIsBooting] = useState(true);
 
   // Notification permission banner state
@@ -199,6 +204,15 @@ export function AppContent() {
       case 'goals':
         content = <GoalsView />;
         break;
+      case 'canvas':
+        content = <CanvasView />;
+        break;
+      case 'family':
+        content = <FamilyView />;
+        break;
+      case 'documents':
+        content = <DocumentsView />;
+        break;
       case 'trash':
         content = <TrashView />;
         break;
@@ -240,6 +254,7 @@ export function AppContent() {
         currentScreen={currentScreen}
         onSelectScreen={setCurrentScreen}
         onOpenQuickAdd={() => openQuickAddWithType('task')}
+        onOpenInvite={() => setIsInviteOpen(true)}
       />
 
       {/* Main Content Area */}
@@ -323,10 +338,20 @@ export function AppContent() {
         )}
       </React.Suspense>
 
+      <React.Suspense fallback={null}>
+        {isInviteOpen && (
+          <InviteModal
+            isOpen={isInviteOpen}
+            onClose={() => setIsInviteOpen(false)}
+          />
+        )}
+      </React.Suspense>
+
       <MoreSheetModal
         isOpen={isMoreSheetOpen}
         onClose={() => setIsMoreSheetOpen(false)}
         onSelectScreen={setCurrentScreen}
+        onOpenInvite={() => setIsInviteOpen(true)}
         currentScreen={currentScreen}
       />
     </div>

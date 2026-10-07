@@ -13,3 +13,8 @@ export * from './FutureMessageRepository';
 export * from './ReviewSessionRepository';
 export * from './LifeContextRepository';
 export * from './SettingsRepository';
+export * from './CanvasRepository';
+export * from './WarrantyRepository';
+export * from './FamilyRepository';
+export * from './DocumentRepository';
+export * from './InviteRepository';

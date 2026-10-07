@@ -14,21 +14,50 @@ import {
   Trash2,
   ArrowUpRight,
   ArrowDownLeft,
-  X
+  X,
+  ShieldCheck,
+  Edit2,
+  Copy
 } from 'lucide-react';
 import { db, generateId, logAudit } from '../../db/db';
 import { getCurrentMonthString, getTodayDateString, formatDisplayDate, calculateNextOccurrence } from '../../utils/dates';
 import { formatMoney, toMinorUnits, fromMinorUnits } from '../../utils/currency';
 import { useToast } from '../common/ToastContext';
-import type { ExpenseItem, IncomeItem, BudgetItem, RecurringExpenseItem, CreditCardItem, SavingsGoalItem } from '../../types';
+import { ItemDetailModal } from '../common/ItemDetailModal';
+import { ContextModal } from '../common/ContextModal';
+import { WarrantyRepository, ExpenseRepository } from '../../repositories';
+import { eventBus } from '../../services/eventBus';
+import type { ExpenseItem, IncomeItem, BudgetItem, RecurringExpenseItem, CreditCardItem, SavingsGoalItem, WarrantyItem, EntityType, PaymentMethod } from '../../types';
 
 export const MoneyView: React.FC<{ onOpenQuickAdd: (type: any) => void }> = ({ onOpenQuickAdd }) => {
   const { showToast } = useToast();
   const currentMonth = getCurrentMonthString();
   const todayStr = getTodayDateString();
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'expenses' | 'budget' | 'recurring' | 'cards' | 'savings'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'expenses' | 'budget' | 'recurring' | 'cards' | 'savings' | 'warranties'>('overview');
   const [selectedMonth, setSelectedMonth] = useState(currentMonth);
+
+  // Detail Modal & Context Modal State
+  const [selectedDetail, setSelectedDetail] = useState<{ type: EntityType | null; data: any | null }>({ type: null, data: null });
+  const [contextModal, setContextModal] = useState<{ isOpen: boolean; type: EntityType | null; id: string | null }>({ isOpen: false, type: null, id: null });
+
+  // Add Warranty Modal State
+  const [isAddWarrantyOpen, setIsAddWarrantyOpen] = useState(false);
+  const [warrantyItemName, setWarrantyItemName] = useState('');
+  const [warrantyBrand, setWarrantyBrand] = useState('');
+  const [warrantyPurchaseDate, setWarrantyPurchaseDate] = useState(todayStr);
+  const [warrantyEnd, setWarrantyEnd] = useState('');
+  const [warrantyPrice, setWarrantyPrice] = useState('');
+  const [warrantyNotes, setWarrantyNotes] = useState('');
+
+  // Edit Expense In-Place Modal
+  const [editingExpense, setEditingExpense] = useState<ExpenseItem | null>(null);
+  const [editExpenseAmount, setEditExpenseAmount] = useState('');
+  const [editExpenseCategory, setEditExpenseCategory] = useState('Food');
+  const [editExpensePaymentMethod, setEditExpensePaymentMethod] = useState<PaymentMethod>('upi');
+  const [editExpenseDate, setEditExpenseDate] = useState('');
+  const [editExpenseNotes, setEditExpenseNotes] = useState('');
+  const [editExpenseIsBusiness, setEditExpenseIsBusiness] = useState(false);
 
   // Edit Budget Modal State
   const [isBudgetModalOpen, setIsBudgetModalOpen] = useState(false);
@@ -78,6 +107,33 @@ export const MoneyView: React.FC<{ onOpenQuickAdd: (type: any) => void }> = ({ o
     return db.savingsGoals.filter((s) => !s.deletedAt).toArray();
   }, []) || [];
 
+  const warranties = useLiveQuery(async () => {
+    return db.warranties.filter((w) => !w.deletedAt).reverse().sortBy('warrantyEnd');
+  }, []) || [];
+
+  const handleSaveWarranty = async () => {
+    if (!warrantyItemName.trim() || !warrantyEnd) {
+      showToast('Item name and warranty expiration date are required', { type: 'warning' });
+      return;
+    }
+    const numPrice = parseFloat(warrantyPrice);
+    await WarrantyRepository.create({
+      itemName: warrantyItemName.trim(),
+      brand: warrantyBrand.trim() || undefined,
+      purchaseDate: warrantyPurchaseDate || todayStr,
+      warrantyEnd,
+      purchasePriceMinor: !isNaN(numPrice) && numPrice > 0 ? toMinorUnits(numPrice) : undefined,
+      notes: warrantyNotes.trim() || undefined
+    });
+    showToast(`Saved warranty for ${warrantyItemName}`, { type: 'success' });
+    setIsAddWarrantyOpen(false);
+    setWarrantyItemName('');
+    setWarrantyBrand('');
+    setWarrantyEnd('');
+    setWarrantyPrice('');
+    setWarrantyNotes('');
+  };
+
   // Computed Financial Totals (Minor Integer units)
   const totalExpenseMinor = expenses.reduce((acc, curr) => acc + curr.amountMinor, 0);
   const totalIncomeMinor = income.reduce((acc, curr) => acc + curr.amountMinor, 0);
@@ -101,7 +157,53 @@ export const MoneyView: React.FC<{ onOpenQuickAdd: (type: any) => void }> = ({ o
   const handleDeleteExpense = async (id: string, amountMinor: number) => {
     await db.expenses.update(id, { deletedAt: new Date().toISOString() });
     await logAudit('delete', 'expense', id, `Deleted expense of ${formatMoney(amountMinor)}`);
+    eventBus.emit('EXPENSE_MUTATED', { type: 'EXPENSE_MUTATED', entityId: id });
     showToast('Expense moved to trash');
+  };
+
+  const handleOpenEditExpense = (exp: ExpenseItem) => {
+    setEditingExpense(exp);
+    setEditExpenseAmount((fromMinorUnits(exp.amountMinor)).toString());
+    setEditExpenseCategory(exp.category);
+    setEditExpensePaymentMethod(exp.paymentMethod);
+    setEditExpenseDate(exp.date);
+    setEditExpenseNotes(exp.notes || '');
+    setEditExpenseIsBusiness(!!exp.isBusiness);
+  };
+
+  const handleSaveExpenseEdit = async () => {
+    if (!editingExpense) return;
+    const num = parseFloat(editExpenseAmount);
+    if (isNaN(num) || num <= 0) {
+      showToast('Please enter a valid expense amount', { type: 'warning' });
+      return;
+    }
+    const minorUnits = toMinorUnits(num);
+    try {
+      await ExpenseRepository.update(editingExpense.id, {
+        amountMinor: minorUnits,
+        category: editExpenseCategory,
+        paymentMethod: editExpensePaymentMethod,
+        date: editExpenseDate || editingExpense.date,
+        notes: editExpenseNotes.trim() || undefined,
+        isBusiness: editExpenseIsBusiness
+      });
+      eventBus.emit('EXPENSE_MUTATED', { type: 'EXPENSE_MUTATED', entityId: editingExpense.id });
+      showToast(`Expense updated to ${formatMoney(minorUnits)}`, { type: 'success' });
+      setEditingExpense(null);
+    } catch (err: any) {
+      showToast(`Failed to update: ${err.message}`, { type: 'error' });
+    }
+  };
+
+  const handleDuplicateExpense = async (expId: string) => {
+    try {
+      const duplicated = await ExpenseRepository.duplicate(expId);
+      eventBus.emit('EXPENSE_MUTATED', { type: 'EXPENSE_MUTATED', entityId: duplicated.id });
+      showToast(`Duplicated: ${duplicated.category} (${formatMoney(duplicated.amountMinor)})`, { type: 'success' });
+    } catch (err: any) {
+      showToast(`Duplicate failed: ${err.message}`, { type: 'error' });
+    }
   };
 
   const handleSaveBudget = async () => {
@@ -257,7 +359,8 @@ export const MoneyView: React.FC<{ onOpenQuickAdd: (type: any) => void }> = ({ o
           { id: 'budget', label: 'Budgets' },
           { id: 'recurring', label: 'Recurring' },
           { id: 'cards', label: 'Credit Cards' },
-          { id: 'savings', label: 'Savings' }
+          { id: 'savings', label: 'Savings' },
+          { id: 'warranties', label: 'Warranties' }
         ].map((tab) => (
           <button
             key={tab.id}
@@ -403,7 +506,21 @@ export const MoneyView: React.FC<{ onOpenQuickAdd: (type: any) => void }> = ({ o
 
       {/* Expenses Tab */}
       {activeTab === 'expenses' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+            <span style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: 500 }}>
+              All Recorded Expenses ({expenses.length})
+            </span>
+            <button
+              onClick={() => onOpenQuickAdd('expense')}
+              className="btn btn-primary btn-sm"
+              style={{ gap: '6px' }}
+            >
+              <Plus size={15} />
+              <span>+ Add Expense</span>
+            </button>
+          </div>
+
           {expenses.length === 0 ? (
             <div className="card" style={{ padding: '36px 16px', textAlign: 'center' }}>
               <Wallet size={36} color="var(--text-muted)" style={{ margin: '0 auto 8px auto' }} />
@@ -411,7 +528,7 @@ export const MoneyView: React.FC<{ onOpenQuickAdd: (type: any) => void }> = ({ o
                 No expenses recorded yet.
               </div>
               <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '4px' }}>
-                Tap "+ Expense" to log your transactions.
+                Tap "+ Add Expense" to log your transactions.
               </div>
             </div>
           ) : (
@@ -419,7 +536,14 @@ export const MoneyView: React.FC<{ onOpenQuickAdd: (type: any) => void }> = ({ o
               <div
                 key={exp.id}
                 className="card"
-                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px' }}
+                onClick={() => setSelectedDetail({ type: 'expense', data: exp })}
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '12px 14px',
+                  cursor: 'pointer'
+                }}
               >
                 <div>
                   <div style={{ fontWeight: 600, fontSize: '14px', color: 'var(--text-primary)' }}>
@@ -432,17 +556,45 @@ export const MoneyView: React.FC<{ onOpenQuickAdd: (type: any) => void }> = ({ o
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <span style={{ fontWeight: 700, fontSize: '15px', color: 'var(--danger)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ fontWeight: 700, fontSize: '15px', color: 'var(--danger)', marginRight: '6px' }}>
                     -{formatMoney(exp.amountMinor)}
                   </span>
                   <button
-                    onClick={() => handleDeleteExpense(exp.id, exp.amountMinor)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleOpenEditExpense(exp);
+                    }}
+                    className="btn btn-secondary btn-sm"
+                    style={{ padding: '3px 8px', fontSize: '12px', minHeight: '28px', gap: '4px' }}
+                    title="Edit expense"
+                  >
+                    <Edit2 size={13} />
+                    <span>Edit</span>
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDuplicateExpense(exp.id);
+                    }}
                     className="btn-ghost"
-                    style={{ color: 'var(--text-muted)', padding: '4px' }}
+                    style={{ color: 'var(--text-muted)', padding: '5px' }}
+                    title="Duplicate expense"
+                  >
+                    <Copy size={14} />
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (confirm(`Delete expense of ${formatMoney(exp.amountMinor)}?`)) {
+                        handleDeleteExpense(exp.id, exp.amountMinor);
+                      }
+                    }}
+                    className="btn-ghost"
+                    style={{ color: 'var(--danger)', padding: '5px' }}
                     title="Delete expense"
                   >
-                    <Trash2 size={15} />
+                    <Trash2 size={14} />
                   </button>
                 </div>
               </div>
@@ -645,6 +797,90 @@ export const MoneyView: React.FC<{ onOpenQuickAdd: (type: any) => void }> = ({ o
         </div>
       )}
 
+      {/* Warranties Tab */}
+      {activeTab === 'warranties' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+            <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+              Active Warranties & Deadlines
+            </span>
+            <button
+              onClick={() => setIsAddWarrantyOpen(true)}
+              className="btn btn-secondary btn-sm"
+              style={{ gap: '4px' }}
+            >
+              <Plus size={15} />
+              <span>Add Warranty</span>
+            </button>
+          </div>
+
+          {warranties.length === 0 ? (
+            <div className="card" style={{ padding: '36px 16px', textAlign: 'center' }}>
+              <ShieldCheck size={36} color="var(--text-muted)" style={{ margin: '0 auto 8px auto' }} />
+              <div style={{ fontWeight: 600 }}>No warranties tracked yet.</div>
+              <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                Track laptop, appliance, phone, and gadget warranty deadlines.
+              </div>
+            </div>
+          ) : (
+            warranties.map((w) => {
+              const status = WarrantyRepository.calculateStatus(w.warrantyEnd);
+              return (
+                <div
+                  key={w.id}
+                  className="card"
+                  onClick={() => setSelectedDetail({ type: 'warranty', data: w })}
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    padding: '14px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontWeight: 600, fontSize: '15px' }}>{w.itemName}</span>
+                      {w.brand && <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>({w.brand})</span>}
+                    </div>
+                    <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                      Expires: <strong>{formatDisplayDate(w.warrantyEnd)}</strong>
+                      {w.purchasePriceMinor ? ` · ${formatMoney(w.purchasePriceMinor)}` : ''}
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span
+                      style={{
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        textTransform: 'capitalize',
+                        padding: '3px 8px',
+                        borderRadius: '6px',
+                        background:
+                          status === 'active'
+                            ? 'var(--success-light)'
+                            : status === 'expiring_soon'
+                            ? 'var(--warning-light)'
+                            : 'var(--danger-light)',
+                        color:
+                          status === 'active'
+                            ? 'var(--success)'
+                            : status === 'expiring_soon'
+                            ? 'var(--warning)'
+                            : 'var(--danger)'
+                      }}
+                    >
+                      {status.replace('_', ' ')}
+                    </span>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      )}
+
       {/* Set/Edit Budget Modal */}
       {isBudgetModalOpen && (
         <div className="modal-overlay" onClick={() => setIsBudgetModalOpen(false)} role="dialog" aria-modal="true">
@@ -815,6 +1051,230 @@ export const MoneyView: React.FC<{ onOpenQuickAdd: (type: any) => void }> = ({ o
           </div>
         </div>
       )}
+
+      {/* Add Warranty Modal */}
+      {isAddWarrantyOpen && (
+        <div className="modal-overlay" onClick={() => setIsAddWarrantyOpen(false)} role="dialog" aria-modal="true">
+          <div className="bottom-sheet" onClick={(e) => e.stopPropagation()}>
+            <div className="sheet-handle" />
+            <h3 style={{ fontSize: '17px', fontWeight: 600, marginBottom: '14px' }}>
+              Add Product Warranty
+            </h3>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                  Item / Product Name
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. MacBook Air, Sony Headphones"
+                  value={warrantyItemName}
+                  onChange={(e) => setWarrantyItemName(e.target.value)}
+                  autoFocus
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                    Brand
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Apple, Sony"
+                    value={warrantyBrand}
+                    onChange={(e) => setWarrantyBrand(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                    Purchase Price (₹)
+                  </label>
+                  <input
+                    type="number"
+                    placeholder="e.g. 85000"
+                    value={warrantyPrice}
+                    onChange={(e) => setWarrantyPrice(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                    Purchase Date
+                  </label>
+                  <input
+                    type="date"
+                    value={warrantyPurchaseDate}
+                    onChange={(e) => setWarrantyPurchaseDate(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                    Warranty Expiration
+                  </label>
+                  <input
+                    type="date"
+                    value={warrantyEnd}
+                    onChange={(e) => setWarrantyEnd(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                  Notes / Serial Number
+                </label>
+                <textarea
+                  rows={2}
+                  placeholder="Serial #, warranty terms, store receipt..."
+                  value={warrantyNotes}
+                  onChange={(e) => setWarrantyNotes(e.target.value)}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+                <button onClick={() => setIsAddWarrantyOpen(false)} className="btn btn-secondary" style={{ flex: 1 }}>
+                  Cancel
+                </button>
+                <button onClick={handleSaveWarranty} className="btn btn-primary" style={{ flex: 2 }}>
+                  Save Warranty
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* In-Place Edit Expense Modal */}
+      {editingExpense && (
+        <div className="modal-overlay" onClick={() => setEditingExpense(null)} role="dialog" aria-modal="true">
+          <div className="bottom-sheet" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '440px', margin: '0 auto' }}>
+            <div className="sheet-handle" />
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+              <h3 style={{ fontSize: '17px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                Edit Expense
+              </h3>
+              <button onClick={() => setEditingExpense(null)} className="btn-ghost" style={{ padding: '4px' }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                  Amount (₹) *
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={editExpenseAmount}
+                  onChange={(e) => setEditExpenseAmount(e.target.value)}
+                  style={{ fontSize: '18px', fontWeight: 700 }}
+                  autoFocus
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                    Category
+                  </label>
+                  <select
+                    value={editExpenseCategory}
+                    onChange={(e) => setEditExpenseCategory(e.target.value)}
+                  >
+                    {['Food', 'Transport', 'Utilities', 'Entertainment', 'Healthcare', 'Shopping', 'Education', 'Personal', 'Work', 'Other'].map(cat => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                    Payment Method
+                  </label>
+                  <select
+                    value={editExpensePaymentMethod}
+                    onChange={(e) => setEditExpensePaymentMethod(e.target.value as any)}
+                  >
+                    <option value="upi">UPI</option>
+                    <option value="cash">Cash</option>
+                    <option value="credit_card">Credit Card</option>
+                    <option value="debit_card">Debit Card</option>
+                    <option value="net_banking">Net Banking</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                  Date
+                </label>
+                <input
+                  type="date"
+                  value={editExpenseDate}
+                  onChange={(e) => setEditExpenseDate(e.target.value)}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                  Description / Note
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Lunch with team, Grocery run"
+                  value={editExpenseNotes}
+                  onChange={(e) => setEditExpenseNotes(e.target.value)}
+                />
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 0' }}>
+                <input
+                  type="checkbox"
+                  id="editIsBusiness"
+                  checked={editExpenseIsBusiness}
+                  onChange={(e) => setEditExpenseIsBusiness(e.target.checked)}
+                  style={{ width: 'auto', cursor: 'pointer' }}
+                />
+                <label htmlFor="editIsBusiness" style={{ fontSize: '13px', color: 'var(--text-primary)', cursor: 'pointer' }}>
+                  Mark as Business Expense
+                </label>
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+                <button onClick={() => setEditingExpense(null)} className="btn btn-secondary" style={{ flex: 1 }}>
+                  Cancel
+                </button>
+                <button onClick={handleSaveExpenseEdit} className="btn btn-primary" style={{ flex: 2 }}>
+                  Save Changes
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Universal Detail Modal */}
+      <ItemDetailModal
+        isOpen={!!selectedDetail.type}
+        onClose={() => setSelectedDetail({ type: null, data: null })}
+        itemType={selectedDetail.type}
+        itemData={selectedDetail.data}
+        onOpenContext={(type, id) => setContextModal({ isOpen: true, type, id })}
+      />
+
+      {/* Context Modal */}
+      <ContextModal
+        isOpen={contextModal.isOpen}
+        onClose={() => setContextModal({ isOpen: false, type: null, id: null })}
+        entityType={contextModal.type || 'expense'}
+        entityId={contextModal.id || ''}
+      />
     </div>
   );
 };

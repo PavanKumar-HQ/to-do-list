@@ -8,19 +8,23 @@ import {
   Target,
   BookOpen,
   Wallet,
-  Search,
   Trash2,
   Settings,
   Bell,
   Inbox,
   Home,
-  X
+  X,
+  PenTool,
+  Heart,
+  FolderLock,
+  Share2
 } from 'lucide-react';
 
 interface MoreSheetModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSelectScreen: (screen: string) => void;
+  onOpenInvite?: () => void;
   currentScreen?: string;
 }
 
@@ -28,43 +32,58 @@ export const MoreSheetModal: React.FC<MoreSheetModalProps> = ({
   isOpen,
   onClose,
   onSelectScreen,
+  onOpenInvite,
   currentScreen
 }) => {
   if (!isOpen) return null;
 
+  // Calm logical grouping per Section 37
   const sections = [
     {
-      title: 'Daily Core',
+      title: 'Plan',
       items: [
-        { id: 'home', label: 'Today (Home)', icon: Home },
+        { id: 'home', label: 'Home', icon: Home },
         { id: 'tasks', label: 'Tasks', icon: CheckSquare },
         { id: 'calendar', label: 'Calendar', icon: Calendar },
+        { id: 'reminders', label: 'Reminders & Alerts', icon: Bell },
         { id: 'inbox', label: 'Universal Inbox', icon: Inbox }
       ]
     },
     {
-      title: 'Remember & Track',
+      title: 'Memory & Creation',
       items: [
-        { id: 'reminders', label: 'Reminders & Alerts', icon: Bell },
-        { id: 'loops', label: 'Follow-ups & Commitments', icon: ListTodo },
         { id: 'notes', label: 'Notes & Ideas', icon: FileText },
-        { id: 'people', label: 'People & Waiting', icon: Users },
+        { id: 'canvas', label: 'Canvas Visual Studio', icon: PenTool },
         { id: 'journal', label: 'Daily Journal', icon: BookOpen }
       ]
     },
     {
-      title: 'Plan & Goals',
+      title: 'People & Family',
       items: [
-        { id: 'goals', label: 'Goals & Routines', icon: Target },
-        { id: 'lists', label: 'Lists & Checklists', icon: ListTodo },
-        { id: 'money', label: 'Money & Budgets', icon: Wallet }
+        { id: 'people', label: 'People & Waiting', icon: Users },
+        { id: 'loops', label: 'Follow-ups & Loops', icon: ListTodo },
+        { id: 'family', label: 'Family Care', icon: Heart }
       ]
     },
     {
-      title: 'System & Tools',
+      title: 'Money & Assets',
       items: [
-        { id: 'settings', label: 'Settings & Backups', icon: Settings },
-        { id: 'trash', label: 'Trash & Recovery', icon: Trash2 }
+        { id: 'money', label: 'Money & Warranties', icon: Wallet },
+        { id: 'documents', label: 'Documents Vault', icon: FolderLock }
+      ]
+    },
+    {
+      title: 'Goals & Routines',
+      items: [
+        { id: 'goals', label: 'Goals & Milestones', icon: Target },
+        { id: 'lists', label: 'Lists & Checklists', icon: ListTodo }
+      ]
+    },
+    {
+      title: 'System',
+      items: [
+        { id: 'trash', label: 'Trash & Recovery', icon: Trash2 },
+        { id: 'settings', label: 'Settings & Backups', icon: Settings }
       ]
     }
   ];
@@ -79,10 +98,10 @@ export const MoreSheetModal: React.FC<MoreSheetModalProps> = ({
             </div>
             <div>
               <h2 style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>
-                Kanso
+                Life OS
               </h2>
               <p style={{ fontSize: '11.5px', color: 'var(--text-muted)', margin: 0 }}>
-                Workspace
+                Personal Workspace
               </p>
             </div>
           </div>
@@ -90,6 +109,19 @@ export const MoreSheetModal: React.FC<MoreSheetModalProps> = ({
             <X size={18} />
           </button>
         </div>
+
+        {onOpenInvite && (
+          <button
+            onClick={() => {
+              onClose();
+              onOpenInvite();
+            }}
+            className="flex items-center gap-2 w-full p-2.5 mb-4 text-xs font-semibold rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 hover:bg-indigo-500/20 transition"
+          >
+            <Share2 className="w-4 h-4" />
+            <span>Invite / Share App (Private)</span>
+          </button>
+        )}
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', overflowY: 'auto', flex: 1, paddingRight: '2px' }}>
           {sections.map((sec) => (
