@@ -288,7 +288,7 @@ export async function createBackupPayload(password?: string): Promise<BackupPayl
       exportDate: new Date().toISOString(),
       timezone,
       currency,
-      devicePlatform: navigator.userAgent || 'Unknown Platform',
+      devicePlatform: (typeof navigator !== 'undefined' ? navigator.userAgent : 'Node/Test Environment') || 'Unknown Platform',
       recordCount: totalRecords,
       integrity: {
         checksum,
@@ -314,7 +314,7 @@ export async function createBackupPayload(password?: string): Promise<BackupPayl
     exportDate: new Date().toISOString(),
     timezone,
     currency,
-    devicePlatform: navigator.userAgent || 'Unknown Platform',
+    devicePlatform: (typeof navigator !== 'undefined' ? navigator.userAgent : 'Node/Test Environment') || 'Unknown Platform',
     recordCount: totalRecords,
     integrity: {
       checksum,

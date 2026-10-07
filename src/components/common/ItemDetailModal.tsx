@@ -155,13 +155,14 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
         }
 
         const minorUnits = toMinorUnits(numAmount);
+        const finalNotes = editTitle.trim() || editNotes.trim() || undefined;
         const updated = await ExpenseRepository.update(currentData.id, {
           amountMinor: minorUnits,
           category: editCategory.trim() || 'General',
           paymentMethod: editPaymentMethod,
           date: editDate || currentData.date,
           time: editTime || undefined,
-          notes: editNotes.trim() || undefined,
+          notes: finalNotes,
           isBusiness: editIsBusiness
         });
 

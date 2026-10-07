@@ -12,6 +12,7 @@ interface ActiveAlert {
   title: string;
   time?: string;
   date?: string;
+  type?: 'reminder' | 'task';
 }
 
 export const InAppReminderAlert: React.FC = () => {
@@ -23,14 +24,22 @@ export const InAppReminderAlert: React.FC = () => {
 
   const handleNewAlert = (data: any) => {
     if (data?.id && data?.title) {
+      const isTask = data.type === 'task';
       setCurrentAlert({
         id: data.id,
         title: data.title,
         time: data.time,
-        date: data.date
+        date: data.date,
+        type: isTask ? 'task' : 'reminder'
       });
-      setIsRinging(true);
-      startAlarmRinging().catch((e) => console.warn('Alarm audio start notice:', e));
+
+      // Sound is strictly for reminders/alarms. Tasks use quiet floating notification!
+      if (!isTask) {
+        setIsRinging(true);
+        startAlarmRinging().catch((e) => console.warn('Alarm audio start notice:', e));
+      } else {
+        setIsRinging(false);
+      }
     }
   };
 

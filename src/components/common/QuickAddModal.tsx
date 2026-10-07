@@ -59,7 +59,7 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
   defaultDate
 }) => {
   const { showToast } = useToast();
-  const [viewMode, setViewMode] = useState<'grid' | 'form'>('grid');
+  const [viewMode, setViewMode] = useState<'grid' | 'form'>('form');
   const [activeType, setActiveType] = useState<EntityType>('task');
   const [naturalText, setNaturalText] = useState('');
 
@@ -88,16 +88,11 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
   const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Sync mode and activeType when modal opens
+  // Sync mode and activeType when modal opens - always open directly in form view
   useEffect(() => {
     if (isOpen) {
-      if (defaultType) {
-        setActiveType(defaultType);
-        setViewMode('form');
-      } else {
-        setViewMode('grid');
-        setActiveType('task');
-      }
+      setActiveType(defaultType || 'task');
+      setViewMode('form');
       if (defaultDate) {
         setDueDate(defaultDate);
       } else {
@@ -591,22 +586,58 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
         {/* 2. SCREEN 4: PROGRESSIVE TAILORED FORM VIEW */}
         {viewMode === 'form' && (
           <div>
-            {/* Header: < Create [Utility] */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-              <button
-                type="button"
-                onClick={() => setViewMode('grid')}
-                className="btn-ghost"
-                style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 8px', marginLeft: '-8px' }}
-              >
-                <ChevronLeft size={20} color="var(--text-primary)" />
-                <span style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)' }}>
-                  Create {getTypeName(activeType).toLowerCase()}
+            {/* Header: Title + Close */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)' }}>
+                  {activeType === 'task' ? 'Quick Task' : `Create ${getTypeName(activeType)}`}
                 </span>
-              </button>
+              </div>
               <button onClick={onClose} className="btn-ghost btn-icon" aria-label="Close modal">
                 <X size={20} />
               </button>
+            </div>
+
+            {/* Quick Entity Type Tabs - 1 tap to switch without leaving the form */}
+            <div
+              style={{
+                display: 'flex',
+                gap: '6px',
+                overflowX: 'auto',
+                paddingBottom: '8px',
+                marginBottom: '16px',
+                scrollbarWidth: 'none'
+              }}
+            >
+              {utilityItems.map((u) => {
+                const isSelected = activeType === u.id;
+                const IconComponent = u.icon;
+                return (
+                  <button
+                    key={u.id}
+                    type="button"
+                    onClick={() => handleSelectUtility(u.id)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '6px 14px',
+                      borderRadius: 'var(--radius-full)',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      border: isSelected ? `1.5px solid ${u.color}` : '1px solid var(--border-subtle)',
+                      background: isSelected ? u.bgColor : 'var(--bg-surface-elevated)',
+                      color: isSelected ? u.color : 'var(--text-secondary)',
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    <IconComponent size={14} color={isSelected ? u.color : 'var(--text-tertiary)'} />
+                    <span>{u.label}</span>
+                  </button>
+                );
+              })}
             </div>
 
             {/* Duplicate Alert */}
@@ -666,6 +697,12 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
                       placeholder="e.g. Send revised proposal"
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleSave();
+                        }
+                      }}
                       autoFocus
                       style={{
                         fontSize: '15px',

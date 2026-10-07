@@ -6,6 +6,8 @@ import type { TaskItem, Subtask } from '../types';
 import { LIMITS, sanitizeObject } from '../services/securityService';
 import { multiTabSync } from '../services/multiTabService';
 import { calculateNextOccurrence } from '../utils/dates';
+import { eventBus } from '../services/eventBus';
+import { cancelTaskNotification, refreshNextReminderTimer } from '../services/notificationService';
 
 export class TaskRepository {
   /**
@@ -68,6 +70,8 @@ export class TaskRepository {
     await db.tasks.add(task);
     await logAudit('create', 'task', id, `Created task: ${task.title}`);
     multiTabSync.broadcastMutation('task', id, 'create', now);
+    eventBus.emit('TASK_MUTATED', { type: 'TASK_MUTATED', action: 'create', entityId: id, data: task });
+    refreshNextReminderTimer();
 
     return task;
   }
@@ -102,6 +106,8 @@ export class TaskRepository {
     await db.tasks.update(id, cleanUpdates);
     await logAudit('update', 'task', id, `Updated task: ${merged.title}`);
     multiTabSync.broadcastMutation('task', id, 'update', now);
+    eventBus.emit('TASK_MUTATED', { type: 'TASK_MUTATED', action: 'update', entityId: id, data: merged });
+    refreshNextReminderTimer();
 
     return (await db.tasks.get(id))!;
   }
@@ -160,6 +166,9 @@ export class TaskRepository {
 
     await logAudit('complete', 'task', id, `Completed task: ${existing.title}`);
     multiTabSync.broadcastMutation('task', id, 'update', now);
+    cancelTaskNotification(id);
+    eventBus.emit('TASK_MUTATED', { type: 'TASK_MUTATED', action: 'complete', entityId: id });
+    refreshNextReminderTimer();
 
     return {
       task: (await db.tasks.get(id))!,
@@ -183,6 +192,8 @@ export class TaskRepository {
 
     await logAudit('update', 'task', id, `Uncompleted task: ${existing.title}`);
     multiTabSync.broadcastMutation('task', id, 'update', now);
+    eventBus.emit('TASK_MUTATED', { type: 'TASK_MUTATED', action: 'update', entityId: id });
+    refreshNextReminderTimer();
     return (await db.tasks.get(id))!;
   }
 
@@ -201,6 +212,9 @@ export class TaskRepository {
 
     await logAudit('delete', 'task', id, `Moved task to trash: ${existing.title}`);
     multiTabSync.broadcastMutation('task', id, 'delete', now);
+    cancelTaskNotification(id);
+    eventBus.emit('TASK_MUTATED', { type: 'TASK_MUTATED', action: 'delete', entityId: id });
+    refreshNextReminderTimer();
   }
 
   /**
@@ -218,6 +232,8 @@ export class TaskRepository {
 
     await logAudit('restore', 'task', id, `Restored task from trash: ${existing.title}`);
     multiTabSync.broadcastMutation('task', id, 'restore', now);
+    eventBus.emit('TASK_MUTATED', { type: 'TASK_MUTATED', action: 'restore', entityId: id });
+    refreshNextReminderTimer();
   }
 
   /**
@@ -242,6 +258,9 @@ export class TaskRepository {
 
     await logAudit('delete', 'task', id, `Permanently deleted task: ${existing.title}`);
     multiTabSync.broadcastMutation('task', id, 'delete');
+    cancelTaskNotification(id);
+    eventBus.emit('TASK_MUTATED', { type: 'TASK_MUTATED', action: 'delete', entityId: id });
+    refreshNextReminderTimer();
   }
 
   /**

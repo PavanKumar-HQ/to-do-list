@@ -11,7 +11,6 @@ import { NameOnboardingModal } from './components/common/NameOnboardingModal';
 import { ViewSkeleton } from './components/common/ViewSkeleton';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { InAppReminderAlert } from './components/common/InAppReminderAlert';
-import { FloatingActionMenu } from './components/common/FloatingActionMenu';
 import { AppInstallNotificationPrompt } from './components/common/AppInstallNotificationPrompt';
 
 // Core HomeView is loaded eagerly for instant first paint
@@ -42,7 +41,13 @@ const InviteModal = React.lazy(() => import('./components/common/InviteModal').t
 
 import { db, initializeDatabaseDefaults } from './db/db';
 import { COMMON_CURRENCIES } from './utils/currency';
-import { requestNotificationPermission, handleNotificationAction, refreshNextReminderTimer, checkMissedReminders } from './services/notificationService';
+import {
+  requestNotificationPermission,
+  handleNotificationAction,
+  refreshNextReminderTimer,
+  checkMissedReminders,
+  checkUpcomingTasksAndNotify
+} from './services/notificationService';
 import { eventBus } from './services/eventBus';
 import { useLiveQuery } from 'dexie-react-hooks';
 import type { EntityType } from './types';
@@ -52,7 +57,6 @@ export function AppContent() {
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   const [quickAddType, setQuickAddType] = useState<EntityType>('task');
   const [quickAddDate, setQuickAddDate] = useState<string | undefined>(undefined);
-  const [isFloatingMenuOpen, setIsFloatingMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isVoiceOpen, setIsVoiceOpen] = useState(false);
   const [isMoreSheetOpen, setIsMoreSheetOpen] = useState(false);
@@ -81,6 +85,7 @@ export function AppContent() {
     initializeDatabaseDefaults();
     refreshNextReminderTimer();
     checkMissedReminders();
+    checkUpcomingTasksAndNotify();
     // Force light theme
     document.documentElement.setAttribute('data-theme', 'light');
     localStorage.setItem('theme', 'light');
@@ -283,30 +288,19 @@ export function AppContent() {
           onOpenMoreSheet={() => setIsMoreSheetOpen(true)}
         />
 
-        {/* Persistent Floating Quick Add Button */}
+        {/* Persistent Floating Quick Add Button - Directly opens Task Creation */}
         <button
-          onClick={() => setIsFloatingMenuOpen(!isFloatingMenuOpen)}
+          onClick={() => openQuickAddWithType('task')}
           className="fab-quick-add"
-          aria-label="Quick capture"
-          title="Quick Capture (+)"
+          aria-label="Create new task"
+          title="Create New Task (+)"
         >
           <Plus
             size={26}
             strokeWidth={2.5}
-            style={{
-              transform: isFloatingMenuOpen ? 'rotate(45deg)' : 'none',
-              transition: 'transform 0.16s ease'
-            }}
           />
         </button>
       </div>
-
-      {/* Floating Speed-Dial Capture Menu */}
-      <FloatingActionMenu
-        isOpen={isFloatingMenuOpen}
-        onClose={() => setIsFloatingMenuOpen(false)}
-        onSelectType={(type) => openQuickAddWithType(type)}
-      />
 
       {/* In-App Reminder Alert System */}
       <InAppReminderAlert />

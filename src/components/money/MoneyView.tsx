@@ -158,7 +158,17 @@ export const MoneyView: React.FC<{ onOpenQuickAdd: (type: any) => void }> = ({ o
     await db.expenses.update(id, { deletedAt: new Date().toISOString() });
     await logAudit('delete', 'expense', id, `Deleted expense of ${formatMoney(amountMinor)}`);
     eventBus.emit('EXPENSE_MUTATED', { type: 'EXPENSE_MUTATED', entityId: id });
-    showToast('Expense moved to trash');
+    showToast(`Expense of ${formatMoney(amountMinor)} deleted`, {
+      type: 'info',
+      action: {
+        label: 'Undo',
+        onClick: async () => {
+          await db.expenses.update(id, { deletedAt: undefined, updatedAt: new Date().toISOString() });
+          eventBus.emit('EXPENSE_MUTATED', { type: 'EXPENSE_MUTATED', entityId: id });
+          showToast('Expense restored', { type: 'success' });
+        }
+      }
+    });
   };
 
   const handleOpenEditExpense = (exp: ExpenseItem) => {
@@ -480,14 +490,29 @@ export const MoneyView: React.FC<{ onOpenQuickAdd: (type: any) => void }> = ({ o
           {/* Top Categories */}
           {categorySpending.length > 0 && (
             <div className="card" style={{ padding: '16px' }}>
-              <div style={{ fontSize: '14px', fontWeight: 600, marginBottom: '12px' }}>
-                Spending by Category
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                <div style={{ fontSize: '14px', fontWeight: 600 }}>
+                  Spending by Category
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('expenses')}
+                  className="btn-ghost"
+                  style={{ fontSize: '12px', color: 'var(--accent)', padding: '2px 6px' }}
+                >
+                  View All Expenses →
+                </button>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {categorySpending.map(([cat, amountMinor]) => {
                   const percent = totalExpenseMinor > 0 ? Math.round((amountMinor / totalExpenseMinor) * 100) : 0;
                   return (
-                    <div key={cat}>
+                    <div
+                      key={cat}
+                      onClick={() => setActiveTab('expenses')}
+                      style={{ cursor: 'pointer', padding: '4px', borderRadius: '6px', transition: 'background 0.15s ease' }}
+                      title={`Click to view all ${cat} expenses`}
+                    >
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '3px' }}>
                         <span style={{ fontWeight: 500 }}>{cat}</span>
                         <span style={{ fontWeight: 600 }}>{formatMoney(amountMinor)} ({percent}%)</span>
@@ -501,6 +526,117 @@ export const MoneyView: React.FC<{ onOpenQuickAdd: (type: any) => void }> = ({ o
               </div>
             </div>
           )}
+
+          {/* Recent Expenses directly on Overview */}
+          <div className="card" style={{ padding: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+              <div style={{ fontSize: '14px', fontWeight: 600 }}>
+                Recent Expenses
+              </div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => onOpenQuickAdd('expense')}
+                  className="btn btn-primary btn-sm"
+                  style={{ gap: '4px', fontSize: '12px', padding: '4px 10px' }}
+                >
+                  <Plus size={14} />
+                  <span>+ Add Expense</span>
+                </button>
+                {expenses.length > 5 && (
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('expenses')}
+                    className="btn btn-secondary btn-sm"
+                    style={{ fontSize: '12px', padding: '4px 10px' }}
+                  >
+                    View All ({expenses.length})
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {expenses.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '20px 0', color: 'var(--text-muted)', fontSize: '13px' }}>
+                No expenses logged yet. Tap "+ Add Expense" above.
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {expenses.slice(0, 8).map((exp) => (
+                  <div
+                    key={exp.id}
+                    onClick={() => setSelectedDetail({ type: 'expense', data: exp })}
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      padding: '10px 12px',
+                      background: 'var(--bg-surface-elevated)',
+                      borderRadius: '10px',
+                      border: '1px solid var(--border-subtle)',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: '13px', color: 'var(--text-primary)' }}>
+                        {exp.notes || exp.category}
+                      </div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'flex', gap: '6px', marginTop: '2px' }}>
+                        <span>{formatDisplayDate(exp.date)}</span>
+                        <span>• {exp.category}</span>
+                        <span style={{ textTransform: 'uppercase' }}>• {exp.paymentMethod}</span>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ fontWeight: 700, fontSize: '14px', color: 'var(--danger)', marginRight: '4px' }}>
+                        -{formatMoney(exp.amountMinor)}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenEditExpense(exp);
+                        }}
+                        className="btn btn-secondary btn-sm"
+                        style={{ padding: '3px 8px', fontSize: '11px', minHeight: '26px', gap: '3px' }}
+                        title="Edit expense"
+                      >
+                        <Edit2 size={12} />
+                        <span>Edit</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDuplicateExpense(exp.id);
+                        }}
+                        className="btn-ghost"
+                        style={{ color: 'var(--text-muted)', padding: '4px' }}
+                        title="Duplicate expense"
+                      >
+                        <Copy size={13} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (confirm(`Delete expense of ${formatMoney(exp.amountMinor)}?`)) {
+                            handleDeleteExpense(exp.id, exp.amountMinor);
+                          }
+                        }}
+                        className="btn-ghost"
+                        style={{ color: 'var(--danger)', padding: '4px' }}
+                        title="Delete expense"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
 

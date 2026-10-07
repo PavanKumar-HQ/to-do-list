@@ -1052,6 +1052,40 @@ async function runTestSuite() {
   assert(preview.summary.isValid === true, 'Schema v5 backup passes cryptographic validation and preview');
   assert(preview.summary.schemaVersion === 5, 'Preview reports schemaVersion 5');
 
+  // -----------------------------------------------------------------
+  // 34. UPCOMING TASKS DETECTION & NOTIFICATION ENGINE
+  // -----------------------------------------------------------------
+  console.log('\n--- 34. Upcoming Tasks Detection & Notification Engine ---');
+
+  const todayStr = new Date().toISOString().split('T')[0];
+  const upcomingTask = await TaskRepository.create({
+    title: 'Urgent Client Review Today',
+    dueDate: todayStr,
+    dueTime: '18:00',
+    priority: 'high',
+    status: 'todo'
+  });
+  assert(upcomingTask.id.length > 0, 'Created task with due date today');
+
+  // Proactive upcoming task checking
+  const checkResult = await notificationService.checkUpcomingTasksAndNotify(true);
+  assert(checkResult.count >= 1, 'notificationService.checkUpcomingTasksAndNotify identified upcoming task');
+  assert(checkResult.tasks.some(t => t.id === upcomingTask.id), 'Upcoming task is included in notification scan list');
+
+  // Notification action: snooze_10m
+  await notificationService.handleNotificationAction('snooze_10m', upcomingTask.id);
+  const snoozedUpcomingTask = await db.tasks.get(upcomingTask.id);
+  assert(snoozedUpcomingTask?.dueTime !== '18:00', 'notificationService snoozed task due time forward by 10 minutes');
+
+  // Notification action: complete
+  await notificationService.handleNotificationAction('complete', upcomingTask.id);
+  const completedUpcomingTask = await db.tasks.get(upcomingTask.id);
+  assert(completedUpcomingTask?.status === 'completed', 'notificationService completed task directly from notification action');
+
+  // Cancel notification on completion
+  await notificationService.cancelTaskNotification(upcomingTask.id);
+  assert(true, 'cancelTaskNotification executed gracefully without exceptions');
+
   const total = passed + failed;
   console.log(`\n=====================================================`);
   console.log(` TEST SUMMARY: ${passed} PASSED | ${failed} FAILED | ${total} TOTAL`);

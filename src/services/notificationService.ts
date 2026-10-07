@@ -4,7 +4,7 @@
 // and event-driven timer scheduling (NO continuous 1-second polling loop).
 
 import { db } from '../db/db';
-import type { ReminderItem } from '../types';
+import type { ReminderItem, TaskItem } from '../types';
 import { eventBus } from './eventBus';
 import { getTodayDateString } from '../utils/dates';
 import { testAlarmSound } from './soundService';
@@ -140,7 +140,7 @@ export async function dispatchNativeNotification(
 
   playGentleChime();
 
-  if ('Notification' in window && Notification.permission === 'granted') {
+  if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
     try {
       // Prefer Service Worker registration for native PWA notifications (Section 34, 37)
       if ('serviceWorker' in navigator) {
@@ -175,8 +175,8 @@ export async function dispatchNativeNotification(
 }
 
 /**
- * Event-Driven Reminder Scheduler (NO continuous 1-second polling loop!)
- * Finds the single earliest upcoming active reminder and sets one timeout.
+ * Event-Driven Reminder & Task Scheduler (NO continuous 1-second polling loop!)
+ * Finds the single earliest upcoming active reminder or task and sets one timeout.
  */
 export async function refreshNextReminderTimer() {
   if (activeTimer) {
@@ -188,16 +188,22 @@ export async function refreshNextReminderTimer() {
   const now = new Date();
   const todayStr = getTodayDateString();
 
-  // Indexed query for today and future active reminders
+  // 1. Indexed query for today and future active reminders
   const activeReminders = await db.reminders
     .where('date')
     .aboveOrEqual(todayStr)
     .filter(r => !r.deletedAt && (r.status === 'active' || r.status === 'snoozed'))
     .toArray();
 
-  let earliestTime: number | null = null;
-  let earliestReminder: ReminderItem | null = null;
+  // 2. Query active tasks scheduled for today or in the future
+  const activeTasks = await db.tasks
+    .filter(t => !t.deletedAt && t.status !== 'completed' && t.status !== 'archived' && !!t.dueDate && t.dueDate >= todayStr)
+    .toArray();
 
+  let earliestTime: number | null = null;
+  let earliestItem: { type: 'reminder'; reminder: ReminderItem } | { type: 'task'; task: TaskItem } | null = null;
+
+  // Evaluate reminders
   for (const r of activeReminders) {
     let targetTimestamp: number;
     const isSnoozedFuture = r.snoozedUntil && new Date(r.snoozedUntil).getTime() > now.getTime();
@@ -212,7 +218,6 @@ export async function refreshNextReminderTimer() {
     }
 
     // Check if due right now (or within the last 2 minutes) and hasn't fired in this session
-    // Only fire if not actively snoozed in the future
     if (!isSnoozedFuture && r.date === todayStr && targetTimestamp <= now.getTime() && (now.getTime() - targetTimestamp) <= 120000) {
       if (!recentlyFiredIds.has(r.id)) {
         recentlyFiredIds.add(r.id);
@@ -221,20 +226,49 @@ export async function refreshNextReminderTimer() {
     } else if (targetTimestamp > now.getTime()) {
       if (earliestTime === null || targetTimestamp < earliestTime) {
         earliestTime = targetTimestamp;
-        earliestReminder = r;
+        earliestItem = { type: 'reminder', reminder: r };
       }
     }
   }
 
-  if (earliestTime !== null && earliestReminder !== null) {
+  // Evaluate upcoming tasks with due dates/times
+  for (const t of activeTasks) {
+    let targetTimestamp: number;
+    if (t.reminderAt) {
+      targetTimestamp = new Date(t.reminderAt).getTime();
+    } else {
+      const parts = t.dueDate!.split('-').map(Number);
+      const timeParts = (t.dueTime || '09:00').split(':').map(Number);
+      const targetDate = new Date(parts[0], parts[1] - 1, parts[2], timeParts[0] || 0, timeParts[1] || 0, 0);
+      targetTimestamp = targetDate.getTime();
+    }
+
+    const taskTag = `task:${t.id}`;
+    if (t.dueDate === todayStr && targetTimestamp <= now.getTime() && (now.getTime() - targetTimestamp) <= 120000) {
+      if (!recentlyFiredIds.has(taskTag)) {
+        recentlyFiredIds.add(taskTag);
+        fireTaskReminder(t);
+      }
+    } else if (targetTimestamp > now.getTime()) {
+      if (earliestTime === null || targetTimestamp < earliestTime) {
+        earliestTime = targetTimestamp;
+        earliestItem = { type: 'task', task: t };
+      }
+    }
+  }
+
+  if (earliestTime !== null && earliestItem !== null) {
     const delay = Math.max(0, earliestTime - now.getTime());
     // Max safe setTimeout is ~24.8 days (2^31 - 1 ms). If further, cap to 24 hours
     const cappedDelay = Math.min(delay, 86400000);
 
     nextTimerTimestamp = earliestTime;
+    const itemToFire = earliestItem;
     activeTimer = setTimeout(async () => {
-      if (earliestReminder) {
-        await fireReminder(earliestReminder);
+      if (itemToFire.type === 'reminder') {
+        await fireReminder(itemToFire.reminder);
+      } else {
+        await fireTaskReminder(itemToFire.task);
       }
       refreshNextReminderTimer();
     }, cappedDelay);
@@ -313,6 +347,144 @@ async function fireReminder(reminder: ReminderItem) {
   });
 }
 
+export async function fireTaskReminder(task: TaskItem) {
+  const tag = `task:${task.id}`;
+  recentlyFiredIds.add(tag);
+
+  // Emit in-app alert for immediate presentation
+  eventBus.emit('IN_APP_ALERT', {
+    type: 'IN_APP_ALERT',
+    entityId: task.id,
+    data: {
+      id: task.id,
+      title: task.title,
+      time: task.dueTime || 'Due today',
+      date: task.dueDate,
+      type: 'task'
+    }
+  });
+
+  const dueLabel = task.dueTime ? `Due at ${task.dueTime}` : 'Due today';
+  await dispatchNativeNotification(
+    tag,
+    `Upcoming Task: ${task.title}`,
+    `${dueLabel} • Priority: ${task.priority.toUpperCase()}`,
+    { taskId: task.id, type: 'task' }
+  );
+}
+
+/**
+ * Cancel a task notification and close native notification tag
+ */
+export async function cancelTaskNotification(taskId: string) {
+  if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
+    try {
+      const reg = await navigator.serviceWorker.getRegistration();
+      if (reg) {
+        const notifications = await reg.getNotifications({ tag: `task:${taskId}` });
+        notifications.forEach(n => n.close());
+      }
+    } catch {}
+  }
+  recentlyFiredIds.delete(`task:${taskId}`);
+  refreshNextReminderTimer();
+}
+
+/**
+ * Check for upcoming tasks and dispatch notifications (proactive and on-demand)
+ */
+export async function checkUpcomingTasksAndNotify(forceNotification: boolean = false): Promise<{
+  count: number;
+  tasks: TaskItem[];
+  notifiedCount: number;
+}> {
+  const now = new Date();
+  const todayStr = getTodayDateString();
+
+  const activeTasks = await db.tasks
+    .filter(t => !t.deletedAt && t.status !== 'completed' && t.status !== 'archived')
+    .toArray();
+
+  const todayTasks = activeTasks.filter(t => t.dueDate === todayStr);
+  const overdueTasks = activeTasks.filter(t => !!t.dueDate && t.dueDate < todayStr);
+  const upcomingTasks = activeTasks.filter(t => !!t.dueDate && t.dueDate > todayStr);
+
+  let notifiedCount = 0;
+
+  // 1. If any task is due today and hasn't fired yet:
+  for (const t of todayTasks) {
+    const tag = `task:${t.id}`;
+    if (!recentlyFiredIds.has(tag)) {
+      recentlyFiredIds.add(tag);
+      await fireTaskReminder(t);
+      notifiedCount++;
+    }
+  }
+
+  // 2. If forceNotification is requested (or manual check) and no individual task was just fired:
+  if (forceNotification && notifiedCount === 0) {
+    if (todayTasks.length > 0 || overdueTasks.length > 0) {
+      const topTask = todayTasks[0] || overdueTasks[0];
+      const countTotal = todayTasks.length + overdueTasks.length;
+      const title = countTotal > 1 ? `${countTotal} Tasks Due Today` : `Upcoming Task: ${topTask.title}`;
+      const body = countTotal > 1
+        ? `Next: "${topTask.title}" (${topTask.dueTime || 'today'}). Total ${countTotal} pending tasks.`
+        : `Scheduled for ${topTask.dueTime || 'today'} • ${topTask.priority.toUpperCase()} priority`;
+
+      await dispatchNativeNotification(
+        `task_summary_${todayStr}`,
+        title,
+        body,
+        { count: countTotal }
+      );
+
+      eventBus.emit('IN_APP_ALERT', {
+        type: 'IN_APP_ALERT',
+        entityId: topTask.id,
+        data: {
+          id: topTask.id,
+          title,
+          time: topTask.dueTime || 'Today',
+          date: topTask.dueDate || todayStr,
+          type: 'task'
+        }
+      });
+      notifiedCount++;
+    } else if (upcomingTasks.length > 0) {
+      const nextTask = upcomingTasks[0];
+      const title = `Next Upcoming Task: ${nextTask.title}`;
+      const body = `Scheduled for ${nextTask.dueDate}${nextTask.dueTime ? ' at ' + nextTask.dueTime : ''}`;
+
+      await dispatchNativeNotification(
+        `task_upcoming_${nextTask.id}`,
+        title,
+        body,
+        { taskId: nextTask.id }
+      );
+      eventBus.emit('IN_APP_ALERT', {
+        type: 'IN_APP_ALERT',
+        entityId: nextTask.id,
+        data: {
+          id: nextTask.id,
+          title,
+          time: nextTask.dueTime || nextTask.dueDate,
+          date: nextTask.dueDate,
+          type: 'task'
+        }
+      });
+      notifiedCount++;
+    }
+  }
+
+  refreshNextReminderTimer();
+
+  return {
+    count: todayTasks.length + overdueTasks.length,
+    tasks: [...todayTasks, ...overdueTasks, ...upcomingTasks],
+    notifiedCount
+  };
+}
+
 /**
  * Schedule a specific reminder immediately
  */
@@ -324,7 +496,7 @@ export async function scheduleReminder(reminder: ReminderItem) {
  * Cancel a reminder and close native notification tag
  */
 export async function cancelReminder(reminderId: string) {
-  if ('serviceWorker' in navigator) {
+  if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
     try {
       const reg = await navigator.serviceWorker.getRegistration();
       if (reg) {
@@ -372,18 +544,43 @@ export async function checkMissedReminders(): Promise<ReminderItem[]> {
 }
 
 // Handle notification actions received from Service Worker
-export async function handleNotificationAction(action: string, reminderId: string) {
-  if (!reminderId) return;
+export async function handleNotificationAction(action: string, entityId: string) {
+  if (!entityId) return;
 
+  // Check if target entity is a task
+  const task = await db.tasks.get(entityId);
+  if (task) {
+    if (action === 'complete') {
+      const nowIso = new Date().toISOString();
+      await db.tasks.update(entityId, {
+        status: 'completed',
+        completedAt: nowIso,
+        updatedAt: nowIso
+      });
+      cancelTaskNotification(entityId);
+    } else if (action === 'snooze_10m') {
+      recentlyFiredIds.delete(`task:${entityId}`);
+      const tenMinsLater = new Date(Date.now() + 10 * 60000);
+      const newTime = tenMinsLater.toTimeString().slice(0, 5);
+      await db.tasks.update(entityId, {
+        dueTime: newTime,
+        updatedAt: new Date().toISOString()
+      });
+      refreshNextReminderTimer();
+    }
+    return;
+  }
+
+  // Otherwise handle as reminder
   if (action === 'complete') {
-    await db.reminders.update(reminderId, { status: 'dismissed', updatedAt: new Date().toISOString() });
-    cancelReminder(reminderId);
+    await db.reminders.update(entityId, { status: 'dismissed', updatedAt: new Date().toISOString() });
+    cancelReminder(entityId);
   } else if (action === 'snooze_10m') {
-    recentlyFiredIds.delete(reminderId);
+    recentlyFiredIds.delete(entityId);
     const tenMinsLater = new Date(Date.now() + 10 * 60000);
     const newDate = tenMinsLater.toISOString().split('T')[0];
     const newTime = tenMinsLater.toTimeString().slice(0, 5);
-    await db.reminders.update(reminderId, {
+    await db.reminders.update(entityId, {
       status: 'snoozed',
       date: newDate,
       time: newTime,
@@ -394,14 +591,19 @@ export async function handleNotificationAction(action: string, reminderId: strin
   }
 }
 
-// Listen to internal eventBus to invalidate reminder timer automatically
+// Listen to internal eventBus to invalidate reminder and task timers automatically
 eventBus.subscribe('REMINDER_MUTATED', () => {
+  refreshNextReminderTimer();
+});
+
+eventBus.subscribe('TASK_MUTATED', () => {
   refreshNextReminderTimer();
 });
 
 eventBus.subscribe('APP_RESUMED', () => {
   checkMissedReminders();
   refreshNextReminderTimer();
+  checkUpcomingTasksAndNotify();
 });
 
 export const notificationService = {
@@ -411,6 +613,9 @@ export const notificationService = {
   scheduleReminder,
   cancelReminder,
   rescheduleReminder,
+  fireTaskReminder,
+  cancelTaskNotification,
+  checkUpcomingTasksAndNotify,
   refreshNextReminderTimer,
   checkMissedReminders,
   handleNotificationAction,

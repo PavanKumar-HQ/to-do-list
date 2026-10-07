@@ -15,12 +15,14 @@ import {
   ChevronUp,
   X,
   Network,
-  Target
+  Target,
+  Bell
 } from 'lucide-react';
 import { db, generateId, logAudit } from '../../db/db';
 import { getTodayDateString, getRelativeDateLabel, calculateNextOccurrence } from '../../utils/dates';
 import { useToast } from '../common/ToastContext';
 import { ContextModal } from '../common/ContextModal';
+import { checkUpcomingTasksAndNotify } from '../../services/notificationService';
 import type { TaskItem, TaskStatus, Priority, RecurrenceType, Subtask, EntityType } from '../../types';
 
 export const TasksView: React.FC<{ onOpenQuickAdd: (type: any) => void }> = ({ onOpenQuickAdd }) => {
@@ -167,20 +169,50 @@ export const TasksView: React.FC<{ onOpenQuickAdd: (type: any) => void }> = ({ o
     { id: 'completed', label: 'Done' }
   ];
 
+  const [isCheckingUpcoming, setIsCheckingUpcoming] = useState(false);
+
+  const handleCheckUpcoming = async () => {
+    setIsCheckingUpcoming(true);
+    try {
+      const res = await checkUpcomingTasksAndNotify(true);
+      if (res.tasks.length === 0) {
+        showToast('All caught up! No upcoming tasks.', { type: 'info' });
+      } else {
+        showToast(`Checked upcoming tasks: ${res.count} tasks found. Notification sent!`, { type: 'success' });
+      }
+    } catch {
+      showToast('Failed to check upcoming tasks', { type: 'error' });
+    } finally {
+      setIsCheckingUpcoming(false);
+    }
+  };
+
   return (
     <div className="page-wrapper">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
         <div style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: 500 }}>
           {allTasks.filter(t => t.status !== 'completed').length} active tasks
         </div>
-        <button
-          onClick={() => onOpenQuickAdd('task')}
-          className="btn btn-primary btn-sm"
-          style={{ gap: '6px' }}
-        >
-          <Plus size={16} />
-          <span>New Task</span>
-        </button>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <button
+            onClick={handleCheckUpcoming}
+            className="btn btn-secondary btn-sm"
+            style={{ gap: '6px' }}
+            disabled={isCheckingUpcoming}
+            title="Scan upcoming tasks and trigger notification"
+          >
+            <Bell size={14} />
+            <span>{isCheckingUpcoming ? 'Checking...' : 'Check Upcoming'}</span>
+          </button>
+          <button
+            onClick={() => onOpenQuickAdd('task')}
+            className="btn btn-primary btn-sm"
+            style={{ gap: '6px' }}
+          >
+            <Plus size={16} />
+            <span>New Task</span>
+          </button>
+        </div>
       </div>
 
       {/* Tabs */}

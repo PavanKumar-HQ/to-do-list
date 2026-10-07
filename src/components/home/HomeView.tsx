@@ -34,7 +34,7 @@ import { FutureMessageModal } from '../loops/FutureMessageModal';
 import { LifeLoadExplanationModal } from './LifeLoadExplanationModal';
 import { MissedRemindersBanner } from '../reminders/MissedRemindersBanner';
 import { ActivityBars } from '../common/LoadingSpinner';
-import { checkMissedReminders } from '../../services/notificationService';
+import { checkMissedReminders, checkUpcomingTasksAndNotify } from '../../services/notificationService';
 import { eventBus } from '../../services/eventBus';
 import type { AttentionItem, LifeLoadAssessment, TaskItem, EntityType, FutureMessageItem, ReminderItem } from '../../types';
 
@@ -991,8 +991,43 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigateTo, onOpenQuickAdd
             cursor: 'pointer'
           }}
         >
-          <div style={{ fontSize: '0.9375rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-            Today
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '0.9375rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+              Today
+            </span>
+            <button
+              type="button"
+              onClick={async (e) => {
+                e.stopPropagation();
+                try {
+                  const res = await checkUpcomingTasksAndNotify(true);
+                  if (res.tasks.length === 0) {
+                    showToast('No upcoming tasks for today', { type: 'info' });
+                  } else {
+                    showToast(`Checked upcoming tasks: ${res.count} tasks found`, { type: 'success' });
+                  }
+                } catch {
+                  showToast('Error checking upcoming tasks', { type: 'error' });
+                }
+              }}
+              className="btn-ghost btn-sm"
+              style={{
+                padding: '3px 8px',
+                borderRadius: 'var(--radius-full)',
+                fontSize: '11px',
+                fontWeight: 500,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                background: 'var(--bg-surface-elevated)',
+                border: '1px solid var(--border-subtle)',
+                color: 'var(--text-secondary)'
+              }}
+              title="Check upcoming tasks and pass notification"
+            >
+              <Bell size={11} />
+              <span>Check Upcoming</span>
+            </button>
           </div>
           <ChevronRight size={16} color="var(--text-tertiary)" />
         </div>

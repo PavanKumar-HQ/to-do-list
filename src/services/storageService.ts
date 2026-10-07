@@ -13,7 +13,7 @@ export async function getStorageMetrics(): Promise<StorageEstimateResult> {
   let usageBytes = 0;
   let quotaBytes = 0;
 
-  if (navigator.storage && navigator.storage.estimate) {
+  if (typeof navigator !== 'undefined' && navigator.storage && navigator.storage.estimate) {
     try {
       const estimate = await navigator.storage.estimate();
       usageBytes = estimate.usage || 0;
