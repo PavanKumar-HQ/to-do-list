@@ -570,9 +570,19 @@ export const VaultView: React.FC = () => {
       {/* Add / Edit Modal */}
       {isModalOpen && (
         <div className="modal-overlay" onClick={() => setIsModalOpen(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '460px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h3 style={{ fontSize: '18px', fontWeight: 600, margin: 0 }}>
+          <div
+            className="modal-content"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              maxWidth: '480px',
+              width: '100%',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+              padding: '22px'
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+              <h3 style={{ fontSize: '17px', fontWeight: 600, margin: 0, color: 'var(--text-primary)' }}>
                 {editingItem ? 'Edit Vault Item' : 'Store Item in Vault'}
               </h3>
               <button onClick={() => setIsModalOpen(false)} className="btn-ghost btn-icon">
@@ -581,8 +591,8 @@ export const VaultView: React.FC = () => {
             </div>
 
             {!editingItem && (
-              <div style={{ marginBottom: '4px' }}>
-                <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '6px' }}>
+              <div style={{ marginBottom: '14px', background: 'var(--bg-surface-elevated)', padding: '10px 12px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
+                <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '8px' }}>
                   Quick Templates
                 </div>
                 <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
@@ -602,9 +612,9 @@ export const VaultView: React.FC = () => {
                           display: 'inline-flex',
                           alignItems: 'center',
                           gap: '4px',
-                          padding: '4px 9px',
+                          padding: '4px 8px',
                           borderRadius: 'var(--radius-full)',
-                          background: 'var(--bg-surface-elevated)',
+                          background: 'var(--bg-surface)',
                           border: '1px solid var(--border-subtle)',
                           fontSize: '11.5px',
                           fontWeight: 500,
@@ -621,13 +631,15 @@ export const VaultView: React.FC = () => {
               </div>
             )}
 
-            <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div>
-                <label className="form-label">Item / Resource Name *</label>
+                <label className="form-label" style={{ fontSize: '12px', fontWeight: 600, marginBottom: '4px' }}>
+                  Item / Resource Name *
+                </label>
                 <input
                   type="text"
                   className="input-text"
-                  placeholder="e.g. House & Car Keys, AirPods Pro, Glasses Case, AWS Portal"
+                  placeholder="e.g. House & Car Keys, AirPods Pro, Passport, AWS Portal"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   autoFocus
@@ -635,36 +647,42 @@ export const VaultView: React.FC = () => {
                 />
               </div>
 
-              <div>
-                <label className="form-label">Category</label>
-                <select
-                  className="input-select"
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value as VaultCategory)}
-                >
-                  {CATEGORIES.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.label}
-                    </option>
-                  ))}
-                </select>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div>
+                  <label className="form-label" style={{ fontSize: '12px', fontWeight: 600, marginBottom: '4px' }}>
+                    Category
+                  </label>
+                  <select
+                    className="input-select"
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value as VaultCategory)}
+                  >
+                    {CATEGORIES.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="form-label" style={{ fontSize: '12px', fontWeight: 600, marginBottom: '4px' }}>
+                    Where is it kept?
+                  </label>
+                  <input
+                    type="text"
+                    className="input-text"
+                    placeholder="e.g. Side table drawer, key hook"
+                    value={locationHint}
+                    onChange={(e) => setLocationHint(e.target.value)}
+                  />
+                </div>
               </div>
 
               <div>
-                <label className="form-label">
-                  Where is it kept? (Physical Location Hint)
+                <label className="form-label" style={{ fontSize: '12px', fontWeight: 600, marginBottom: '4px' }}>
+                  Web URL / Portal Link (Optional)
                 </label>
-                <input
-                  type="text"
-                  className="input-text"
-                  placeholder="e.g. Side table drawer, key hook by main door, backpack pouch"
-                  value={locationHint}
-                  onChange={(e) => setLocationHint(e.target.value)}
-                />
-              </div>
-
-              <div>
-                <label className="form-label">Web URL / Portal Link (Optional)</label>
                 <input
                   type="text"
                   className="input-text"
@@ -675,20 +693,22 @@ export const VaultView: React.FC = () => {
               </div>
 
               <div>
-                <label className="form-label">
-                  Login / Username Hint (No Passwords!)
+                <label className="form-label" style={{ fontSize: '12px', fontWeight: 600, marginBottom: '4px' }}>
+                  Login / Username Hint (No Passwords)
                 </label>
                 <input
                   type="text"
                   className="input-text"
-                  placeholder="e.g. Signed in with Google (pavan@...), or user: admin_pavan"
+                  placeholder="e.g. Signed in with Google (pavan@...), or username"
                   value={usernameHint}
                   onChange={(e) => setUsernameHint(e.target.value)}
                 />
               </div>
 
               <div>
-                <label className="form-label">Notes & Details</label>
+                <label className="form-label" style={{ fontSize: '12px', fontWeight: 600, marginBottom: '4px' }}>
+                  Notes & Details
+                </label>
                 <textarea
                   className="input-textarea"
                   rows={2}
@@ -699,7 +719,9 @@ export const VaultView: React.FC = () => {
               </div>
 
               <div>
-                <label className="form-label">Tags (comma separated)</label>
+                <label className="form-label" style={{ fontSize: '12px', fontWeight: 600, marginBottom: '4px' }}>
+                  Tags (comma separated)
+                </label>
                 <input
                   type="text"
                   className="input-text"
@@ -709,19 +731,20 @@ export const VaultView: React.FC = () => {
                 />
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', cursor: 'pointer', margin: '4px 0', userSelect: 'none' }}>
                 <input
                   type="checkbox"
                   id="vault-pin-check"
                   checked={isPinned}
                   onChange={(e) => setIsPinned(e.target.checked)}
+                  style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: 'var(--accent)' }}
                 />
-                <label htmlFor="vault-pin-check" style={{ fontSize: '13px', color: 'var(--text-primary)', cursor: 'pointer' }}>
+                <span style={{ fontSize: '13px', color: 'var(--text-primary)', fontWeight: 500 }}>
                   Pin to top of Vault for quick access
-                </label>
-              </div>
+                </span>
+              </label>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '10px' }}>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '6px' }}>
                 <button type="button" onClick={() => setIsModalOpen(false)} className="btn btn-secondary">
                   Cancel
                 </button>
