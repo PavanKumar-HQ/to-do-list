@@ -196,6 +196,36 @@ export class NoteRepository {
     multiTabSync.broadcastMutation('note', id, 'delete');
   }
 
+  public static async duplicate(id: string): Promise<NoteItem> {
+    const existing = await db.notes.get(id);
+    if (!existing) throw new Error(`Note ${id} not found.`);
+
+    const now = new Date().toISOString();
+    const newId = generateId();
+
+    const clone: NoteItem = sanitizeObject({
+      ...existing,
+      id: newId,
+      title: `${existing.title} (Copy)`,
+      isPinned: false,
+      checklistItems: (existing.checklistItems || []).map((ci) => ({
+        id: generateId(),
+        text: ci.text,
+        done: false
+      })),
+      createdAt: now,
+      updatedAt: now,
+      deletedAt: undefined,
+      archivedAt: undefined
+    });
+
+    await db.notes.add(clone);
+    await logAudit('create', 'note', newId, `Duplicated note: ${existing.title}`);
+    multiTabSync.broadcastMutation('note', newId, 'create', now);
+
+    return clone;
+  }
+
   public static async queryActive(): Promise<NoteItem[]> {
     return db.notes.filter(n => !n.deletedAt && !n.archivedAt).toArray();
   }
