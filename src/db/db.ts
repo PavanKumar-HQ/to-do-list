@@ -39,6 +39,8 @@ import type {
   VaultResourceItem,
   MeetingNoteItem,
   ConversationLogItem,
+  HabitItem,
+  StudySubjectItem,
   AppSettings,
   AuditHistoryEntry,
   EntityType
@@ -84,6 +86,8 @@ export class PersonalLifeDatabase extends Dexie {
   vaultResources!: EntityTable<VaultResourceItem, 'id'>;
   meetingNotes!: EntityTable<MeetingNoteItem, 'id'>;
   conversationLogs!: EntityTable<ConversationLogItem, 'id'>;
+  habits!: EntityTable<HabitItem, 'id'>;
+  studySubjects!: EntityTable<StudySubjectItem, 'id'>;
   settings!: EntityTable<AppSettings, 'id'>;
   auditHistory!: EntityTable<AuditHistoryEntry, 'id'>;
 
@@ -152,6 +156,12 @@ export class PersonalLifeDatabase extends Dexie {
       vaultResources: 'id, title, category, isPinned, createdAt, deletedAt',
       meetingNotes: 'id, title, personId, meetingDate, createdAt, deletedAt',
       conversationLogs: 'id, personId, date, createdAt, deletedAt'
+    });
+
+    // Version 7 adds streak-based Habits and Study Planner with syllabus & chapter tracking
+    this.version(7).stores({
+      habits: 'id, name, category, streak, createdAt, deletedAt',
+      studySubjects: 'id, title, deadline, createdAt, deletedAt'
     });
   }
 }

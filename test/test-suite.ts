@@ -1173,6 +1173,104 @@ async function runTestSuite() {
   assert(savedConvo !== undefined, 'Conversation memory logged successfully');
   assert(savedConvo?.personId === crmPerson.id, 'Conversation linked to personal CRM contact');
 
+  // -----------------------------------------------------------------
+  // 38. HABIT TRACKER & STREAKS
+  // -----------------------------------------------------------------
+  console.log('\n--- 38. Habit Tracker & Streaks ---');
+
+  const habitId = generateId();
+  await db.habits.add({
+    id: habitId,
+    name: 'Morning Meditation',
+    category: 'mind',
+    color: '#8b5cf6',
+    streak: 3,
+    bestStreak: 7,
+    completedDates: [todayStr],
+    targetDaysPerWeek: 7,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  });
+
+  const savedHabit = await db.habits.get(habitId);
+  assert(savedHabit !== undefined, 'Habit created and persisted in IndexedDB');
+  assert(savedHabit?.streak === 3, 'Habit streak count saved accurately');
+  assert(savedHabit?.completedDates.includes(todayStr), 'Completed dates tracked in punchcard');
+
+  // -----------------------------------------------------------------
+  // 39. DAILY PLANNER TIME BLOCKS & PRIORITIES
+  // -----------------------------------------------------------------
+  console.log('\n--- 39. Daily Planner Time Blocks & Priorities ---');
+
+  const plannerTaskId = generateId();
+  await db.tasks.add({
+    id: plannerTaskId,
+    title: 'Architect Database Schemas',
+    status: 'todo',
+    priority: 'high',
+    priorityCode: 'P1',
+    timeBlock: 'morning',
+    dueDate: todayStr,
+    dueTime: '09:00',
+    recurrence: 'none',
+    subtasks: [],
+    tags: ['daily-plan'],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  });
+
+  const savedTask = await db.tasks.get(plannerTaskId);
+  assert(savedTask !== undefined, 'Planner task saved in IndexedDB');
+  assert(savedTask?.timeBlock === 'morning', 'Morning focus time-block assigned');
+  assert(savedTask?.priorityCode === 'P1', 'P1 Critical priority code assigned');
+
+  // -----------------------------------------------------------------
+  // 40. SAVINGS GOALS & REQUIRED MONTHLY SAVINGS
+  // -----------------------------------------------------------------
+  console.log('\n--- 40. Savings Goals & Required Monthly Savings ---');
+
+  const goalId = generateId();
+  await db.savingsGoals.add({
+    id: goalId,
+    title: 'Emergency Fund',
+    targetAmountMinor: 10000000, // ₹1,00,000
+    currentAmountMinor: 2500000,  // ₹25,000
+    deadline: '2026-12-31',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  });
+
+  const savedGoal = await db.savingsGoals.get(goalId);
+  assert(savedGoal !== undefined, 'Savings goal created in IndexedDB');
+  assert(savedGoal?.targetAmountMinor === 10000000, 'Target amount in minor units preserved');
+  assert(savedGoal?.currentAmountMinor === 2500000, 'Current saved amount in minor units preserved');
+
+  // -----------------------------------------------------------------
+  // 41. STUDY PLANNER & SYLLABUS TRACKER
+  // -----------------------------------------------------------------
+  console.log('\n--- 41. Study Planner & Syllabus Tracker ---');
+
+  const subjectId = generateId();
+  await db.studySubjects.add({
+    id: subjectId,
+    title: 'Distributed Systems',
+    category: 'Tech',
+    color: '#3b82f6',
+    deadline: '2026-11-30',
+    chapters: [
+      { id: generateId(), title: 'Raft Consensus', completed: true, completedAt: new Date().toISOString() },
+      { id: generateId(), title: 'Vector Clocks', completed: false },
+      { id: generateId(), title: 'CRDTs', completed: false }
+    ],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  });
+
+  const savedSubject = await db.studySubjects.get(subjectId);
+  assert(savedSubject !== undefined, 'Study subject created in IndexedDB');
+  assert(savedSubject?.chapters.length === 3, 'Chapters / modules tracked');
+  assert(savedSubject?.chapters[0].completed === true, 'Chapter completion status persisted');
+
   const total = passed + failed;
   console.log(`\n=====================================================`);
   console.log(` TEST SUMMARY: ${passed} PASSED | ${failed} FAILED | ${total} TOTAL`);

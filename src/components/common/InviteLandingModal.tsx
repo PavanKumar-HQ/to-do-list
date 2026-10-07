@@ -72,10 +72,10 @@ export const InviteLandingModal: React.FC<InviteLandingModalProps> = ({
           </div>
 
           <h2 style={{ fontSize: '22px', fontWeight: 700, margin: '0 0 6px 0', letterSpacing: '-0.02em', color: '#ffffff' }}>
-            Welcome to Personal Life OS
+            Welcome to Saral (सरल)
           </h2>
           <p style={{ fontSize: '13px', margin: 0, opacity: 0.9, lineHeight: 1.4, color: 'rgba(255,255,255,0.95)' }}>
-            You've been invited to use a private, calm, local-first workspace designed to organize your mind, tasks, journal, and life.
+            You've been invited to use Saral — a calm, private, local-first workspace designed to organize your mind, habits, study, planning, and life.
           </p>
         </div>
 

@@ -156,6 +156,8 @@ export async function createBackupPayload(password?: string): Promise<BackupPayl
     vaultResources,
     meetingNotes,
     conversationLogs,
+    habits,
+    studySubjects,
     settings,
     auditHistory
   ] = await Promise.all([
@@ -197,6 +199,8 @@ export async function createBackupPayload(password?: string): Promise<BackupPayl
     db.vaultResources.toArray(),
     db.meetingNotes.toArray(),
     db.conversationLogs.toArray(),
+    db.habits.toArray(),
+    db.studySubjects.toArray(),
     db.settings.get('current_settings'),
     db.auditHistory.toArray()
   ]);
@@ -239,7 +243,9 @@ export async function createBackupPayload(password?: string): Promise<BackupPayl
     invites.length +
     vaultResources.length +
     meetingNotes.length +
-    conversationLogs.length;
+    conversationLogs.length +
+    habits.length +
+    studySubjects.length;
 
   const tablesData = {
     inbox,
@@ -280,6 +286,8 @@ export async function createBackupPayload(password?: string): Promise<BackupPayl
     vaultResources,
     meetingNotes,
     conversationLogs,
+    habits,
+    studySubjects,
     settings,
     auditHistory
   };
@@ -550,7 +558,9 @@ export async function validateAndPreviewBackup(fileContent: string): Promise<{
       invites: Array.isArray(t.invites) ? t.invites.length : 0,
       vaultResources: Array.isArray(t.vaultResources) ? t.vaultResources.length : 0,
       meetingNotes: Array.isArray(t.meetingNotes) ? t.meetingNotes.length : 0,
-      conversationLogs: Array.isArray(t.conversationLogs) ? t.conversationLogs.length : 0
+      conversationLogs: Array.isArray(t.conversationLogs) ? t.conversationLogs.length : 0,
+      habits: Array.isArray(t.habits) ? t.habits.length : 0,
+      studySubjects: Array.isArray(t.studySubjects) ? t.studySubjects.length : 0
     };
 
     const totalRecords = Object.values(counts).reduce((a, b) => a + b, 0);
@@ -623,6 +633,8 @@ async function writeTablesToDb(t: any, mode: 'replace' | 'merge') {
     db.vaultResources,
     db.meetingNotes,
     db.conversationLogs,
+    db.habits,
+    db.studySubjects,
     db.settings,
     db.auditHistory
   ], async () => {
@@ -666,6 +678,8 @@ async function writeTablesToDb(t: any, mode: 'replace' | 'merge') {
         db.vaultResources.clear(),
         db.meetingNotes.clear(),
         db.conversationLogs.clear(),
+        db.habits.clear(),
+        db.studySubjects.clear(),
         db.auditHistory.clear()
       ]);
     }
@@ -708,6 +722,8 @@ async function writeTablesToDb(t: any, mode: 'replace' | 'merge') {
     if (t.vaultResources?.length) await db.vaultResources.bulkPut(t.vaultResources);
     if (t.meetingNotes?.length) await db.meetingNotes.bulkPut(t.meetingNotes);
     if (t.conversationLogs?.length) await db.conversationLogs.bulkPut(t.conversationLogs);
+    if (t.habits?.length) await db.habits.bulkPut(t.habits);
+    if (t.studySubjects?.length) await db.studySubjects.bulkPut(t.studySubjects);
     if (t.auditHistory?.length) await db.auditHistory.bulkPut(t.auditHistory);
 
     if (t.settings) {
@@ -834,7 +850,9 @@ function getZeroCounts() {
     invites: 0,
     vaultResources: 0,
     meetingNotes: 0,
-    conversationLogs: 0
+    conversationLogs: 0,
+    habits: 0,
+    studySubjects: 0
   };
 }
 
@@ -877,6 +895,8 @@ function getZeroTables() {
     invites: [],
     vaultResources: [],
     meetingNotes: [],
-    conversationLogs: []
+    conversationLogs: [],
+    habits: [],
+    studySubjects: []
   };
 }

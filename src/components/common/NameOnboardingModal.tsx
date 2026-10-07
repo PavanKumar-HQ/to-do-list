@@ -145,7 +145,7 @@ export const NameOnboardingModal: React.FC<NameOnboardingModalProps> = ({ onComp
               />
             </div>
 
-            {/* Kanso Branding */}
+            {/* Saral Branding */}
             <h1
               id="onboarding-title"
               style={{
@@ -156,7 +156,7 @@ export const NameOnboardingModal: React.FC<NameOnboardingModalProps> = ({ onComp
                 letterSpacing: '-0.02em'
               }}
             >
-              Kanso
+              Saral
             </h1>
             <div
               style={{
@@ -165,7 +165,7 @@ export const NameOnboardingModal: React.FC<NameOnboardingModalProps> = ({ onComp
                 marginBottom: '36px'
               }}
             >
-              Your life. Organized.
+              सरल • Simple, Calm & Focused Personal Life OS
             </div>
 
             {/* Main Catchphrase */}

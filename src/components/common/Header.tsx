@@ -59,10 +59,13 @@ export const Header: React.FC<HeaderProps> = ({
       case 'journal': return 'Journal';
       case 'people': return 'People';
       case 'lists': return 'Lists';
-      case 'goals': return 'Goals';
+      case 'habits': return 'Habit Tracker';
+      case 'daily': return 'Daily Planner';
+      case 'study': return 'Study Planner';
+      case 'vault': return 'Where Did I Put That?';
       case 'settings': return 'Settings';
       case 'trash': return 'Trash';
-      default: return 'Kanso';
+      default: return 'Saral';
     }
   };
 

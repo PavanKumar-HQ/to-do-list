@@ -32,15 +32,15 @@ export const AppBootLoader: React.FC = () => {
           boxShadow: 'var(--shadow-md)'
         }}
       >
-        <span style={{ fontSize: '26px', fontWeight: 700, letterSpacing: '-0.03em' }}>K</span>
+        <span style={{ fontSize: '26px', fontWeight: 700, letterSpacing: '-0.03em' }}>S</span>
       </div>
 
       <div style={{ textAlign: 'center' }}>
         <h1 style={{ fontSize: '24px', fontWeight: 700, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.02em' }}>
-          Kanso
+          Saral
         </h1>
-        <p style={{ fontSize: '15px', color: 'var(--text-secondary)', margin: '6px 0 0 0', fontWeight: 500 }}>
-          Your life. Organized.
+        <p style={{ fontSize: '14px', color: 'var(--text-secondary)', margin: '6px 0 0 0', fontWeight: 500 }}>
+          सरल • Simple, Calm & Focused
         </p>
       </div>
 

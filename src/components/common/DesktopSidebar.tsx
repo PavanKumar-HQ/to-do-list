@@ -82,7 +82,7 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
   ];
 
   const goalsNav = [
-    { id: 'goals', label: 'Goals & Routines', icon: Target },
+    { id: 'goals', label: 'Habits, Planner & Goals', icon: Target },
     { id: 'lists', label: 'Lists & Checklists', icon: ListTodo }
   ];
 
@@ -165,10 +165,10 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
           <AnimalAvatar avatarId={settings?.avatarId} size={28} />
           <div>
             <div style={{ fontWeight: 600, fontSize: '15px', color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>
-              Life OS
+              Saral
             </div>
             <div style={{ fontSize: '11.5px', color: 'var(--text-muted)' }}>
-              Personal Workspace
+              सरल • Simple & Calm
             </div>
           </div>
         </div>

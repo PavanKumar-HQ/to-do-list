@@ -1,6 +1,11 @@
 import React, { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import {
+  BarChart3,
+  Flame,
+  Sun,
+  PiggyBank,
+  GraduationCap,
   Target,
   Repeat,
   Plus,
@@ -8,31 +13,51 @@ import {
   RotateCcw,
   Trash2,
   Calendar,
-  X
+  X,
+  Sparkles
 } from 'lucide-react';
 import { db, generateId, logAudit } from '../../db/db';
 import { formatDisplayDate, getTodayDateString } from '../../utils/dates';
 import { useToast } from '../common/ToastContext';
-import type { GoalItem, RoutineItem, Milestone } from '../../types';
+import type { GoalItem, RoutineItem } from '../../types';
+
+import { GrowthDashboardAnalytics } from './GrowthDashboardAnalytics';
+import { HabitTrackerTab } from './HabitTrackerTab';
+import { DailyPlannerTab } from './DailyPlannerTab';
+import { SavingsGoalsTab } from './SavingsGoalsTab';
+import { StudyPlannerTab } from './StudyPlannerTab';
+
+export type GrowthTab = 'dashboard' | 'habits' | 'planner' | 'savings' | 'study' | 'routines' | 'goals';
 
 export const GoalsView: React.FC = () => {
   const { showToast } = useToast();
-  const [activeTab, setActiveTab] = useState<'goals' | 'routines'>('routines');
+  const [activeTab, setActiveTab] = useState<GrowthTab>('dashboard');
 
-  // New Routine State
+  // Routines & Goals state (preserved)
   const [isNewRoutineOpen, setIsNewRoutineOpen] = useState(false);
   const [routineTitle, setRoutineTitle] = useState('');
   const [routineFrequency, setRoutineFrequency] = useState<RoutineItem['frequency']>('daily');
   const [routineSteps, setRoutineSteps] = useState<string[]>(['Step 1', 'Step 2']);
 
-  // New Goal State
   const [isNewGoalOpen, setIsNewGoalOpen] = useState(false);
   const [goalTitle, setGoalTitle] = useState('');
   const [goalTarget, setGoalTarget] = useState('');
   const [goalUnit, setGoalUnit] = useState('₹');
   const [goalDeadline, setGoalDeadline] = useState('');
 
-  // Queries
+  // Queries for badge counts
+  const habitsCount = useLiveQuery(async () => {
+    return db.habits.filter((h) => !h.deletedAt).count();
+  }, []) || 0;
+
+  const savingsCount = useLiveQuery(async () => {
+    return db.savingsGoals.filter((g) => !g.deletedAt).count();
+  }, []) || 0;
+
+  const studyCount = useLiveQuery(async () => {
+    return db.studySubjects.filter((s) => !s.deletedAt).count();
+  }, []) || 0;
+
   const routines = useLiveQuery(async () => {
     return db.routines.filter((r) => !r.deletedAt).toArray();
   }, []) || [];
@@ -108,45 +133,127 @@ export const GoalsView: React.FC = () => {
 
   return (
     <div className="page-wrapper">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
-          <h2 style={{ fontSize: '22px', fontWeight: 700 }}>Goals & Routines</h2>
-          <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
-            Habitual checklists and long-term milestones
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <h2 style={{ fontSize: '22px', fontWeight: 700, margin: 0 }}>Growth & Productivity Hub</h2>
+            <span
+              style={{
+                fontSize: '11px',
+                fontWeight: 600,
+                padding: '2px 8px',
+                borderRadius: '12px',
+                background: 'var(--accent-light)',
+                color: 'var(--accent)'
+              }}
+            >
+              Saral Suite
+            </span>
+          </div>
+          <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: '4px 0 0' }}>
+            Habits, Daily Planner, Savings Goals, Study Syllabus & Visual Analytics
           </p>
         </div>
-        <button
-          onClick={() => {
-            if (activeTab === 'routines') setIsNewRoutineOpen(true);
-            else setIsNewGoalOpen(true);
-          }}
-          className="btn btn-primary btn-sm"
-          style={{ gap: '6px' }}
-        >
-          <Plus size={16} />
-          <span>New {activeTab === 'routines' ? 'Routine' : 'Goal'}</span>
-        </button>
+
+        {activeTab === 'routines' && (
+          <button onClick={() => setIsNewRoutineOpen(true)} className="btn btn-primary btn-sm" style={{ gap: '6px' }}>
+            <Plus size={16} />
+            <span>New Routine</span>
+          </button>
+        )}
+        {activeTab === 'goals' && (
+          <button onClick={() => setIsNewGoalOpen(true)} className="btn btn-primary btn-sm" style={{ gap: '6px' }}>
+            <Plus size={16} />
+            <span>New Milestone</span>
+          </button>
+        )}
       </div>
 
-      {/* Tabs */}
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+      {/* Main Navigation Tabs */}
+      <div
+        style={{
+          display: 'flex',
+          gap: '6px',
+          marginBottom: '20px',
+          overflowX: 'auto',
+          paddingBottom: '6px',
+          borderBottom: '1px solid var(--border-subtle)'
+        }}
+      >
+        <button
+          onClick={() => setActiveTab('dashboard')}
+          className={`btn btn-sm ${activeTab === 'dashboard' ? 'btn-primary' : 'btn-secondary'}`}
+          style={{ borderRadius: 'var(--radius-full)', padding: '6px 14px', fontSize: '12.5px', gap: '6px' }}
+        >
+          <BarChart3 size={15} />
+          <span>Analytics Dashboard</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('habits')}
+          className={`btn btn-sm ${activeTab === 'habits' ? 'btn-primary' : 'btn-secondary'}`}
+          style={{ borderRadius: 'var(--radius-full)', padding: '6px 14px', fontSize: '12.5px', gap: '6px' }}
+        >
+          <Flame size={15} style={{ color: activeTab === 'habits' ? '#ffffff' : '#ef4444' }} />
+          <span>Habit Tracker {habitsCount > 0 && `(${habitsCount})`}</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('planner')}
+          className={`btn btn-sm ${activeTab === 'planner' ? 'btn-primary' : 'btn-secondary'}`}
+          style={{ borderRadius: 'var(--radius-full)', padding: '6px 14px', fontSize: '12.5px', gap: '6px' }}
+        >
+          <Sun size={15} style={{ color: activeTab === 'planner' ? '#ffffff' : '#f59e0b' }} />
+          <span>Daily Planner</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('savings')}
+          className={`btn btn-sm ${activeTab === 'savings' ? 'btn-primary' : 'btn-secondary'}`}
+          style={{ borderRadius: 'var(--radius-full)', padding: '6px 14px', fontSize: '12.5px', gap: '6px' }}
+        >
+          <PiggyBank size={15} style={{ color: activeTab === 'savings' ? '#ffffff' : '#10b981' }} />
+          <span>Savings Goals {savingsCount > 0 && `(${savingsCount})`}</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('study')}
+          className={`btn btn-sm ${activeTab === 'study' ? 'btn-primary' : 'btn-secondary'}`}
+          style={{ borderRadius: 'var(--radius-full)', padding: '6px 14px', fontSize: '12.5px', gap: '6px' }}
+        >
+          <GraduationCap size={15} style={{ color: activeTab === 'study' ? '#ffffff' : '#8b5cf6' }} />
+          <span>Study Planner {studyCount > 0 && `(${studyCount})`}</span>
+        </button>
+
         <button
           onClick={() => setActiveTab('routines')}
           className={`btn btn-sm ${activeTab === 'routines' ? 'btn-primary' : 'btn-secondary'}`}
-          style={{ borderRadius: 'var(--radius-full)', padding: '6px 16px' }}
+          style={{ borderRadius: 'var(--radius-full)', padding: '6px 14px', fontSize: '12.5px', gap: '6px' }}
         >
-          Routines ({routines.length})
+          <Repeat size={15} />
+          <span>Routines ({routines.length})</span>
         </button>
+
         <button
           onClick={() => setActiveTab('goals')}
           className={`btn btn-sm ${activeTab === 'goals' ? 'btn-primary' : 'btn-secondary'}`}
-          style={{ borderRadius: 'var(--radius-full)', padding: '6px 16px' }}
+          style={{ borderRadius: 'var(--radius-full)', padding: '6px 14px', fontSize: '12.5px', gap: '6px' }}
         >
-          Goals ({goals.length})
+          <Target size={15} />
+          <span>Milestones ({goals.length})</span>
         </button>
       </div>
 
-      {activeTab === 'routines' ? (
+      {/* Render Active Tab */}
+      {activeTab === 'dashboard' && <GrowthDashboardAnalytics />}
+      {activeTab === 'habits' && <HabitTrackerTab />}
+      {activeTab === 'planner' && <DailyPlannerTab />}
+      {activeTab === 'savings' && <SavingsGoalsTab />}
+      {activeTab === 'study' && <StudyPlannerTab />}
+
+      {/* Routines View Tab */}
+      {activeTab === 'routines' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           {routines.length === 0 ? (
             <div className="card" style={{ padding: '36px 16px', textAlign: 'center' }}>
@@ -159,8 +266,6 @@ export const GoalsView: React.FC = () => {
           ) : (
             routines.map((routine) => {
               const completedCount = routine.steps.filter((s) => s.completed).length;
-              const isAllDone = completedCount === routine.steps.length && routine.steps.length > 0;
-
               return (
                 <div key={routine.id} className="card" style={{ padding: '16px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
@@ -225,13 +330,15 @@ export const GoalsView: React.FC = () => {
             })
           )}
         </div>
-      ) : (
-        /* Goals View */
+      )}
+
+      {/* Goals / Milestones View Tab */}
+      {activeTab === 'goals' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           {goals.length === 0 ? (
             <div className="card" style={{ padding: '36px 16px', textAlign: 'center' }}>
               <Target size={36} color="var(--text-muted)" style={{ margin: '0 auto 8px auto' }} />
-              <div style={{ fontWeight: 600 }}>No active goals.</div>
+              <div style={{ fontWeight: 600 }}>No active milestone goals.</div>
               <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '4px' }}>
                 Set targets for career, learning, or fitness.
               </div>
@@ -367,7 +474,7 @@ export const GoalsView: React.FC = () => {
           <div className="bottom-sheet" onClick={(e) => e.stopPropagation()}>
             <div className="sheet-handle" />
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-              <h3 style={{ fontSize: '17px', fontWeight: 600 }}>Create Goal</h3>
+              <h3 style={{ fontSize: '17px', fontWeight: 600 }}>Create Milestone Goal</h3>
               <button onClick={() => setIsNewGoalOpen(false)} className="btn-ghost btn-icon">
                 <X size={20} />
               </button>

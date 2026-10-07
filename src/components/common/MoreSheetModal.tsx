@@ -75,9 +75,9 @@ export const MoreSheetModal: React.FC<MoreSheetModalProps> = ({
       ]
     },
     {
-      title: 'Goals & Routines',
+      title: 'Growth & Goals',
       items: [
-        { id: 'goals', label: 'Goals & Milestones', icon: Target },
+        { id: 'goals', label: 'Habits, Planner & Goals', icon: Target },
         { id: 'lists', label: 'Lists & Checklists', icon: ListTodo }
       ]
     },
@@ -96,14 +96,14 @@ export const MoreSheetModal: React.FC<MoreSheetModalProps> = ({
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px', paddingBottom: '12px', borderBottom: '1px solid var(--border-subtle)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <div style={{ width: '28px', height: '28px', borderRadius: '6px', background: 'var(--accent)', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '14px' }}>
-              K
+              S
             </div>
             <div>
               <h2 style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>
-                Life OS
+                Saral
               </h2>
               <p style={{ fontSize: '11.5px', color: 'var(--text-muted)', margin: 0 }}>
-                Personal Workspace
+                सरल • Simple & Calm
               </p>
             </div>
           </div>

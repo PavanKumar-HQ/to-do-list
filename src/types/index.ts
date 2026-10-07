@@ -195,6 +195,8 @@ export interface TaskItem {
   attachmentIds?: string[];
   isPinned?: boolean;
   isMinimumDay?: boolean; // Highlighted for Minimum Day focus
+  timeBlock?: 'morning' | 'afternoon' | 'evening'; // Daily Planner time blocks
+  priorityCode?: 'P1' | 'P2' | 'P3'; // P1 (Critical), P2 (High), P3 (Normal)
   postponeCount?: number; // Times this task was postponed
   lastPostponedAt?: string;
   lastActivityAt?: string;
@@ -805,6 +807,8 @@ export interface BackupPayload {
     vaultResources?: VaultResourceItem[];
     meetingNotes?: MeetingNoteItem[];
     conversationLogs?: ConversationLogItem[];
+    habits?: HabitItem[];
+    studySubjects?: StudySubjectItem[];
     settings?: AppSettings;
     auditHistory?: AuditHistoryEntry[];
   };
@@ -856,6 +860,8 @@ export interface BackupPreviewSummary {
     vaultResources?: number;
     meetingNotes?: number;
     conversationLogs?: number;
+    habits?: number;
+    studySubjects?: number;
   };
 }
 
@@ -915,6 +921,48 @@ export interface ConversationLogItem {
   notes: string;
   promises?: string;
   nextFollowupDate?: string;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt?: string;
+}
+
+// Habit Tracker (Streak-based Tracker)
+export type HabitCategory = 'health' | 'fitness' | 'learning' | 'mind' | 'routine' | 'career';
+
+export interface HabitItem {
+  id: string;
+  name: string;
+  category: HabitCategory;
+  color?: string;
+  streak: number; // Current active streak count
+  bestStreak: number; // Longest streak achieved
+  completedDates: string[]; // ['YYYY-MM-DD']
+  targetDaysPerWeek: number; // e.g. 7 for everyday, 5 for weekdays
+  reminderTime?: string; // HH:mm
+  isArchived?: boolean;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt?: string;
+}
+
+// Study Planner (Subjects -> Chapters -> Deadlines -> Progress)
+export interface StudyChapter {
+  id: string;
+  title: string;
+  completed: boolean;
+  deadline?: string; // YYYY-MM-DD
+  notes?: string;
+  completedAt?: string;
+}
+
+export interface StudySubjectItem {
+  id: string;
+  title: string;
+  category?: string; // e.g. "Tech", "Math", "Exam Prep", "Languages"
+  color?: string;
+  deadline?: string; // Target completion date
+  chapters: StudyChapter[];
+  notes?: string;
   createdAt: string;
   updatedAt: string;
   deletedAt?: string;
