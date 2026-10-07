@@ -223,90 +223,9 @@ export const VaultView: React.FC = () => {
 
   return (
     <div className="view-container animate-fade-in" style={{ paddingBottom: '90px' }}>
-      {/* Top Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <h2 style={{ fontSize: '22px', fontWeight: 700, margin: 0 }}>
-              Where Did I Put That? (Personal Vault)
-            </h2>
-            <span
-              style={{
-                fontSize: '11px',
-                fontWeight: 600,
-                padding: '2px 8px',
-                borderRadius: '12px',
-                background: 'var(--accent-light)',
-                color: 'var(--accent)'
-              }}
-            >
-              100% Offline
-            </span>
-          </div>
-          <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: '4px 0 0' }}>
-            Never lose keys, earbuds, glasses, passports, tools, bookmarks or account hints again.
-          </p>
-        </div>
-
-        <button
-          onClick={() => handleOpenAdd()}
-          className="btn btn-primary btn-sm"
-          style={{ gap: '6px' }}
-        >
-          <Plus size={16} />
-          <span>Save Item</span>
-        </button>
-      </div>
-
-      {/* Quick Preset Chips for Everyday Physical Items */}
-      <div style={{ marginBottom: '16px' }}>
-        <div style={{ fontSize: '11.5px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '8px' }}>
-          Quick Add Everyday Items
-        </div>
-        <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
-          {PRESETS.map((p) => {
-            const Icon = p.icon;
-            return (
-              <button
-                key={p.title}
-                onClick={() => handleOpenAdd(p)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '6px 12px',
-                  borderRadius: 'var(--radius-full)',
-                  background: 'var(--bg-surface)',
-                  border: '1px solid var(--border-subtle)',
-                  fontSize: '12.5px',
-                  fontWeight: 500,
-                  color: 'var(--text-secondary)',
-                  cursor: 'pointer',
-                  whiteSpace: 'nowrap',
-                  transition: 'all 0.15s ease'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = 'var(--accent)';
-                  e.currentTarget.style.background = 'var(--accent-light)';
-                  e.currentTarget.style.color = 'var(--accent)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = 'var(--border-subtle)';
-                  e.currentTarget.style.background = 'var(--bg-surface)';
-                  e.currentTarget.style.color = 'var(--text-secondary)';
-                }}
-              >
-                <Icon size={14} style={{ flexShrink: 0 }} />
-                <span>{p.title}</span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Search & Category Filter Pills */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '20px' }}>
-        <div style={{ position: 'relative' }}>
+      {/* Top Action Bar: Search + Add Button */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
+        <div style={{ position: 'relative', flex: 1 }}>
           <Search
             size={16}
             style={{
@@ -320,8 +239,14 @@ export const VaultView: React.FC = () => {
           <input
             type="text"
             className="input-text"
-            style={{ paddingLeft: '36px', borderRadius: 'var(--radius-md)' }}
-            placeholder="Search items by name, drawer location, buds, keys, passport, tags..."
+            style={{
+              paddingLeft: '36px',
+              paddingRight: searchQuery ? '32px' : '12px',
+              borderRadius: 'var(--radius-md)',
+              height: '40px',
+              fontSize: '13.5px'
+            }}
+            placeholder="Search items, locations, keys, logins..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -336,47 +261,73 @@ export const VaultView: React.FC = () => {
           )}
         </div>
 
-        {/* Categories Bar */}
-        <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
-          <button
-            onClick={() => setSelectedCategory('all')}
-            className={`btn btn-sm ${selectedCategory === 'all' ? 'btn-primary' : 'btn-secondary'}`}
-            style={{ borderRadius: 'var(--radius-full)', padding: '6px 14px', fontSize: '12.5px', whiteSpace: 'nowrap' }}
-          >
-            All Items ({resources.length})
-          </button>
-          {CATEGORIES.map((cat) => {
-            const Icon = cat.icon;
-            const isSelected = selectedCategory === cat.id;
-            const count = resources.filter(r => {
-              let c = r.category as string;
-              if (c === 'website' || c === 'github_repo' || c === 'tool') c = 'website_tech';
-              if (c === 'document') c = 'personal_items';
-              return c === cat.id || r.category === cat.id;
-            }).length;
+        <button
+          onClick={() => handleOpenAdd()}
+          className="btn btn-primary"
+          style={{ height: '40px', padding: '0 16px', gap: '6px', whiteSpace: 'nowrap', flexShrink: 0 }}
+        >
+          <Plus size={16} />
+          <span>Save Item</span>
+        </button>
+      </div>
 
-            return (
-              <button
-                key={cat.id}
-                onClick={() => setSelectedCategory(cat.id)}
-                className={`btn btn-sm ${isSelected ? 'btn-primary' : 'btn-secondary'}`}
-                style={{
-                  borderRadius: 'var(--radius-full)',
-                  padding: '6px 14px',
-                  fontSize: '12.5px',
-                  gap: '6px',
-                  whiteSpace: 'nowrap',
-                  display: 'inline-flex',
-                  alignItems: 'center'
-                }}
-              >
-                <Icon size={14} style={{ flexShrink: 0, color: isSelected ? 'inherit' : 'var(--text-secondary)' }} />
-                <span>{cat.label}</span>
-                {count > 0 && <span style={{ opacity: 0.8 }}>({count})</span>}
-              </button>
-            );
-          })}
-        </div>
+      {/* Category Filter Pills */}
+      <div
+        style={{
+          display: 'flex',
+          gap: '6px',
+          overflowX: 'auto',
+          paddingBottom: '10px',
+          marginBottom: '16px',
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none'
+        }}
+      >
+        <button
+          onClick={() => setSelectedCategory('all')}
+          className={`btn btn-sm ${selectedCategory === 'all' ? 'btn-primary' : 'btn-secondary'}`}
+          style={{
+            borderRadius: 'var(--radius-full)',
+            padding: '5px 12px',
+            fontSize: '12px',
+            whiteSpace: 'nowrap',
+            fontWeight: selectedCategory === 'all' ? 600 : 500
+          }}
+        >
+          All ({resources.length})
+        </button>
+        {CATEGORIES.map((cat) => {
+          const Icon = cat.icon;
+          const isSelected = selectedCategory === cat.id;
+          const count = resources.filter(r => {
+            let c = r.category as string;
+            if (c === 'website' || c === 'github_repo' || c === 'tool') c = 'website_tech';
+            if (c === 'document') c = 'personal_items';
+            return c === cat.id || r.category === cat.id;
+          }).length;
+
+          return (
+            <button
+              key={cat.id}
+              onClick={() => setSelectedCategory(cat.id)}
+              className={`btn btn-sm ${isSelected ? 'btn-primary' : 'btn-secondary'}`}
+              style={{
+                borderRadius: 'var(--radius-full)',
+                padding: '5px 12px',
+                fontSize: '12px',
+                gap: '5px',
+                whiteSpace: 'nowrap',
+                display: 'inline-flex',
+                alignItems: 'center',
+                fontWeight: isSelected ? 600 : 500
+              }}
+            >
+              <Icon size={13} style={{ flexShrink: 0 }} />
+              <span>{cat.label}</span>
+              {count > 0 && <span style={{ opacity: 0.75, fontSize: '11px' }}>({count})</span>}
+            </button>
+          );
+        })}
       </div>
 
       {/* Items Grid */}
@@ -628,6 +579,47 @@ export const VaultView: React.FC = () => {
                 <X size={18} />
               </button>
             </div>
+
+            {!editingItem && (
+              <div style={{ marginBottom: '4px' }}>
+                <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '6px' }}>
+                  Quick Templates
+                </div>
+                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                  {PRESETS.map((p) => {
+                    const Icon = p.icon;
+                    return (
+                      <button
+                        key={p.title}
+                        type="button"
+                        onClick={() => {
+                          setTitle(p.title);
+                          setCategory(p.category);
+                          setLocationHint(p.locationHint);
+                          setTagsInput(p.category.replace('_', ' '));
+                        }}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          padding: '4px 9px',
+                          borderRadius: 'var(--radius-full)',
+                          background: 'var(--bg-surface-elevated)',
+                          border: '1px solid var(--border-subtle)',
+                          fontSize: '11.5px',
+                          fontWeight: 500,
+                          color: 'var(--text-secondary)',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <Icon size={12} style={{ flexShrink: 0 }} />
+                        <span>{p.title}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div>
