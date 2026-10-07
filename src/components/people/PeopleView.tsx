@@ -16,7 +16,7 @@ import {
   MessageSquare,
   ListTodo,
   FileText,
-  Mic,
+  Zap,
   Tag,
   ArrowRight,
   Heart,
@@ -28,7 +28,6 @@ import { db, generateId, logAudit } from '../../db/db';
 import { formatDisplayDate, getTodayDateString } from '../../utils/dates';
 import { useToast } from '../common/ToastContext';
 import { ContextModal } from '../common/ContextModal';
-import { MeetingTranscriberModal } from './MeetingTranscriberModal';
 import type { PersonItem, FollowupItem, FollowupStatus, EntityType, MeetingNoteItem, ConversationLogItem } from '../../types';
 
 export const PeopleView: React.FC = () => {
@@ -42,10 +41,6 @@ export const PeopleView: React.FC = () => {
     type: null,
     id: null
   });
-
-  // Transcriber Modal
-  const [isTranscriberOpen, setIsTranscriberOpen] = useState(false);
-  const [transcriberPersonId, setTranscriberPersonId] = useState<string | undefined>(undefined);
 
   // Quick Log Conversation Modal
   const [isLogConversationOpen, setIsLogConversationOpen] = useState(false);
@@ -233,18 +228,6 @@ export const PeopleView: React.FC = () => {
         <div style={{ display: 'flex', gap: '8px' }}>
           <button
             onClick={() => {
-              setTranscriberPersonId(undefined);
-              setIsTranscriberOpen(true);
-            }}
-            className="btn btn-secondary"
-            style={{ gap: '6px', borderRadius: '8px', background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(168, 85, 247, 0.1) 100%)', borderColor: 'var(--accent)' }}
-          >
-            <Sparkles size={16} color="var(--accent)" />
-            <span>Gemini Transcriber</span>
-          </button>
-
-          <button
-            onClick={() => {
               if (activeTab === 'meetings') setIsLogConversationOpen(true);
               else if (activeTab === 'followups') setIsAddFollowupOpen(true);
               else setIsAddPersonOpen(true);
@@ -383,17 +366,6 @@ export const PeopleView: React.FC = () => {
                           <MessageSquare size={16} />
                         </button>
                         <button
-                          onClick={() => {
-                            setTranscriberPersonId(p.id);
-                            setIsTranscriberOpen(true);
-                          }}
-                          className="btn-ghost"
-                          style={{ padding: '4px', color: 'var(--accent)' }}
-                          title="Transcribe meeting with person"
-                        >
-                          <Mic size={16} />
-                        </button>
-                        <button
                           onClick={() => setContextModal({ isOpen: true, type: 'person', id: p.id })}
                           className="btn-ghost"
                           style={{ padding: '4px', color: 'var(--text-muted)' }}
@@ -448,7 +420,7 @@ export const PeopleView: React.FC = () => {
             style={{
               padding: '16px',
               borderRadius: '12px',
-              background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(168, 85, 247, 0.08) 100%)',
+              background: 'var(--bg-surface)',
               border: '1px solid var(--border-subtle)',
               display: 'flex',
               justifyContent: 'space-between',
@@ -462,38 +434,27 @@ export const PeopleView: React.FC = () => {
                 Meeting & Conversation Intelligence
               </div>
               <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                Capture discussions, promises made, and auto-generate Gemini meeting notes.
+                Capture discussions, follow-ups, and promises you made to others.
               </div>
             </div>
 
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <button
-                onClick={() => setIsLogConversationOpen(true)}
-                className="btn btn-secondary btn-sm"
-                style={{ gap: '6px' }}
-              >
-                <Plus size={14} />
-                <span>Quick Log Notes</span>
-              </button>
-
-              <button
-                onClick={() => setIsTranscriberOpen(true)}
-                className="btn btn-primary btn-sm"
-                style={{ gap: '6px' }}
-              >
-                <Sparkles size={14} />
-                <span>Gemini Transcriber</span>
-              </button>
-            </div>
+            <button
+              onClick={() => setIsLogConversationOpen(true)}
+              className="btn btn-primary btn-sm"
+              style={{ gap: '6px' }}
+            >
+              <Plus size={14} />
+              <span>Log Conversation</span>
+            </button>
           </div>
 
-          {/* Combined Meeting Notes & Conversation Logs */}
-          {meetingNotes.length === 0 && conversationLogs.length === 0 ? (
+          {/* Combined Conversation Logs */}
+          {conversationLogs.length === 0 ? (
             <div className="card" style={{ padding: '40px 16px', textAlign: 'center' }}>
               <MessageSquare size={36} color="var(--text-muted)" style={{ margin: '0 auto 8px auto' }} />
-              <div style={{ fontWeight: 600 }}>No meeting or conversation notes yet</div>
+              <div style={{ fontWeight: 600 }}>No conversation logs yet</div>
               <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '4px' }}>
-                Log notes manually or click "Gemini Transcriber" to record live audio and auto-extract promises.
+                Log conversations to remember what you discussed and what you promised to do.
               </div>
             </div>
           ) : (
@@ -628,8 +589,9 @@ export const PeopleView: React.FC = () => {
                     )}
 
                     {log.promises && (
-                      <div style={{ fontSize: '11.5px', color: 'var(--accent)', background: 'var(--accent-light)', padding: '4px 8px', borderRadius: '4px', fontWeight: 500 }}>
-                        ⚡ {log.promises}
+                      <div style={{ fontSize: '11.5px', color: 'var(--accent)', background: 'var(--accent-light)', padding: '4px 8px', borderRadius: '4px', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '5px' }}>
+                        <Zap size={12} style={{ flexShrink: 0 }} />
+                        <span>{log.promises}</span>
                       </div>
                     )}
                   </div>
@@ -783,8 +745,9 @@ export const PeopleView: React.FC = () => {
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--accent)', marginBottom: '4px' }}>
-                  ⚡ What did I promise to do? (Auto-adds to Tasks)
+                <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '12px', fontWeight: 600, color: 'var(--accent)', marginBottom: '4px' }}>
+                  <Zap size={13} style={{ flexShrink: 0 }} />
+                  <span>What did I promise to do? (Auto-adds to Tasks)</span>
                 </label>
                 <input
                   type="text"
@@ -1008,15 +971,6 @@ export const PeopleView: React.FC = () => {
             </div>
           </div>
         </div>
-      )}
-
-      {/* Gemini Meeting Transcriber Modal */}
-      {isTranscriberOpen && (
-        <MeetingTranscriberModal
-          isOpen={isTranscriberOpen}
-          onClose={() => setIsTranscriberOpen(false)}
-          preselectedPersonId={transcriberPersonId}
-        />
       )}
 
       {/* Life Context Modal */}

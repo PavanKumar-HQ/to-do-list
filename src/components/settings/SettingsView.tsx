@@ -331,7 +331,7 @@ export const SettingsView: React.FC = () => {
                 fontSize: '10px'
               }}
             >
-              ✎
+              <Edit2 size={10} />
             </div>
           </div>
 
@@ -431,17 +431,17 @@ export const SettingsView: React.FC = () => {
                       background: isSelected ? a.bgColor : 'transparent',
                       border: isSelected ? `2px solid ${a.borderColor}` : '1px solid var(--border-subtle)',
                       borderRadius: '12px',
-                      padding: '6px 2px',
+                      padding: '8px 4px',
                       cursor: 'pointer',
                       display: 'flex',
                       flexDirection: 'column',
                       alignItems: 'center',
-                      gap: '2px',
+                      gap: '4px',
                       transition: 'all 0.15s ease'
                     }}
                     title={a.name}
                   >
-                    <span style={{ fontSize: '22px', lineHeight: 1 }}>{a.emoji}</span>
+                    <a.icon size={20} style={{ color: a.color, flexShrink: 0 }} />
                     <span style={{ fontSize: '9px', fontWeight: 600, color: isSelected ? a.borderColor : 'var(--text-secondary)' }}>
                       {a.name}
                     </span>

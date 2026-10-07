@@ -869,7 +869,7 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
                       <option value="">No goal linked (Standalone)</option>
                       {goals.map((g) => (
                         <option key={g.id} value={g.id}>
-                          🎯 {g.title} {g.targetAmount > 0 ? `(${Math.round((g.currentAmount / g.targetAmount) * 100)}%)` : ''}
+                          {g.title} {g.targetAmount > 0 ? `(${Math.round((g.currentAmount / g.targetAmount) * 100)}%)` : ''}
                         </option>
                       ))}
                     </select>

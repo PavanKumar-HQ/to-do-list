@@ -577,7 +577,7 @@ export const TasksView: React.FC<{ onOpenQuickAdd: (type: any) => void }> = ({ o
                   <option value="">No goal linked (Standalone)</option>
                   {goals.map((g) => (
                     <option key={g.id} value={g.id}>
-                      🎯 {g.title}
+                      {g.title}
                     </option>
                   ))}
                 </select>

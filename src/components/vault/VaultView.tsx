@@ -45,12 +45,12 @@ const CATEGORIES: Array<{ id: VaultCategory; label: string; icon: React.FC<any>;
 ];
 
 const PRESETS = [
-  { title: 'House & Car Keys', category: 'keys_essentials' as VaultCategory, locationHint: 'Key hanger by the main door / side drawer', icon: '🔑' },
-  { title: 'AirPods / Earbuds', category: 'gadgets_buds' as VaultCategory, locationHint: 'Work desk organizer tray / backpack front pocket', icon: '🎧' },
-  { title: 'Reading / Sun Glasses', category: 'personal_items' as VaultCategory, locationHint: 'Bedside table nightstand / case in car glovebox', icon: '👓' },
-  { title: 'Passport & Physical IDs', category: 'personal_items' as VaultCategory, locationHint: 'Wardrobe locker / document folder on shelf 2', icon: '🛂' },
-  { title: 'Laptop Charger & USB-C Cable', category: 'gadgets_buds' as VaultCategory, locationHint: 'Laptop sleeve side pouch / power strip station', icon: '🔌' },
-  { title: 'Toolbox & Spare Keys', category: 'tools_home' as VaultCategory, locationHint: 'Utility cupboard / garage shelf box A', icon: '🛠️' }
+  { title: 'House & Car Keys', category: 'keys_essentials' as VaultCategory, locationHint: 'Key hanger by the main door / side drawer', icon: Key },
+  { title: 'AirPods / Earbuds', category: 'gadgets_buds' as VaultCategory, locationHint: 'Work desk organizer tray / backpack front pocket', icon: Headphones },
+  { title: 'Reading / Sun Glasses', category: 'personal_items' as VaultCategory, locationHint: 'Bedside table nightstand / case in car glovebox', icon: Glasses },
+  { title: 'Passport & Physical IDs', category: 'personal_items' as VaultCategory, locationHint: 'Wardrobe locker / document folder on shelf 2', icon: FileText },
+  { title: 'Laptop Charger & USB-C Cable', category: 'gadgets_buds' as VaultCategory, locationHint: 'Laptop sleeve side pouch / power strip station', icon: Smartphone },
+  { title: 'Toolbox & Spare Keys', category: 'tools_home' as VaultCategory, locationHint: 'Utility cupboard / garage shelf box A', icon: Wrench }
 ];
 
 export const VaultView: React.FC = () => {
@@ -154,7 +154,7 @@ export const VaultView: React.FC = () => {
         updatedAt: nowIso
       });
       await logAudit('create', 'document', id, `Added vault item: ${title.trim()}`);
-      showToast(`Saved "${title.trim()}" to Vault ✨`, { type: 'success' });
+      showToast(`Saved "${title.trim()}" to Vault`, { type: 'success' });
     }
 
     setIsModalOpen(false);
@@ -264,40 +264,43 @@ export const VaultView: React.FC = () => {
           Quick Add Everyday Items
         </div>
         <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
-          {PRESETS.map((p) => (
-            <button
-              key={p.title}
-              onClick={() => handleOpenAdd(p)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '6px 12px',
-                borderRadius: 'var(--radius-full)',
-                background: 'var(--bg-surface)',
-                border: '1px solid var(--border-subtle)',
-                fontSize: '12.5px',
-                fontWeight: 500,
-                color: 'var(--text-secondary)',
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
-                transition: 'all 0.15s ease'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = 'var(--accent)';
-                e.currentTarget.style.background = 'var(--accent-light)';
-                e.currentTarget.style.color = 'var(--accent)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = 'var(--border-subtle)';
-                e.currentTarget.style.background = 'var(--bg-surface)';
-                e.currentTarget.style.color = 'var(--text-secondary)';
-              }}
-            >
-              <span>{p.icon}</span>
-              <span>{p.title}</span>
-            </button>
-          ))}
+          {PRESETS.map((p) => {
+            const Icon = p.icon;
+            return (
+              <button
+                key={p.title}
+                onClick={() => handleOpenAdd(p)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '6px 12px',
+                  borderRadius: 'var(--radius-full)',
+                  background: 'var(--bg-surface)',
+                  border: '1px solid var(--border-subtle)',
+                  fontSize: '12.5px',
+                  fontWeight: 500,
+                  color: 'var(--text-secondary)',
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                  transition: 'all 0.15s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--accent)';
+                  e.currentTarget.style.background = 'var(--accent-light)';
+                  e.currentTarget.style.color = 'var(--accent)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--border-subtle)';
+                  e.currentTarget.style.background = 'var(--bg-surface)';
+                  e.currentTarget.style.color = 'var(--text-secondary)';
+                }}
+              >
+                <Icon size={14} style={{ flexShrink: 0 }} />
+                <span>{p.title}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -647,7 +650,7 @@ export const VaultView: React.FC = () => {
 
               <div>
                 <label className="form-label">
-                  📍 Where is it kept? (Physical Location Hint)
+                  Where is it kept? (Physical Location Hint)
                 </label>
                 <input
                   type="text"
@@ -659,7 +662,7 @@ export const VaultView: React.FC = () => {
               </div>
 
               <div>
-                <label className="form-label">🔗 Web URL / Portal Link (Optional)</label>
+                <label className="form-label">Web URL / Portal Link (Optional)</label>
                 <input
                   type="text"
                   className="input-text"
@@ -671,7 +674,7 @@ export const VaultView: React.FC = () => {
 
               <div>
                 <label className="form-label">
-                  🔐 Login / Username Hint (No Passwords!)
+                  Login / Username Hint (No Passwords!)
                 </label>
                 <input
                   type="text"

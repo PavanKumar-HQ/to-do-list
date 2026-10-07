@@ -427,13 +427,13 @@ export const AppInstallNotificationPrompt: React.FC = () => {
                       Look at the <strong>right side of your address / URL bar</strong> at the top of the browser.
                     </li>
                     <li>
-                      Click the <strong>Install</strong> icon (computer screen with down arrow 🖥️ ⬇️).
+                      Click the <strong>Install</strong> icon in the address bar.
                     </li>
                     <li>
-                      Click <strong>"Install"</strong> to add Kanso directly to your Mac Applications or Windows Start Menu.
+                      Click <strong>"Install"</strong> to add Saral directly to your desktop or device applications.
                     </li>
                     <li style={{ marginTop: '4px', fontSize: '12px', color: 'var(--text-muted, #737373)' }}>
-                      Alternatively, click the browser menu (⋮) ➔ <strong>"Install Kanso..."</strong>.
+                      Alternatively, click the browser menu (three dots) and select <strong>"Install Saral..."</strong>.
                     </li>
                   </ol>
                 </>

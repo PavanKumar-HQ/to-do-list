@@ -11,15 +11,12 @@ import {
   Play,
   Pause,
   RotateCcw,
-  Sparkles,
   Calendar,
   ChevronLeft,
   ChevronRight,
-  MoreVertical,
   ArrowRight,
-  Tag,
-  AlertCircle,
-  Timer
+  Timer,
+  Check
 } from 'lucide-react';
 import { db, generateId, logAudit } from '../../db/db';
 import { getTodayDateString, formatDisplayDate } from '../../utils/dates';
@@ -56,9 +53,9 @@ const TIME_BLOCK_META: Record<TimeBlock, { title: string; subtitle: string; icon
 };
 
 const PRIORITY_BADGES: Record<'P1' | 'P2' | 'P3', { label: string; color: string; bg: string; border: string }> = {
-  P1: { label: 'P1 • Critical', color: '#ef4444', bg: 'rgba(239, 68, 68, 0.12)', border: 'rgba(239, 68, 68, 0.3)' },
-  P2: { label: 'P2 • High', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.12)', border: 'rgba(245, 158, 11, 0.3)' },
-  P3: { label: 'P3 • Normal', color: '#3b82f6', bg: 'rgba(59, 130, 246, 0.12)', border: 'rgba(59, 130, 246, 0.3)' }
+  P1: { label: 'P1 Critical', color: '#ef4444', bg: 'rgba(239, 68, 68, 0.12)', border: 'rgba(239, 68, 68, 0.3)' },
+  P2: { label: 'P2 High', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.12)', border: 'rgba(245, 158, 11, 0.3)' },
+  P3: { label: 'P3 Normal', color: '#3b82f6', bg: 'rgba(59, 130, 246, 0.12)', border: 'rgba(59, 130, 246, 0.3)' }
 };
 
 export const DailyPlannerTab: React.FC = () => {
@@ -84,11 +81,11 @@ export const DailyPlannerTab: React.FC = () => {
     } else if (timerSecondsLeft === 0 && isTimerRunning) {
       setIsTimerRunning(false);
       if (activeTimerMode === 'focus') {
-        showToast('🎉 Focus session completed! Time for a 5-minute break.', { type: 'success' });
+        showToast('Focus session completed. Time for a 5-minute break.', { type: 'success' });
         setActiveTimerMode('break');
         setTimerSecondsLeft(5 * 60);
       } else {
-        showToast('⚡ Break over! Ready for the next focus sprint?', { type: 'info' });
+        showToast('Break over. Ready for next focus session.', { type: 'info' });
         setActiveTimerMode('focus');
         setTimerSecondsLeft(25 * 60);
       }
@@ -115,7 +112,7 @@ export const DailyPlannerTab: React.FC = () => {
     });
 
     if (nextStatus === 'completed') {
-      showToast(`Completed: ${task.title} ✨`, { type: 'success' });
+      showToast(`Completed: ${task.title}`, { type: 'success' });
     }
   };
 
@@ -184,28 +181,30 @@ export const DailyPlannerTab: React.FC = () => {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-      {/* Date Navigator Bar & Focus Timer */}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
+      {/* Date Navigator Bar & Focus Timer - Responsive no overflow */}
       <div
         style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr auto',
-          gap: '16px',
-          alignItems: 'center',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '12px',
           background: 'var(--bg-surface)',
-          padding: '16px 20px',
+          padding: '14px 16px',
           borderRadius: 'var(--radius-lg)',
-          border: '1px solid var(--border-subtle)'
+          border: '1px solid var(--border-subtle)',
+          width: '100%',
+          maxWidth: '100%',
+          boxSizing: 'border-box'
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <button onClick={() => handleDateChangeBy(-1)} className="btn-ghost btn-icon" title="Previous Day">
               <ChevronLeft size={18} />
             </button>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '0 6px' }}>
-              <Calendar size={18} style={{ color: 'var(--accent)' }} />
-              <span style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Calendar size={17} style={{ color: 'var(--accent)' }} />
+              <span style={{ fontSize: '15.5px', fontWeight: 700, color: 'var(--text-primary)' }}>
                 {formatDisplayDate(selectedDate)}
               </span>
               {isToday && (
@@ -228,64 +227,73 @@ export const DailyPlannerTab: React.FC = () => {
             </button>
           </div>
 
-          {!isToday && (
-            <button
-              onClick={() => setSelectedDate(getTodayDateString())}
-              className="btn btn-secondary btn-sm"
-              style={{ fontSize: '12px', borderRadius: 'var(--radius-full)' }}
-            >
-              Jump to Today
-            </button>
-          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            {!isToday && (
+              <button
+                onClick={() => setSelectedDate(getTodayDateString())}
+                className="btn btn-secondary btn-sm"
+                style={{ fontSize: '11.5px', borderRadius: 'var(--radius-full)', padding: '3px 10px' }}
+              >
+                Jump to Today
+              </button>
+            )}
 
-          <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginLeft: 'auto' }}>
-            {completedTasks}/{totalTasks} Completed ({completionPercentage}%)
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+              {completedTasks}/{totalTasks} Completed ({completionPercentage}%)
+            </div>
           </div>
         </div>
 
-        {/* Integrated Pomodoro Focus Timer */}
+        {/* Integrated Focus Timer */}
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '10px',
+            justifyContent: 'space-between',
             background: activeTimerMode === 'focus' ? 'rgba(59, 130, 246, 0.08)' : 'rgba(16, 185, 129, 0.08)',
             border: activeTimerMode === 'focus' ? '1px solid rgba(59, 130, 246, 0.25)' : '1px solid rgba(16, 185, 129, 0.25)',
-            padding: '6px 14px',
-            borderRadius: 'var(--radius-full)'
+            padding: '6px 12px',
+            borderRadius: 'var(--radius-md)',
+            flexWrap: 'wrap',
+            gap: '8px'
           }}
         >
-          <Timer size={16} style={{ color: activeTimerMode === 'focus' ? '#3b82f6' : '#10b981' }} />
-          <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)' }}>
-            {activeTimerMode === 'focus' ? 'Focus' : 'Break'}:
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Timer size={16} style={{ color: activeTimerMode === 'focus' ? '#3b82f6' : '#10b981' }} />
+            <span style={{ fontSize: '12.5px', fontWeight: 600, color: 'var(--text-primary)' }}>
+              {activeTimerMode === 'focus' ? 'Focus Session' : 'Break'}:
+            </span>
+            <span style={{ fontSize: '14px', fontWeight: 700, fontFamily: 'monospace', color: 'var(--text-primary)' }}>
+              {formatTimer(timerSecondsLeft)}
+            </span>
           </div>
-          <div style={{ fontSize: '14px', fontWeight: 700, fontFamily: 'monospace', color: 'var(--text-primary)' }}>
-            {formatTimer(timerSecondsLeft)}
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <button
+              onClick={() => setIsTimerRunning(!isTimerRunning)}
+              className="btn btn-secondary btn-sm"
+              style={{ padding: '3px 10px', fontSize: '12px', gap: '4px' }}
+            >
+              {isTimerRunning ? <Pause size={13} /> : <Play size={13} />}
+              <span>{isTimerRunning ? 'Pause' : 'Start'}</span>
+            </button>
+            <button
+              onClick={() => {
+                setIsTimerRunning(false);
+                setTimerSecondsLeft(activeTimerMode === 'focus' ? 25 * 60 : 5 * 60);
+              }}
+              className="btn-ghost btn-icon"
+              style={{ width: '28px', height: '28px' }}
+              title="Reset Timer"
+            >
+              <RotateCcw size={13} />
+            </button>
           </div>
-          <button
-            onClick={() => setIsTimerRunning(!isTimerRunning)}
-            className="btn-ghost btn-icon"
-            style={{ width: '26px', height: '26px', color: isTimerRunning ? '#ef4444' : 'var(--accent)' }}
-            title={isTimerRunning ? 'Pause Timer' : 'Start Timer'}
-          >
-            {isTimerRunning ? <Pause size={14} /> : <Play size={14} />}
-          </button>
-          <button
-            onClick={() => {
-              setIsTimerRunning(false);
-              setTimerSecondsLeft(activeTimerMode === 'focus' ? 25 * 60 : 5 * 60);
-            }}
-            className="btn-ghost btn-icon"
-            style={{ width: '26px', height: '26px' }}
-            title="Reset Timer"
-          >
-            <RotateCcw size={13} />
-          </button>
         </div>
       </div>
 
       {/* 3 Interactive Time Blocks (Morning Focus, Afternoon Flow, Evening Wind-down) */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
         {(['morning', 'afternoon', 'evening'] as TimeBlock[]).map((blockKey) => {
           const meta = TIME_BLOCK_META[blockKey];
           const Icon = meta.icon;
@@ -303,37 +311,43 @@ export const DailyPlannerTab: React.FC = () => {
                 display: 'flex',
                 flexDirection: 'column',
                 boxShadow: 'var(--shadow-sm)',
-                overflow: 'hidden'
+                overflow: 'hidden',
+                width: '100%',
+                maxWidth: '100%',
+                boxSizing: 'border-box'
               }}
             >
               {/* Block Header */}
               <div
                 style={{
                   background: meta.bg,
-                  padding: '14px 16px',
+                  padding: '12px 16px',
                   borderBottom: `1px solid ${meta.border}`,
                   display: 'flex',
                   justifyContent: 'space-between',
-                  alignItems: 'center'
+                  alignItems: 'center',
+                  flexWrap: 'wrap',
+                  gap: '8px'
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <div
                     style={{
-                      width: '32px',
-                      height: '32px',
+                      width: '30px',
+                      height: '30px',
                       borderRadius: '8px',
                       background: meta.color,
                       color: '#ffffff',
                       display: 'flex',
                       alignItems: 'center',
-                      justifyContent: 'center'
+                      justifyContent: 'center',
+                      flexShrink: 0
                     }}
                   >
-                    <Icon size={18} />
+                    <Icon size={16} />
                   </div>
                   <div>
-                    <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)' }}>
+                    <div style={{ fontSize: '14.5px', fontWeight: 700, color: 'var(--text-primary)' }}>
                       {meta.title}
                     </div>
                     <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
@@ -351,7 +365,7 @@ export const DailyPlannerTab: React.FC = () => {
                   style={{ gap: '4px', borderRadius: 'var(--radius-full)', padding: '4px 10px', fontSize: '12px' }}
                 >
                   <Plus size={14} />
-                  <span>Add</span>
+                  <span>Add Task</span>
                 </button>
               </div>
 
@@ -370,7 +384,7 @@ export const DailyPlannerTab: React.FC = () => {
                   <input
                     type="text"
                     className="input-text"
-                    placeholder={`Add task to ${meta.title}...`}
+                    placeholder={`Task title for ${meta.title}...`}
                     value={newTaskTitle}
                     onChange={(e) => setNewTaskTitle(e.target.value)}
                     onKeyDown={(e) => {
@@ -379,7 +393,7 @@ export const DailyPlannerTab: React.FC = () => {
                     autoFocus
                   />
 
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                     <div style={{ display: 'flex', gap: '4px' }}>
                       {(['P1', 'P2', 'P3'] as Array<'P1' | 'P2' | 'P3'>).map((p) => {
                         const isSelected = newTaskPriority === p;
@@ -400,7 +414,7 @@ export const DailyPlannerTab: React.FC = () => {
                               cursor: 'pointer'
                             }}
                           >
-                            {p}
+                            {pCfg.label}
                           </button>
                         );
                       })}
@@ -410,7 +424,7 @@ export const DailyPlannerTab: React.FC = () => {
                       <input
                         type="time"
                         className="input-text"
-                        style={{ padding: '2px 6px', fontSize: '12px', width: '100px' }}
+                        style={{ padding: '2px 6px', fontSize: '12px', width: '90px' }}
                         value={newTaskTime}
                         onChange={(e) => setNewTaskTime(e.target.value)}
                       />
@@ -427,12 +441,12 @@ export const DailyPlannerTab: React.FC = () => {
               )}
 
               {/* Tasks List */}
-              <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
+              <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {blockTasks.length === 0 ? (
                   <div
                     style={{
                       textAlign: 'center',
-                      padding: '24px 12px',
+                      padding: '20px 12px',
                       color: 'var(--text-muted)',
                       fontSize: '12.5px',
                       fontStyle: 'italic'
@@ -459,10 +473,13 @@ export const DailyPlannerTab: React.FC = () => {
                           background: isCompleted ? 'var(--bg-surface-elevated)' : 'var(--bg-surface)',
                           border: '1px solid var(--border-subtle)',
                           opacity: isCompleted ? 0.65 : 1,
-                          transition: 'all 0.15s ease'
+                          transition: 'all 0.15s ease',
+                          width: '100%',
+                          maxWidth: '100%',
+                          boxSizing: 'border-box'
                         }}
                       >
-                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', flex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', flex: 1, minWidth: 0 }}>
                           <button
                             onClick={() => handleToggleTask(task)}
                             style={{
@@ -471,24 +488,27 @@ export const DailyPlannerTab: React.FC = () => {
                               padding: 0,
                               cursor: 'pointer',
                               color: isCompleted ? '#10b981' : 'var(--text-muted)',
-                              marginTop: '2px'
+                              marginTop: '2px',
+                              flexShrink: 0
                             }}
                           >
                             {isCompleted ? <CheckCircle2 size={18} /> : <Circle size={18} />}
                           </button>
 
-                          <div style={{ flex: 1 }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
                             <div
                               style={{
                                 fontSize: '13.5px',
                                 fontWeight: 500,
                                 color: 'var(--text-primary)',
-                                textDecoration: isCompleted ? 'line-through' : 'none'
+                                textDecoration: isCompleted ? 'line-through' : 'none',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis'
                               }}
                             >
                               {task.title}
                             </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px', flexWrap: 'wrap' }}>
                               <span
                                 style={{
                                   fontSize: '10px',
@@ -513,35 +533,35 @@ export const DailyPlannerTab: React.FC = () => {
                         </div>
 
                         {/* Move Time Block Action */}
-                        <div style={{ display: 'flex', gap: '2px' }}>
+                        <div style={{ display: 'flex', gap: '2px', flexShrink: 0 }}>
                           {blockKey !== 'morning' && (
                             <button
                               onClick={() => handleMoveBlock(task, 'morning')}
                               className="btn-ghost btn-icon"
-                              style={{ width: '24px', height: '24px', fontSize: '10px' }}
-                              title="Move to Morning Focus"
+                              style={{ width: '26px', height: '26px', fontSize: '11px' }}
+                              title="Move to Morning"
                             >
-                              🌅
+                              <Sunrise size={13} style={{ color: '#f59e0b' }} />
                             </button>
                           )}
                           {blockKey !== 'afternoon' && (
                             <button
                               onClick={() => handleMoveBlock(task, 'afternoon')}
                               className="btn-ghost btn-icon"
-                              style={{ width: '24px', height: '24px', fontSize: '10px' }}
-                              title="Move to Afternoon Flow"
+                              style={{ width: '26px', height: '26px', fontSize: '11px' }}
+                              title="Move to Afternoon"
                             >
-                              ☀️
+                              <Sun size={13} style={{ color: '#3b82f6' }} />
                             </button>
                           )}
                           {blockKey !== 'evening' && (
                             <button
                               onClick={() => handleMoveBlock(task, 'evening')}
                               className="btn-ghost btn-icon"
-                              style={{ width: '24px', height: '24px', fontSize: '10px' }}
-                              title="Move to Evening Wind-down"
+                              style={{ width: '26px', height: '26px', fontSize: '11px' }}
+                              title="Move to Evening"
                             >
-                              🌙
+                              <Moon size={13} style={{ color: '#8b5cf6' }} />
                             </button>
                           )}
                         </div>

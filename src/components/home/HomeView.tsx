@@ -868,7 +868,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigateTo, onOpenQuickAdd
                 <Sun size={15} />
               </div>
               <span style={{ fontSize: '11px', fontWeight: 700, color: '#f59e0b' }}>
-                🌅 ☀️ 🌙
+                3 Blocks
               </span>
             </div>
             <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>
@@ -991,7 +991,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigateTo, onOpenQuickAdd
                 <FolderSearch size={15} />
               </div>
               <span style={{ fontSize: '11px', fontWeight: 700, color: '#06b6d4' }}>
-                🔑 🎧 👓 🛂
+                {vaultList.length} Items
               </span>
             </div>
             <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>

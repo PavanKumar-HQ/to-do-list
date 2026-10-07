@@ -100,7 +100,7 @@ export const SavingsGoalsTab: React.FC = () => {
       };
       await db.savingsGoals.add(newGoal);
       await logAudit('create', 'savings_goal', newGoal.id, `Created savings goal: ${title.trim()}`);
-      showToast(`Savings goal created: ${title.trim()} 🎯`, { type: 'success' });
+      showToast(`Savings goal created: ${title.trim()}`, { type: 'success' });
     }
 
     setIsModalOpen(false);
@@ -118,7 +118,7 @@ export const SavingsGoalsTab: React.FC = () => {
     });
 
     await logAudit('update', 'savings_goal', selectedGoal.id, `Added ₹${(addMinor / 100).toLocaleString('en-IN')} to ${selectedGoal.title}`);
-    showToast(`Added ₹${(addMinor / 100).toLocaleString('en-IN')} to ${selectedGoal.title}! 💰`, { type: 'success' });
+    showToast(`Added ₹${(addMinor / 100).toLocaleString('en-IN')} to ${selectedGoal.title}`, { type: 'success' });
     setIsDepositModalOpen(false);
   };
 

@@ -118,7 +118,7 @@ export const HabitTrackerTab: React.FC = () => {
       };
       await db.habits.add(newHabit);
       await logAudit('create', 'habit' as any, newHabit.id, `Created habit: ${name.trim()}`);
-      showToast(`Habit created: ${name.trim()} 🔥`, { type: 'success' });
+      showToast(`Habit created: ${name.trim()}`, { type: 'success' });
     }
 
     setIsModalOpen(false);
@@ -173,7 +173,7 @@ export const HabitTrackerTab: React.FC = () => {
     });
 
     if (!isCompleted && dateStr === todayStr) {
-      showToast(`Completed "${habit.name}" today! Streak: ${currentStreak} 🔥`, { type: 'success' });
+      showToast(`Completed "${habit.name}" today! Streak: ${currentStreak} days`, { type: 'success' });
     }
   };
 

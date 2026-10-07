@@ -97,13 +97,13 @@ export function AppContent() {
 
     // Check for App Updates and alert user
     checkForAppUpdateOnBoot((version) => {
-      showToast(`🎉 App updated to v${version} with the latest features!`, { type: 'success' });
+      showToast(`App updated to v${version} with the latest features!`, { type: 'success' });
     });
 
     registerServiceWorkerUpdateListener(() => {
-      showToast('✨ New version available!', {
+      showToast('New version available. Update now to load the latest changes.', {
         type: 'info',
-        actionLabel: 'Refresh',
+        actionLabel: 'Update',
         onAction: () => {
           if ('serviceWorker' in navigator) {
             navigator.serviceWorker.getRegistration().then((reg) => {

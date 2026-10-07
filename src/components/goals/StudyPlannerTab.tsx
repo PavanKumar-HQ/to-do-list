@@ -112,7 +112,7 @@ export const StudyPlannerTab: React.FC = () => {
 
       await db.studySubjects.add(newSubject);
       await logAudit('create', 'study_subject' as any, newSubject.id, `Created study subject: ${title.trim()}`);
-      showToast(`Created study subject: ${title.trim()} 📚`, { type: 'success' });
+      showToast(`Created study subject: ${title.trim()}`, { type: 'success' });
 
       // Automatically expand new subject
       setExpandedSubjectIds((prev) => ({ ...prev, [newSubject.id]: true }));
