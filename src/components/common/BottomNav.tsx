@@ -1,8 +1,7 @@
 import React from 'react';
-import { Home, Inbox, Calendar, Wallet, CheckSquare } from 'lucide-react';
+import { Home, CheckSquare, Target, FolderSearch, MoreHorizontal, Flame } from 'lucide-react';
 import { db } from '../../db/db';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { getTodayDateString } from '../../utils/dates';
 
 interface BottomNavProps {
   currentScreen: string;
@@ -15,19 +14,20 @@ export const BottomNav: React.FC<BottomNavProps> = ({
   onSelectScreen,
   onOpenMoreSheet
 }) => {
-  const todayStr = getTodayDateString();
+  const pendingTasksCount = useLiveQuery(async () => {
+    return db.tasks.filter((t) => !t.deletedAt && t.status !== 'completed' && t.status !== 'archived').count();
+  }, []) || 0;
 
-  // Active counts for badges
-  const pendingInboxCount = useLiveQuery(async () => {
-    return db.inbox.filter((i) => !i.deletedAt && !i.isProcessed).count();
+  const habitsCount = useLiveQuery(async () => {
+    return db.habits.filter((h) => !h.deletedAt).count();
   }, []) || 0;
 
   const navItems = [
     { id: 'home', label: 'Home', icon: Home },
-    { id: 'tasks', label: 'Tasks', icon: CheckSquare },
-    { id: 'calendar', label: 'Calendar', icon: Calendar },
-    { id: 'money', label: 'Money', icon: Wallet },
-    { id: 'inbox', label: 'Inbox', icon: Inbox, badge: pendingInboxCount > 0 ? pendingInboxCount : undefined }
+    { id: 'goals', label: 'Habits & Plan', icon: Target, badge: habitsCount > 0 ? habitsCount : undefined },
+    { id: 'tasks', label: 'Tasks', icon: CheckSquare, badge: pendingTasksCount > 0 ? pendingTasksCount : undefined },
+    { id: 'vault', label: 'Vault', icon: FolderSearch },
+    { id: 'more', label: 'More', icon: MoreHorizontal, isMore: true }
   ];
 
   return (
@@ -57,7 +57,13 @@ export const BottomNav: React.FC<BottomNavProps> = ({
         return (
           <button
             key={item.id}
-            onClick={() => onSelectScreen(item.id)}
+            onClick={() => {
+              if (item.isMore && onOpenMoreSheet) {
+                onOpenMoreSheet();
+              } else {
+                onSelectScreen(item.id);
+              }
+            }}
             style={{
               flex: 1,
               height: '100%',
@@ -77,19 +83,20 @@ export const BottomNav: React.FC<BottomNavProps> = ({
           >
             <div style={{ position: 'relative' }}>
               <Icon size={20} strokeWidth={isActive ? 2.2 : 1.7} />
-              {item.badge !== undefined && (
+              {item.badge !== undefined && !item.isMore && (
                 <span
                   style={{
                     position: 'absolute',
                     top: '-4px',
                     right: '-8px',
-                    background: item.id === 'inbox' ? 'var(--warning-bg)' : 'var(--bg-surface-elevated)',
-                    color: item.id === 'inbox' ? 'var(--warning)' : 'var(--text-primary)',
+                    background: item.id === 'goals' ? 'rgba(239, 68, 68, 0.15)' : 'var(--bg-surface-elevated)',
+                    color: item.id === 'goals' ? '#ef4444' : 'var(--text-primary)',
                     fontSize: '10px',
                     fontWeight: 600,
                     borderRadius: '10px',
                     padding: '1px 5px',
-                    lineHeight: '12px'
+                    lineHeight: '12px',
+                    border: '1px solid var(--border-subtle)'
                   }}
                 >
                   {item.badge > 99 ? '99+' : item.badge}

@@ -865,8 +865,19 @@ export interface BackupPreviewSummary {
   };
 }
 
-// "Where Did I Put That?" — Resource & Credential Hint Vault
-export type VaultCategory = 'website' | 'github_repo' | 'document' | 'tool' | 'credential_hint';
+// "Where Did I Put That?" — Personal Belongings & Resource Vault (Physical items & digital resources)
+export type VaultCategory =
+  | 'keys_essentials'  // Keys, Car Key, Bike Key, Wallets, IDs, Access Cards
+  | 'gadgets_buds'     // Earbuds / AirPods, Chargers, Cables, Devices
+  | 'personal_items'   // Glasses, Watch, Medicine, Passport, Important Belongings
+  | 'tools_home'       // Tools, Hardware, Spare Keys, Storage Boxes, Luggage
+  | 'website_tech'     // Websites, Repos, Portals, Online Tools
+  | 'credential_hint'  // Username & login hints (no passwords)
+  | 'general'          // General everyday items
+  | 'website'
+  | 'github_repo'
+  | 'document'
+  | 'tool';
 
 export interface VaultResourceItem {
   id: string;

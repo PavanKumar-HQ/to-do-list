@@ -18,7 +18,16 @@ import {
   Tag,
   ShieldAlert,
   Sparkles,
-  Check
+  Check,
+  Key,
+  Headphones,
+  Glasses,
+  Home,
+  Briefcase,
+  MapPin,
+  Package,
+  Layers,
+  Smartphone
 } from 'lucide-react';
 import { db, generateId, logAudit } from '../../db/db';
 import { useToast } from '../common/ToastContext';
@@ -26,11 +35,22 @@ import { formatDisplayDate } from '../../utils/dates';
 import type { VaultResourceItem, VaultCategory } from '../../types';
 
 const CATEGORIES: Array<{ id: VaultCategory; label: string; icon: React.FC<any>; color: string; desc: string }> = [
-  { id: 'website', label: 'Websites & Portals', icon: Globe, color: '#3b82f6', desc: 'Bookmarked websites, web apps & portals' },
-  { id: 'github_repo', label: 'GitHub & Repos', icon: GitBranch, color: '#10b981', desc: 'Code repositories, gists & forks' },
-  { id: 'document', label: 'Documents & Files', icon: FileText, color: '#8b5cf6', desc: 'File location hints, sheets & drives' },
-  { id: 'tool', label: 'Tools & Utilities', icon: Wrench, color: '#f59e0b', desc: 'Developer tools, SaaS utilities & apps' },
-  { id: 'credential_hint', label: 'Account & Auth Hints', icon: KeyRound, color: '#ec4899', desc: 'Usernames, SSO methods (no passwords)' }
+  { id: 'keys_essentials', label: 'Keys, Wallets & IDs', icon: Key, color: '#f59e0b', desc: 'House keys, car/bike keys, wallet, access badges & physical IDs' },
+  { id: 'gadgets_buds', label: 'Earbuds, Tech & Cables', icon: Headphones, color: '#3b82f6', desc: 'AirPods/buds, chargers, dongles, cables & portable gadgets' },
+  { id: 'personal_items', label: 'Personal & Valuables', icon: Glasses, color: '#10b981', desc: 'Glasses, watch, medication, passport & physical documents' },
+  { id: 'tools_home', label: 'Home, Tools & Storage', icon: Wrench, color: '#8b5cf6', desc: 'Hardware tools, spare keys, storage bins, luggage & drawers' },
+  { id: 'website_tech', label: 'Websites & Portals', icon: Globe, color: '#06b6d4', desc: 'Bookmarked websites, web portals, cloud drive links & GitHub repos' },
+  { id: 'credential_hint', label: 'Account & Login Hints', icon: KeyRound, color: '#ec4899', desc: 'Usernames, SSO email methods (safe login hints, no passwords)' },
+  { id: 'general', label: 'General Items', icon: Package, color: '#64748b', desc: 'Any miscellaneous physical belongings or digital items' }
+];
+
+const PRESETS = [
+  { title: 'House & Car Keys', category: 'keys_essentials' as VaultCategory, locationHint: 'Key hanger by the main door / side drawer', icon: '🔑' },
+  { title: 'AirPods / Earbuds', category: 'gadgets_buds' as VaultCategory, locationHint: 'Work desk organizer tray / backpack front pocket', icon: '🎧' },
+  { title: 'Reading / Sun Glasses', category: 'personal_items' as VaultCategory, locationHint: 'Bedside table nightstand / case in car glovebox', icon: '👓' },
+  { title: 'Passport & Physical IDs', category: 'personal_items' as VaultCategory, locationHint: 'Wardrobe locker / document folder on shelf 2', icon: '🛂' },
+  { title: 'Laptop Charger & USB-C Cable', category: 'gadgets_buds' as VaultCategory, locationHint: 'Laptop sleeve side pouch / power strip station', icon: '🔌' },
+  { title: 'Toolbox & Spare Keys', category: 'tools_home' as VaultCategory, locationHint: 'Utility cupboard / garage shelf box A', icon: '🛠️' }
 ];
 
 export const VaultView: React.FC = () => {
@@ -43,7 +63,7 @@ export const VaultView: React.FC = () => {
 
   // Form State
   const [title, setTitle] = useState('');
-  const [category, setCategory] = useState<VaultCategory>('website');
+  const [category, setCategory] = useState<VaultCategory>('keys_essentials');
   const [url, setUrl] = useState('');
   const [locationHint, setLocationHint] = useState('');
   const [usernameHint, setUsernameHint] = useState('');
@@ -55,15 +75,25 @@ export const VaultView: React.FC = () => {
     return db.vaultResources.filter(r => !r.deletedAt).reverse().sortBy('createdAt');
   }, []) || [];
 
-  const handleOpenAdd = () => {
+  const handleOpenAdd = (preset?: typeof PRESETS[0]) => {
     setEditingItem(null);
-    setTitle('');
-    setCategory(selectedCategory === 'all' ? 'website' : selectedCategory);
-    setUrl('');
-    setLocationHint('');
-    setUsernameHint('');
-    setNotes('');
-    setTagsInput('');
+    if (preset) {
+      setTitle(preset.title);
+      setCategory(preset.category);
+      setLocationHint(preset.locationHint);
+      setUrl('');
+      setUsernameHint('');
+      setNotes('');
+      setTagsInput(preset.category.replace('_', ' '));
+    } else {
+      setTitle('');
+      setCategory(selectedCategory === 'all' ? 'keys_essentials' : selectedCategory);
+      setUrl('');
+      setLocationHint('');
+      setUsernameHint('');
+      setNotes('');
+      setTagsInput('');
+    }
     setIsPinned(false);
     setIsModalOpen(true);
   };
@@ -84,7 +114,7 @@ export const VaultView: React.FC = () => {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) {
-      showToast('Title is required', { type: 'warning' });
+      showToast('Title / Item Name is required', { type: 'warning' });
       return;
     }
 
@@ -107,7 +137,7 @@ export const VaultView: React.FC = () => {
         isPinned,
         updatedAt: nowIso
       });
-      showToast('Resource updated', { type: 'success' });
+      showToast('Vault item updated', { type: 'success' });
     } else {
       const id = generateId();
       await db.vaultResources.add({
@@ -124,7 +154,7 @@ export const VaultView: React.FC = () => {
         updatedAt: nowIso
       });
       await logAudit('create', 'document', id, `Added vault item: ${title.trim()}`);
-      showToast('Resource saved to Vault', { type: 'success' });
+      showToast(`Saved "${title.trim()}" to Vault ✨`, { type: 'success' });
     }
 
     setIsModalOpen(false);
@@ -157,7 +187,15 @@ export const VaultView: React.FC = () => {
 
   // Filter and sort resources
   const filteredResources = resources.filter(item => {
-    const matchesCat = selectedCategory === 'all' || item.category === selectedCategory;
+    let itemCat = item.category as string;
+    // Map legacy categories
+    if (itemCat === 'website' || itemCat === 'github_repo' || itemCat === 'tool') {
+      itemCat = 'website_tech';
+    } else if (itemCat === 'document') {
+      itemCat = 'personal_items';
+    }
+
+    const matchesCat = selectedCategory === 'all' || itemCat === selectedCategory || item.category === selectedCategory;
     const q = searchQuery.toLowerCase().trim();
     if (!q) return matchesCat;
 
@@ -176,261 +214,382 @@ export const VaultView: React.FC = () => {
     return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
   });
 
+  const getCategoryMeta = (cat: VaultCategory) => {
+    let searchCat = cat as string;
+    if (searchCat === 'website' || searchCat === 'github_repo' || searchCat === 'tool') searchCat = 'website_tech';
+    if (searchCat === 'document') searchCat = 'personal_items';
+    return CATEGORIES.find(c => c.id === searchCat) || CATEGORIES[0];
+  };
+
   return (
     <div className="view-container animate-fade-in" style={{ paddingBottom: '90px' }}>
-      {/* Header */}
+      {/* Top Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <div style={{ padding: '8px', background: 'var(--accent-light)', color: 'var(--accent)', borderRadius: '10px' }}>
-              <FolderSearch size={22} />
-            </div>
-            <div>
-              <h1 style={{ fontSize: '22px', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
-                Where Did I Put That?
-              </h1>
-              <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>
-                Your private bookmark & resource vault for websites, GitHub repos, documents, and credentials without storing passwords
-              </p>
-            </div>
+            <h2 style={{ fontSize: '22px', fontWeight: 700, margin: 0 }}>
+              Where Did I Put That? (Personal Vault)
+            </h2>
+            <span
+              style={{
+                fontSize: '11px',
+                fontWeight: 600,
+                padding: '2px 8px',
+                borderRadius: '12px',
+                background: 'var(--accent-light)',
+                color: 'var(--accent)'
+              }}
+            >
+              100% Offline
+            </span>
           </div>
+          <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: '4px 0 0' }}>
+            Never lose keys, earbuds, glasses, passports, tools, bookmarks or account hints again.
+          </p>
         </div>
 
         <button
-          onClick={handleOpenAdd}
-          className="btn btn-primary"
-          style={{ gap: '6px', borderRadius: '8px' }}
+          onClick={() => handleOpenAdd()}
+          className="btn btn-primary btn-sm"
+          style={{ gap: '6px' }}
         >
           <Plus size={16} />
-          <span>Save Resource</span>
+          <span>Save Item</span>
         </button>
       </div>
 
-      {/* Search Bar */}
-      <div style={{ position: 'relative', marginBottom: '16px' }}>
-        <Search size={17} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)' }} />
-        <input
-          type="text"
-          placeholder="Search bookmarks, tools, repos, account hints, tags..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          style={{
-            width: '100%',
-            paddingLeft: '40px',
-            paddingRight: searchQuery ? '36px' : '14px',
-            height: '42px',
-            borderRadius: '10px',
-            border: '1px solid var(--border-light)',
-            background: 'var(--bg-surface)'
-          }}
-        />
-        {searchQuery && (
-          <button
-            onClick={() => setSearchQuery('')}
-            className="btn-ghost"
-            style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', padding: '4px' }}
-          >
-            <X size={16} />
-          </button>
-        )}
-      </div>
-
-      {/* Category Pills */}
-      <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '10px', marginBottom: '16px' }}>
-        <button
-          onClick={() => setSelectedCategory('all')}
-          className={`btn btn-sm ${selectedCategory === 'all' ? 'btn-primary' : 'btn-secondary'}`}
-          style={{ borderRadius: '20px', padding: '6px 14px', fontSize: '12.5px' }}
-        >
-          All Resources ({resources.length})
-        </button>
-        {CATEGORIES.map(cat => {
-          const Icon = cat.icon;
-          const count = resources.filter(r => r.category === cat.id).length;
-          const isActive = selectedCategory === cat.id;
-
-          return (
+      {/* Quick Preset Chips for Everyday Physical Items */}
+      <div style={{ marginBottom: '16px' }}>
+        <div style={{ fontSize: '11.5px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '8px' }}>
+          Quick Add Everyday Items
+        </div>
+        <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
+          {PRESETS.map((p) => (
             <button
-              key={cat.id}
-              onClick={() => setSelectedCategory(cat.id)}
-              className={`btn btn-sm ${isActive ? 'btn-primary' : 'btn-secondary'}`}
-              style={{ borderRadius: '20px', padding: '6px 12px', fontSize: '12.5px', gap: '6px', whiteSpace: 'nowrap' }}
+              key={p.title}
+              onClick={() => handleOpenAdd(p)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '6px 12px',
+                borderRadius: 'var(--radius-full)',
+                background: 'var(--bg-surface)',
+                border: '1px solid var(--border-subtle)',
+                fontSize: '12.5px',
+                fontWeight: 500,
+                color: 'var(--text-secondary)',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                transition: 'all 0.15s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = 'var(--accent)';
+                e.currentTarget.style.background = 'var(--accent-light)';
+                e.currentTarget.style.color = 'var(--accent)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = 'var(--border-subtle)';
+                e.currentTarget.style.background = 'var(--bg-surface)';
+                e.currentTarget.style.color = 'var(--text-secondary)';
+              }}
             >
-              <Icon size={14} color={isActive ? '#ffffff' : cat.color} />
-              <span>{cat.label}</span>
-              <span style={{ opacity: 0.7, fontSize: '11px' }}>({count})</span>
+              <span>{p.icon}</span>
+              <span>{p.title}</span>
             </button>
-          );
-        })}
+          ))}
+        </div>
       </div>
 
-      {/* Resource Grid */}
+      {/* Search & Category Filter Pills */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '20px' }}>
+        <div style={{ position: 'relative' }}>
+          <Search
+            size={16}
+            style={{
+              position: 'absolute',
+              left: '12px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              color: 'var(--text-muted)'
+            }}
+          />
+          <input
+            type="text"
+            className="input-text"
+            style={{ paddingLeft: '36px', borderRadius: 'var(--radius-md)' }}
+            placeholder="Search items by name, drawer location, buds, keys, passport, tags..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="btn-ghost btn-icon"
+              style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', width: '24px', height: '24px' }}
+            >
+              <X size={14} />
+            </button>
+          )}
+        </div>
+
+        {/* Categories Bar */}
+        <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '4px' }}>
+          <button
+            onClick={() => setSelectedCategory('all')}
+            className={`btn btn-sm ${selectedCategory === 'all' ? 'btn-primary' : 'btn-secondary'}`}
+            style={{ borderRadius: 'var(--radius-full)', padding: '4px 12px', fontSize: '12px' }}
+          >
+            All Items ({resources.length})
+          </button>
+          {CATEGORIES.map((cat) => {
+            const Icon = cat.icon;
+            const count = resources.filter(r => {
+              let c = r.category as string;
+              if (c === 'website' || c === 'github_repo' || c === 'tool') c = 'website_tech';
+              if (c === 'document') c = 'personal_items';
+              return c === cat.id || r.category === cat.id;
+            }).length;
+
+            return (
+              <button
+                key={cat.id}
+                onClick={() => setSelectedCategory(cat.id)}
+                className={`btn btn-sm ${selectedCategory === cat.id ? 'btn-primary' : 'btn-secondary'}`}
+                style={{ borderRadius: 'var(--radius-full)', padding: '4px 12px', fontSize: '12px', gap: '6px' }}
+              >
+                <Icon size={14} style={{ color: selectedCategory === cat.id ? '#ffffff' : cat.color }} />
+                <span>{cat.label}</span>
+                {count > 0 && <span style={{ opacity: 0.8 }}>({count})</span>}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Items Grid */}
       {filteredResources.length === 0 ? (
         <div
-          className="card"
           style={{
-            padding: '40px 20px',
             textAlign: 'center',
-            border: '1px dashed var(--border-light)',
-            background: 'var(--bg-surface)'
+            padding: '48px 24px',
+            background: 'var(--bg-surface)',
+            borderRadius: 'var(--radius-lg)',
+            border: '1px dashed var(--border-subtle)'
           }}
         >
-          <FolderSearch size={40} style={{ color: 'var(--text-muted)', margin: '0 auto 12px auto' }} />
-          <h3 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)', margin: '0 0 6px 0' }}>
-            {searchQuery ? 'No matching resources found' : 'Your Vault is empty'}
+          <FolderSearch size={44} style={{ color: 'var(--text-muted)', margin: '0 auto 12px', opacity: 0.5 }} />
+          <h3 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>
+            No vault items found
           </h3>
-          <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: '0 auto 16px auto', maxWidth: '400px' }}>
-            {searchQuery
-              ? 'Try searching with different keywords or clear your category filter.'
-              : 'Save important links, GitHub repositories, document paths, or username hints so you never lose them.'}
+          <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '6px', maxWidth: '380px', margin: '6px auto 16px' }}>
+            Store the physical location of your keys, earbuds, sunglasses, chargers, or websites and tool credentials.
           </p>
-          <button onClick={handleOpenAdd} className="btn btn-primary" style={{ margin: '0 auto', gap: '6px' }}>
-            <Plus size={16} />
-            <span>Add First Resource</span>
+          <button onClick={() => handleOpenAdd()} className="btn btn-primary btn-sm" style={{ gap: '6px' }}>
+            <Plus size={15} />
+            <span>Store First Item</span>
           </button>
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '14px' }}>
-          {filteredResources.map(item => {
-            const catMeta = CATEGORIES.find(c => c.id === item.category) || CATEGORIES[0];
-            const Icon = catMeta.icon;
-            const isCopied = copiedId === item.id;
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '14px' }}>
+          {filteredResources.map((item) => {
+            const meta = getCategoryMeta(item.category);
+            const Icon = meta.icon;
 
             return (
               <div
                 key={item.id}
-                className="card"
                 style={{
+                  background: 'var(--bg-surface)',
+                  borderRadius: 'var(--radius-lg)',
+                  border: item.isPinned ? '1px solid var(--accent)' : '1px solid var(--border-subtle)',
                   padding: '16px',
                   display: 'flex',
                   flexDirection: 'column',
                   gap: '12px',
-                  position: 'relative',
-                  border: item.isPinned ? '1px solid var(--accent)' : '1px solid var(--border-subtle)',
-                  boxShadow: item.isPinned ? '0 4px 12px rgba(99, 102, 241, 0.08)' : undefined
+                  boxShadow: 'var(--shadow-sm)',
+                  position: 'relative'
                 }}
               >
-                {/* Header */}
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
-                    <div style={{ padding: '8px', borderRadius: '8px', background: `${catMeta.color}15`, color: catMeta.color, flexShrink: 0 }}>
+                {/* Card Header */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px' }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', flex: 1 }}>
+                    <div
+                      style={{
+                        width: '36px',
+                        height: '36px',
+                        borderRadius: '10px',
+                        background: `${meta.color}18`,
+                        color: meta.color,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0
+                      }}
+                    >
                       <Icon size={18} />
                     </div>
-                    <div style={{ minWidth: 0 }}>
-                      <h4 style={{ fontSize: '15px', fontWeight: 600, margin: 0, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
+                        <span
+                          style={{
+                            fontSize: '10.5px',
+                            fontWeight: 700,
+                            color: meta.color,
+                            background: `${meta.color}15`,
+                            padding: '1px 6px',
+                            borderRadius: '4px'
+                          }}
+                        >
+                          {meta.label}
+                        </span>
+                        {item.isPinned && (
+                          <span style={{ fontSize: '10px', color: 'var(--accent)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '2px' }}>
+                            <Pin size={10} /> Pinned
+                          </span>
+                        )}
+                      </div>
+                      <h4 style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>
                         {item.title}
                       </h4>
-                      <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                        {catMeta.label}
-                      </span>
                     </div>
                   </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <div style={{ display: 'flex', gap: '2px' }}>
                     <button
                       onClick={() => handleTogglePin(item)}
-                      className="btn-ghost"
-                      style={{ padding: '4px', color: item.isPinned ? 'var(--accent)' : 'var(--text-tertiary)' }}
+                      className="btn-ghost btn-icon"
+                      style={{ width: '26px', height: '26px', color: item.isPinned ? 'var(--accent)' : 'var(--text-muted)' }}
                       title={item.isPinned ? 'Unpin' : 'Pin to top'}
                     >
-                      <Pin size={15} style={{ transform: item.isPinned ? 'rotate(45deg)' : 'none' }} />
+                      <Pin size={13} />
                     </button>
                     <button
                       onClick={() => handleOpenEdit(item)}
-                      className="btn-ghost"
-                      style={{ padding: '4px', color: 'var(--text-secondary)' }}
-                      title="Edit resource"
+                      className="btn-ghost btn-icon"
+                      style={{ width: '26px', height: '26px' }}
+                      title="Edit Item"
                     >
-                      <Edit2 size={15} />
+                      <Edit2 size={13} />
                     </button>
                     <button
                       onClick={() => handleDelete(item.id, item.title)}
-                      className="btn-ghost"
-                      style={{ padding: '4px', color: 'var(--danger)' }}
-                      title="Delete resource"
+                      className="btn-ghost btn-icon"
+                      style={{ width: '26px', height: '26px', color: 'var(--danger)' }}
+                      title="Delete Item"
                     >
-                      <Trash2 size={15} />
+                      <Trash2 size={13} />
                     </button>
                   </div>
                 </div>
 
-                {/* Details / Hints */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12.5px' }}>
-                  {item.url && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden' }}>
-                      <a
-                        href={item.url.startsWith('http') ? item.url : `https://${item.url}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        style={{
-                          color: 'var(--accent)',
-                          fontWeight: 500,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '4px'
-                        }}
-                      >
-                        <ExternalLink size={13} style={{ flexShrink: 0 }} />
-                        <span>{item.url.replace(/^https?:\/\/(www\.)?/, '')}</span>
-                      </a>
-                      <button
-                        onClick={() => handleCopy(item.url!, item.id, 'URL')}
-                        className="btn-ghost"
-                        style={{ padding: '2px 4px', fontSize: '11px' }}
-                        title="Copy URL"
-                      >
-                        {isCopied ? <Check size={12} color="var(--success)" /> : <Copy size={12} />}
-                      </button>
-                    </div>
-                  )}
-
-                  {item.locationHint && (
-                    <div style={{ color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <span style={{ fontWeight: 600, color: 'var(--text-tertiary)', fontSize: '11.5px' }}>Location:</span>
-                      <span style={{ background: 'var(--bg-subtle)', padding: '2px 6px', borderRadius: '4px', fontFamily: 'monospace', fontSize: '11.5px' }}>
+                {/* Physical Location Hint (High visibility) */}
+                {item.locationHint && (
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: '8px',
+                      background: 'var(--bg-surface-elevated)',
+                      border: '1px solid var(--border-subtle)',
+                      padding: '8px 10px',
+                      borderRadius: '8px'
+                    }}
+                  >
+                    <MapPin size={15} style={{ color: '#ef4444', marginTop: '2px', flexShrink: 0 }} />
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: '10.5px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>
+                        Where It Is Kept
+                      </div>
+                      <div style={{ fontSize: '13px', color: 'var(--text-primary)', fontWeight: 500 }}>
                         {item.locationHint}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleCopy(item.locationHint!, item.id + '-loc', 'Location')}
+                      className="btn-ghost btn-icon"
+                      style={{ width: '24px', height: '24px' }}
+                      title="Copy Location"
+                    >
+                      {copiedId === item.id + '-loc' ? <Check size={12} color="#10b981" /> : <Copy size={12} />}
+                    </button>
+                  </div>
+                )}
+
+                {/* Digital URL / Link */}
+                {item.url && (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', fontSize: '12.5px' }}>
+                    <a
+                      href={item.url.startsWith('http') ? item.url : `https://${item.url}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ color: 'var(--accent)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                    >
+                      <ExternalLink size={13} style={{ flexShrink: 0 }} />
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.url}</span>
+                    </a>
+                    <button
+                      onClick={() => handleCopy(item.url!, item.id + '-url', 'Link')}
+                      className="btn-ghost btn-icon"
+                      style={{ width: '24px', height: '24px', flexShrink: 0 }}
+                      title="Copy Link"
+                    >
+                      {copiedId === item.id + '-url' ? <Check size={12} color="#10b981" /> : <Copy size={12} />}
+                    </button>
+                  </div>
+                )}
+
+                {/* Username / SSO Hint */}
+                {item.usernameHint && (
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      background: 'rgba(236, 72, 153, 0.06)',
+                      border: '1px solid rgba(236, 72, 153, 0.2)',
+                      padding: '6px 10px',
+                      borderRadius: '6px',
+                      fontSize: '12px'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden' }}>
+                      <KeyRound size={13} style={{ color: '#ec4899', flexShrink: 0 }} />
+                      <span style={{ color: 'var(--text-muted)' }}>Login Hint:</span>
+                      <span style={{ fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {item.usernameHint}
                       </span>
                     </div>
-                  )}
+                    <button
+                      onClick={() => handleCopy(item.usernameHint!, item.id + '-usr', 'Username Hint')}
+                      className="btn-ghost btn-icon"
+                      style={{ width: '22px', height: '22px', flexShrink: 0 }}
+                    >
+                      {copiedId === item.id + '-usr' ? <Check size={12} color="#10b981" /> : <Copy size={12} />}
+                    </button>
+                  </div>
+                )}
 
-                  {item.usernameHint && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-secondary)' }}>
-                      <span style={{ fontWeight: 600, color: 'var(--text-tertiary)', fontSize: '11.5px' }}>Account / User:</span>
-                      <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{item.usernameHint}</span>
-                      <button
-                        onClick={() => handleCopy(item.usernameHint!, `${item.id}_user`, 'Username')}
-                        className="btn-ghost"
-                        style={{ padding: '2px 4px' }}
-                        title="Copy username"
-                      >
-                        <Copy size={12} />
-                      </button>
-                    </div>
-                  )}
+                {/* Notes */}
+                {item.notes && (
+                  <div style={{ fontSize: '12.5px', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+                    {item.notes}
+                  </div>
+                )}
 
-                  {item.notes && (
-                    <div style={{ color: 'var(--text-secondary)', fontSize: '12px', marginTop: '2px', lineHeight: 1.4 }}>
-                      {item.notes}
-                    </div>
-                  )}
-                </div>
-
-                {/* Tags Footer */}
+                {/* Tags */}
                 {item.tags && item.tags.length > 0 && (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: 'auto', paddingTop: '6px' }}>
-                    {item.tags.map((t: string) => (
+                  <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: 'auto' }}>
+                    {item.tags.map((t) => (
                       <span
                         key={t}
                         style={{
                           fontSize: '10.5px',
+                          color: 'var(--text-muted)',
                           background: 'var(--bg-surface-elevated)',
-                          color: 'var(--text-secondary)',
                           padding: '1px 6px',
-                          borderRadius: '4px',
-                          border: '1px solid var(--border-subtle)'
+                          borderRadius: '4px'
                         }}
                       >
                         #{t}
@@ -444,166 +603,125 @@ export const VaultView: React.FC = () => {
         </div>
       )}
 
-      {/* Add / Edit Resource Modal */}
+      {/* Add / Edit Modal */}
       {isModalOpen && (
-        <div className="modal-overlay" onClick={() => setIsModalOpen(false)} role="dialog" aria-modal="true">
-          <div
-            className="bottom-sheet"
-            onClick={(e) => e.stopPropagation()}
-            style={{ maxWidth: '520px', margin: '0 auto', maxHeight: '90vh', overflowY: 'auto' }}
-          >
-            <div className="sheet-handle" />
-
+        <div className="modal-overlay" onClick={() => setIsModalOpen(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '460px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <div style={{ padding: '8px', background: 'var(--accent-light)', color: 'var(--accent)', borderRadius: '8px' }}>
-                  <FolderSearch size={20} />
-                </div>
-                <h3 style={{ fontSize: '17px', fontWeight: 600, margin: 0, color: 'var(--text-primary)' }}>
-                  {editingItem ? 'Edit Resource' : 'Save New Resource'}
-                </h3>
-              </div>
-              <button onClick={() => setIsModalOpen(false)} className="btn-ghost" style={{ padding: '4px' }}>
+              <h3 style={{ fontSize: '18px', fontWeight: 600, margin: 0 }}>
+                {editingItem ? 'Edit Vault Item' : 'Store Item in Vault'}
+              </h3>
+              <button onClick={() => setIsModalOpen(false)} className="btn-ghost btn-icon">
                 <X size={18} />
               </button>
             </div>
 
             <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              {/* Privacy Warning */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', background: 'rgba(239, 68, 68, 0.08)', borderRadius: '8px', fontSize: '11.5px', color: 'var(--danger)' }}>
-                <ShieldAlert size={15} style={{ flexShrink: 0 }} />
-                <span>Zero-password safety: Store auth hints, SSO methods & usernames only. Never enter passwords.</span>
-              </div>
-
-              {/* Title */}
               <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-tertiary)', marginBottom: '4px' }}>
-                  Resource Title *
-                </label>
+                <label className="form-label">Item / Resource Name *</label>
                 <input
                   type="text"
-                  required
-                  placeholder="e.g. AWS Console, Brandex Figma, GitHub Org, Tax Invoices Drive"
+                  className="input-text"
+                  placeholder="e.g. House & Car Keys, AirPods Pro, Glasses Case, AWS Portal"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  style={{ width: '100%', padding: '9px 12px', borderRadius: '8px' }}
+                  autoFocus
+                  required
                 />
               </div>
 
-              {/* Category */}
               <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-tertiary)', marginBottom: '6px' }}>
-                  Category
-                </label>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '6px' }}>
-                  {CATEGORIES.map(cat => {
-                    const Icon = cat.icon;
-                    const isSelected = category === cat.id;
-
-                    return (
-                      <button
-                        type="button"
-                        key={cat.id}
-                        onClick={() => setCategory(cat.id)}
-                        className={`btn btn-sm ${isSelected ? 'btn-primary' : 'btn-secondary'}`}
-                        style={{ fontSize: '11.5px', padding: '6px 8px', gap: '6px', justifyContent: 'flex-start' }}
-                      >
-                        <Icon size={14} color={isSelected ? '#ffffff' : cat.color} />
-                        <span>{cat.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
+                <label className="form-label">Category</label>
+                <select
+                  className="input-select"
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value as VaultCategory)}
+                >
+                  {CATEGORIES.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.label}
+                    </option>
+                  ))}
+                </select>
               </div>
 
-              {/* URL */}
               <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-tertiary)', marginBottom: '4px' }}>
-                  URL / Web Link (Optional)
+                <label className="form-label">
+                  📍 Where is it kept? (Physical Location Hint)
                 </label>
                 <input
                   type="text"
-                  placeholder="https://github.com/org/repo or https://tool.com"
-                  value={url}
-                  onChange={(e) => setUrl(e.target.value)}
-                  style={{ width: '100%', padding: '9px 12px', borderRadius: '8px' }}
-                />
-              </div>
-
-              {/* Location Hint */}
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-tertiary)', marginBottom: '4px' }}>
-                  Where Did I Put It? (Location Hint)
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Google Drive > Finances > 2026 or ~/code/work/brandex"
+                  className="input-text"
+                  placeholder="e.g. Side table drawer, key hook by main door, backpack pouch"
                   value={locationHint}
                   onChange={(e) => setLocationHint(e.target.value)}
-                  style={{ width: '100%', padding: '9px 12px', borderRadius: '8px' }}
                 />
               </div>
 
-              {/* Account / Username Hint */}
               <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-tertiary)', marginBottom: '4px' }}>
-                  Account / Login Hint (No Passwords)
+                <label className="form-label">🔗 Web URL / Portal Link (Optional)</label>
+                <input
+                  type="text"
+                  className="input-text"
+                  placeholder="https://..."
+                  value={url}
+                  onChange={(e) => setUrl(e.target.value)}
+                />
+              </div>
+
+              <div>
+                <label className="form-label">
+                  🔐 Login / Username Hint (No Passwords!)
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. Registered with pavankumar@gmail.com / Log in with Google"
+                  className="input-text"
+                  placeholder="e.g. Signed in with Google (pavan@...), or user: admin_pavan"
                   value={usernameHint}
                   onChange={(e) => setUsernameHint(e.target.value)}
-                  style={{ width: '100%', padding: '9px 12px', borderRadius: '8px' }}
                 />
               </div>
 
-              {/* Notes */}
               <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-tertiary)', marginBottom: '4px' }}>
-                  Notes & Details
-                </label>
+                <label className="form-label">Notes & Details</label>
                 <textarea
+                  className="input-textarea"
                   rows={2}
-                  placeholder="Additional context, access instructions, API key location..."
+                  placeholder="e.g. Spare key is wrapped in blue tape; AirPods case has black sticker"
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  style={{ width: '100%', padding: '9px 12px', borderRadius: '8px' }}
                 />
               </div>
 
-              {/* Tags */}
               <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-tertiary)', marginBottom: '4px' }}>
-                  Tags (Comma separated)
-                </label>
+                <label className="form-label">Tags (comma separated)</label>
                 <input
                   type="text"
-                  placeholder="work, brandex, dev, personal"
+                  className="input-text"
+                  placeholder="keys, home, daily, important"
                   value={tagsInput}
                   onChange={(e) => setTagsInput(e.target.value)}
-                  style={{ width: '100%', padding: '9px 12px', borderRadius: '8px' }}
                 />
               </div>
 
-              {/* Pin to top */}
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <input
                   type="checkbox"
+                  id="vault-pin-check"
                   checked={isPinned}
                   onChange={(e) => setIsPinned(e.target.checked)}
                 />
-                <span>Pin this resource to top of vault</span>
-              </label>
+                <label htmlFor="vault-pin-check" style={{ fontSize: '13px', color: 'var(--text-primary)', cursor: 'pointer' }}>
+                  Pin to top of Vault for quick access
+                </label>
+              </div>
 
-              {/* Buttons */}
-              <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '12px' }}>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '10px' }}>
                 <button type="button" onClick={() => setIsModalOpen(false)} className="btn btn-secondary">
                   Cancel
                 </button>
-                <button type="submit" className="btn btn-primary" style={{ gap: '6px' }}>
-                  <Sparkles size={16} />
-                  <span>{editingItem ? 'Update Resource' : 'Save to Vault'}</span>
+                <button type="submit" className="btn btn-primary">
+                  {editingItem ? 'Save Changes' : 'Save to Vault'}
                 </button>
               </div>
             </form>

@@ -17,7 +17,17 @@ import {
   Bell,
   HelpCircle,
   ShieldCheck,
-  AlertTriangle
+  AlertTriangle,
+  Flame,
+  Sun,
+  PiggyBank,
+  GraduationCap,
+  FolderSearch,
+  Key,
+  Headphones,
+  Glasses,
+  BarChart3,
+  Target
 } from 'lucide-react';
 import { db, generateId, logAudit } from '../../db/db';
 import { getTodayDateString, getCurrentMonthString, formatDisplayDate } from '../../utils/dates';
@@ -238,6 +248,12 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigateTo, onOpenQuickAdd
       deadlines
     };
   }, [todayStr]) || { commitments: 0, waiting: 0, deadlines: 0 };
+
+  // Growth & Vault queries for quick launch hub
+  const habitsList = useLiveQuery(() => db.habits.filter(h => !h.deletedAt).toArray(), []) || [];
+  const savingsList = useLiveQuery(() => db.savingsGoals.filter(s => !s.deletedAt).toArray(), []) || [];
+  const studyList = useLiveQuery(() => db.studySubjects.filter(s => !s.deletedAt).toArray(), []) || [];
+  const vaultList = useLiveQuery(() => db.vaultResources.filter(v => !v.deletedAt).toArray(), []) || [];
 
   // Recent activity stream (only items that actually exist in the database)
   const recentActivities = useLiveQuery(async () => {
@@ -761,6 +777,272 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigateTo, onOpenQuickAdd
         >
           <Plus size={18} />
         </button>
+      </section>
+
+      {/* =====================================================================
+          SARAL GROWTH & PERSONAL VAULT QUICK LAUNCH HUB
+          ===================================================================== */}
+      <section style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 4px' }}>
+          <div style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span>Growth, Habits & Personal Vault</span>
+          </div>
+          <button
+            onClick={() => onNavigateTo('goals')}
+            className="btn-ghost"
+            style={{ fontSize: '0.75rem', color: 'var(--accent)', fontWeight: 600, padding: '2px 6px' }}
+          >
+            Open All →
+          </button>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '10px' }}>
+          {/* 1. Habit Tracker */}
+          <button
+            onClick={() => onNavigateTo('goals')}
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'flex-start',
+              gap: '6px',
+              padding: '12px',
+              borderRadius: '12px',
+              background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.08) 0%, rgba(245, 158, 11, 0.08) 100%)',
+              border: '1px solid rgba(239, 68, 68, 0.2)',
+              cursor: 'pointer',
+              textAlign: 'left',
+              transition: 'transform 0.15s ease, box-shadow 0.15s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.boxShadow = 'var(--shadow-sm)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = 'none';
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+              <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: '#ef4444', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Flame size={15} />
+              </div>
+              <span style={{ fontSize: '11px', fontWeight: 700, color: '#ef4444' }}>
+                {habitsList.length > 0 ? `${habitsList.filter(h => h.streak > 0).length} active` : 'New'}
+              </span>
+            </div>
+            <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>
+              Habit Tracker
+            </div>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+              Streaks & Punchcard
+            </div>
+          </button>
+
+          {/* 2. Daily Planner */}
+          <button
+            onClick={() => onNavigateTo('goals')}
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'flex-start',
+              gap: '6px',
+              padding: '12px',
+              borderRadius: '12px',
+              background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.08) 0%, rgba(59, 130, 246, 0.08) 100%)',
+              border: '1px solid rgba(245, 158, 11, 0.2)',
+              cursor: 'pointer',
+              textAlign: 'left',
+              transition: 'transform 0.15s ease, box-shadow 0.15s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.boxShadow = 'var(--shadow-sm)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = 'none';
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+              <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: '#f59e0b', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Sun size={15} />
+              </div>
+              <span style={{ fontSize: '11px', fontWeight: 700, color: '#f59e0b' }}>
+                🌅 ☀️ 🌙
+              </span>
+            </div>
+            <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>
+              Daily Planner
+            </div>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+              Time Blocks & Timer
+            </div>
+          </button>
+
+          {/* 3. Savings Goals */}
+          <button
+            onClick={() => onNavigateTo('goals')}
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'flex-start',
+              gap: '6px',
+              padding: '12px',
+              borderRadius: '12px',
+              background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(59, 130, 246, 0.08) 100%)',
+              border: '1px solid rgba(16, 185, 129, 0.2)',
+              cursor: 'pointer',
+              textAlign: 'left',
+              transition: 'transform 0.15s ease, box-shadow 0.15s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.boxShadow = 'var(--shadow-sm)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = 'none';
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+              <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: '#10b981', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <PiggyBank size={15} />
+              </div>
+              <span style={{ fontSize: '11px', fontWeight: 700, color: '#10b981' }}>
+                {savingsList.length} Goals
+              </span>
+            </div>
+            <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>
+              Savings Goals
+            </div>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+              Monthly Run-Rate
+            </div>
+          </button>
+
+          {/* 4. Study Planner */}
+          <button
+            onClick={() => onNavigateTo('goals')}
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'flex-start',
+              gap: '6px',
+              padding: '12px',
+              borderRadius: '12px',
+              background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.08) 0%, rgba(236, 72, 153, 0.08) 100%)',
+              border: '1px solid rgba(139, 92, 246, 0.2)',
+              cursor: 'pointer',
+              textAlign: 'left',
+              transition: 'transform 0.15s ease, box-shadow 0.15s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.boxShadow = 'var(--shadow-sm)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = 'none';
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+              <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: '#8b5cf6', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <GraduationCap size={15} />
+              </div>
+              <span style={{ fontSize: '11px', fontWeight: 700, color: '#8b5cf6' }}>
+                {studyList.length} Subjects
+              </span>
+            </div>
+            <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>
+              Study Planner
+            </div>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+              Syllabus & Chapters
+            </div>
+          </button>
+
+          {/* 5. Personal Vault ("Where Did I Put That?") */}
+          <button
+            onClick={() => onNavigateTo('vault')}
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'flex-start',
+              gap: '6px',
+              padding: '12px',
+              borderRadius: '12px',
+              background: 'linear-gradient(135deg, rgba(6, 182, 212, 0.08) 0%, rgba(59, 130, 246, 0.08) 100%)',
+              border: '1px solid rgba(6, 182, 212, 0.2)',
+              cursor: 'pointer',
+              textAlign: 'left',
+              transition: 'transform 0.15s ease, box-shadow 0.15s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.boxShadow = 'var(--shadow-sm)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = 'none';
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+              <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: '#06b6d4', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <FolderSearch size={15} />
+              </div>
+              <span style={{ fontSize: '11px', fontWeight: 700, color: '#06b6d4' }}>
+                🔑 🎧 👓 🛂
+              </span>
+            </div>
+            <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>
+              Where Did I Put That?
+            </div>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+              Keys, Buds & Vault ({vaultList.length})
+            </div>
+          </button>
+
+          {/* 6. Dashboard Analytics */}
+          <button
+            onClick={() => onNavigateTo('goals')}
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'flex-start',
+              gap: '6px',
+              padding: '12px',
+              borderRadius: '12px',
+              background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(139, 92, 246, 0.08) 100%)',
+              border: '1px solid rgba(16, 185, 129, 0.2)',
+              cursor: 'pointer',
+              textAlign: 'left',
+              transition: 'transform 0.15s ease, box-shadow 0.15s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.boxShadow = 'var(--shadow-sm)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = 'none';
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+              <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: '#10b981', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <BarChart3 size={15} />
+              </div>
+              <span style={{ fontSize: '11px', fontWeight: 700, color: '#10b981' }}>
+                Pictorial
+              </span>
+            </div>
+            <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>
+              Visual Analytics
+            </div>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+              Heatmaps & Graphs
+            </div>
+          </button>
+        </div>
       </section>
 
       {/* Missed Reminders Recovery Banner (if any) */}
