@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Download, Bell, X, Sparkles, Share2, Monitor, Smartphone, HelpCircle, CheckCircle2 } from 'lucide-react';
+import { Download, Bell, X, Sparkles, Share2, Monitor, Smartphone } from 'lucide-react';
 import { requestNotificationPermission, dispatchNativeNotification } from '../../services/notificationService';
 import { triggerHaptic } from '../../utils/haptics';
 
@@ -13,7 +13,10 @@ export const AppInstallNotificationPrompt: React.FC = () => {
   const [isInstalled, setIsInstalled] = useState<boolean>(false);
   const [notificationStatus, setNotificationStatus] = useState<string>('default');
   const [isDismissed, setIsDismissed] = useState<boolean>(() => {
-    return localStorage.getItem('kanso_prompt_dismissed_v1') === 'true';
+    return (
+      localStorage.getItem('saral_prompt_dismissed_v1') === 'true' ||
+      localStorage.getItem('kanso_prompt_dismissed_v1') === 'true'
+    );
   });
   const [showInstallModal, setShowInstallModal] = useState<boolean>(false);
   const [deviceInfo, setDeviceInfo] = useState<{
@@ -76,6 +79,7 @@ export const AppInstallNotificationPrompt: React.FC = () => {
     const handleBeforeInstall = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
+      (window as any).__saralInstallPrompt = e;
       (window as any).__kansoInstallPrompt = e;
     };
 
@@ -83,30 +87,39 @@ export const AppInstallNotificationPrompt: React.FC = () => {
     window.addEventListener('appinstalled', () => {
       setIsInstalled(true);
       setDeferredPrompt(null);
+      (window as any).__saralInstallPrompt = null;
       (window as any).__kansoInstallPrompt = null;
       setShowInstallModal(false);
     });
 
     // Also listen for custom event from Settings view or elsewhere
     const handleOpenGuide = () => {
-      const activePrompt = (window as any).__kansoInstallPrompt || deferredPrompt;
+      const activePrompt =
+        (window as any).__saralInstallPrompt ||
+        (window as any).__kansoInstallPrompt ||
+        deferredPrompt;
       if (activePrompt) {
         activePrompt.prompt();
       } else {
         setShowInstallModal(true);
       }
     };
+    window.addEventListener('saral:open-install-guide', handleOpenGuide);
     window.addEventListener('kanso:open-install-guide', handleOpenGuide);
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
+      window.removeEventListener('saral:open-install-guide', handleOpenGuide);
       window.removeEventListener('kanso:open-install-guide', handleOpenGuide);
     };
   }, [deferredPrompt]);
 
   const handleInstallClick = async () => {
     triggerHaptic('light');
-    const promptToUse = deferredPrompt || (window as any).__kansoInstallPrompt;
+    const promptToUse =
+      deferredPrompt ||
+      (window as any).__saralInstallPrompt ||
+      (window as any).__kansoInstallPrompt;
     if (promptToUse) {
       try {
         promptToUse.prompt();
@@ -114,6 +127,7 @@ export const AppInstallNotificationPrompt: React.FC = () => {
         if (outcome === 'accepted') {
           setIsInstalled(true);
           setDeferredPrompt(null);
+          (window as any).__saralInstallPrompt = null;
           (window as any).__kansoInstallPrompt = null;
           setShowInstallModal(false);
           return;
@@ -133,7 +147,7 @@ export const AppInstallNotificationPrompt: React.FC = () => {
     if (result === 'granted') {
       dispatchNativeNotification(
         'welcome-notif',
-        'Kanso Notifications Enabled',
+        'Saral Notifications Enabled',
         'You will now receive timely alerts for your tasks and reminders.'
       );
     }
@@ -142,6 +156,7 @@ export const AppInstallNotificationPrompt: React.FC = () => {
   const handleDismiss = () => {
     triggerHaptic('light');
     setIsDismissed(true);
+    localStorage.setItem('saral_prompt_dismissed_v1', 'true');
     localStorage.setItem('kanso_prompt_dismissed_v1', 'true');
   };
 
@@ -188,7 +203,7 @@ export const AppInstallNotificationPrompt: React.FC = () => {
                   {needsInstall && needsNotification
                     ? 'Download App & Enable Notifications'
                     : needsInstall
-                    ? 'Download Kanso App'
+                    ? 'Download Saral App'
                     : 'Turn On Reminder Notifications'}
                 </span>
                 <span style={{ fontSize: '11.5px', color: 'var(--text-secondary, #525252)' }}>
@@ -322,7 +337,7 @@ export const AppInstallNotificationPrompt: React.FC = () => {
                 </div>
                 <div>
                   <h3 id="install-guide-title" style={{ fontSize: '17px', fontWeight: 600, margin: 0, letterSpacing: '-0.01em' }}>
-                    Install Kanso App
+                    Install Saral App
                   </h3>
                   <p style={{ fontSize: '13px', color: 'var(--text-secondary, #525252)', margin: '2px 0 0 0' }}>
                     Run directly from your Dock, Applications, or Home Screen
@@ -392,7 +407,7 @@ export const AppInstallNotificationPrompt: React.FC = () => {
                       Select <strong>"Add to Dock..."</strong>.
                     </li>
                     <li>
-                      Click <strong>"Add"</strong> to run Kanso as a standalone Mac desktop app.
+                      Click <strong>"Add"</strong> to run Saral as a standalone Mac desktop app.
                     </li>
                   </ol>
                 </>
@@ -401,7 +416,7 @@ export const AppInstallNotificationPrompt: React.FC = () => {
                 <>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 600 }}>
                     <Smartphone size={16} color="var(--accent, #0d9488)" />
-                    <span>Instructions for Android (Chrome / Brave)</span>
+                    <span>Instructions for Android (Chrome / Brave / Edge)</span>
                   </div>
                   <ol style={{ margin: 0, paddingLeft: '20px', fontSize: '13px', lineHeight: '1.6', color: 'var(--text-secondary, #525252)' }}>
                     <li>
@@ -411,7 +426,10 @@ export const AppInstallNotificationPrompt: React.FC = () => {
                       Tap <strong>"Install app"</strong> or <strong>"Add to Home screen"</strong>.
                     </li>
                     <li>
-                      Confirm to add the Kanso icon to your home screen.
+                      Confirm to add the Saral icon to your home screen.
+                    </li>
+                    <li style={{ marginTop: '6px' }}>
+                      <em>Or download the native Android APK package directly from Settings &gt; Android APK.</em>
                     </li>
                   </ol>
                 </>
@@ -442,10 +460,13 @@ export const AppInstallNotificationPrompt: React.FC = () => {
 
             {/* Modal Actions */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '10px', marginTop: '4px' }}>
-              {(deferredPrompt || (window as any).__kansoInstallPrompt) && (
+              {(deferredPrompt || (window as any).__saralInstallPrompt || (window as any).__kansoInstallPrompt) && (
                 <button
                   onClick={async () => {
-                    const prompt = deferredPrompt || (window as any).__kansoInstallPrompt;
+                    const prompt =
+                      deferredPrompt ||
+                      (window as any).__saralInstallPrompt ||
+                      (window as any).__kansoInstallPrompt;
                     if (prompt) {
                       prompt.prompt();
                       const { outcome } = await prompt.userChoice;

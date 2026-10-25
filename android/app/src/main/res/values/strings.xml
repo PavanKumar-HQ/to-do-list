@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Saral</string>
+    <string name="title_activity_main">Saral</string>
+    <string name="package_name">com.saral.lifeos</string>
+    <string name="custom_url_scheme">com.saral.lifeos</string>
+</resources>

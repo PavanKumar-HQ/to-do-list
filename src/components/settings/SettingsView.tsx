@@ -23,6 +23,7 @@ import {
   Shield,
   Headphones,
   Info,
+  Smartphone,
   Check,
   Edit2
 } from 'lucide-react';
@@ -841,25 +842,38 @@ export const SettingsView: React.FC = () => {
             </div>
 
             <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: '1.5', marginBottom: '16px' }}>
-              Install Kanso on your phone, tablet, or desktop. Enjoy full offline access, instant boot times, and home-screen convenience without any app store.
+              Install Saral on your phone, tablet, or desktop. Enjoy full offline access, instant boot times, and home-screen convenience without any app store.
             </p>
 
-            <button
-              onClick={() => {
-                const prompt = (window as any).__kansoInstallPrompt;
-                if (prompt) {
-                  prompt.prompt();
-                } else {
-                  localStorage.removeItem('kanso_prompt_dismissed_v1');
-                  window.dispatchEvent(new CustomEvent('kanso:open-install-guide'));
-                }
-              }}
-              className="btn btn-primary btn-sm"
-              style={{ gap: '6px' }}
-            >
-              <Download size={14} />
-              <span>Install to Home Screen / Desktop</span>
-            </button>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              <button
+                onClick={() => {
+                  const prompt = (window as any).__saralInstallPrompt || (window as any).__kansoInstallPrompt;
+                  if (prompt) {
+                    prompt.prompt();
+                  } else {
+                    localStorage.removeItem('saral_prompt_dismissed_v1');
+                    localStorage.removeItem('kanso_prompt_dismissed_v1');
+                    window.dispatchEvent(new CustomEvent('saral:open-install-guide'));
+                  }
+                }}
+                className="btn btn-primary btn-sm"
+                style={{ gap: '6px' }}
+              >
+                <Download size={14} />
+                <span>Install to Home Screen / Desktop</span>
+              </button>
+
+              <a
+                href="./saral-life-os.apk"
+                download="saral-life-os.apk"
+                className="btn btn-secondary btn-sm"
+                style={{ gap: '6px', textDecoration: 'none' }}
+              >
+                <Smartphone size={14} />
+                <span>Download Android APK (.apk)</span>
+              </a>
+            </div>
           </div>
         </div>
       )}
@@ -930,7 +944,7 @@ export const SettingsView: React.FC = () => {
         <div className="card" style={{ padding: '20px', borderRadius: '20px', background: 'var(--bg-surface-elevated)' }}>
           <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '12px' }}>Local-First Privacy Architecture</h3>
           <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: '1.6', marginBottom: '16px' }}>
-            Kanso runs entirely inside your browser sandbox. No user data, analytics, tracking, or network telemetry leaves your device. All queries and relations are indexed inside IndexedDB.
+            Saral runs entirely inside your browser sandbox or native container. No user data, analytics, tracking, or network telemetry leaves your device. All queries and relations are indexed inside IndexedDB.
           </p>
 
           <div style={{ marginBottom: '16px' }}>
@@ -984,9 +998,9 @@ export const SettingsView: React.FC = () => {
             </div>
             <div>
               <strong style={{ color: 'var(--text-primary)', display: 'block', marginBottom: '3px' }}>
-                Does Kanso work completely offline?
+                Does Saral work completely offline?
               </strong>
-              Yes! Kanso is completely local-first. You can manage tasks, log expenses, schedule events, and view your calendar with zero internet connection.
+              Yes! Saral is completely local-first. You can manage tasks, log expenses, schedule events, and view your calendar with zero internet connection.
             </div>
           </div>
         </div>
@@ -995,9 +1009,9 @@ export const SettingsView: React.FC = () => {
       {/* 7. SUBSECTION: ABOUT */}
       {activeSection === 'about' && (
         <div className="card" style={{ padding: '20px', borderRadius: '20px', background: 'var(--bg-surface-elevated)' }}>
-          <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '8px' }}>Kanso</h3>
+          <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '8px' }}>Saral (सरल)</h3>
           <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '16px' }}>
-            Version 1.0.0 (Production Build)
+            Version 1.0.0 (Production Release)
           </div>
           <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: '1.6', marginBottom: '20px' }}>
             Built for total cognitive clarity, private offline persistence, and seamless time &amp; financial tracking.

@@ -1,4 +1,4 @@
-# Kanso Life OS — Private, Local-First Personal Operating System
+# Saral Life OS — Private, Local-First Personal Operating System
 
 <div align="center">
 
@@ -10,7 +10,7 @@
 ![Lucide Icons](https://img.shields.io/badge/Lucide-Vector%20Icons-F56565?logo=feather&logoColor=white&style=for-the-badge)
 ![Web Audio](https://img.shields.io/badge/Web%20Audio-Synthesizer%20%26%20Alarms-10B981?logo=audio&logoColor=white&style=for-the-badge)
 ![Web Push](https://img.shields.io/badge/Web%20Push-Actions%20%26%20Vibration-0284C7?logo=bell&logoColor=white&style=for-the-badge)
-![Tests](https://img.shields.io/badge/Tests-121%20Passed-success?style=for-the-badge)
+![Tests](https://img.shields.io/badge/Tests-238%20Passed-success?style=for-the-badge)
 ![Privacy](https://img.shields.io/badge/Privacy-100%25%20Local--First-14B8A6?logo=shield&logoColor=white&style=for-the-badge)
 
 <p align="center">
@@ -34,7 +34,7 @@
 ## 🏗️ Architecture & Modules
 
 ```text
-                                  KANSO LIFE OS
+                                  SARAL LIFE OS
                                         │
          ┌──────────────────────────────┼──────────────────────────────┐
          │                              │                              │
