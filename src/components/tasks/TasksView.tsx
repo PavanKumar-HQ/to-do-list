@@ -21,6 +21,7 @@ import {
 import { db, generateId, logAudit } from '../../db/db';
 import { getTodayDateString, getRelativeDateLabel, calculateNextOccurrence } from '../../utils/dates';
 import { useToast } from '../common/ToastContext';
+import { ContextModal } from '../common/ContextModal';
 import { checkUpcomingTasksAndNotify, cancelTaskNotification } from '../../services/notificationService';
 import { eventBus } from '../../services/eventBus';
 import { TaskRepository } from '../../repositories';

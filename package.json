@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:android": "npm run build && npx cap sync android && (cd android && ./gradlew assembleDebug) && cp android/app/build/outputs/apk/debug/app-debug.apk ./saral-life-os.apk && cp android/app/build/outputs/apk/debug/app-debug.apk ./public/saral-life-os.apk",
+    "test": "tsx test/test-suite.ts",
     "lint": "oxlint",
     "preview": "vite preview"
   },
@@ -26,6 +28,7 @@
     "@vitejs/plugin-react": "^6.1.1",
     "fake-indexeddb": "^6.2.5",
     "oxlint": "^1.81.0",
+    "tsx": "^4.23.15",
     "typescript": "~6.0.2",
     "vite": "^8.3.0"
   }
