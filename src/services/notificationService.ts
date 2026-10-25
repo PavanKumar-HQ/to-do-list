@@ -201,7 +201,7 @@ export async function refreshNextReminderTimer() {
     .toArray();
 
   let earliestTime: number | null = null;
-  let earliestItem: { type: 'reminder'; reminder: ReminderItem } | { type: 'task'; task: TaskItem } | null = null;
+  const itemsToFireNow: Array<{ type: 'reminder'; reminder: ReminderItem } | { type: 'task'; task: TaskItem }> = [];
 
   // Evaluate reminders
   for (const r of activeReminders) {
@@ -217,16 +217,16 @@ export async function refreshNextReminderTimer() {
       targetTimestamp = targetDate.getTime();
     }
 
-    // Check if due right now (or within the last 2 minutes) and hasn't fired in this session
-    if (!isSnoozedFuture && r.date === todayStr && targetTimestamp <= now.getTime() && (now.getTime() - targetTimestamp) <= 120000) {
-      if (!recentlyFiredIds.has(r.id)) {
-        recentlyFiredIds.add(r.id);
-        fireReminder(r);
+    const reminderScheduleKey = `reminder:${r.id}:${r.date}:${r.time || 'default'}:${r.snoozedUntil || 'direct'}`;
+
+    if (targetTimestamp <= now.getTime()) {
+      if (!recentlyFiredIds.has(reminderScheduleKey)) {
+        recentlyFiredIds.add(reminderScheduleKey);
+        itemsToFireNow.push({ type: 'reminder', reminder: r });
       }
-    } else if (targetTimestamp > now.getTime()) {
+    } else {
       if (earliestTime === null || targetTimestamp < earliestTime) {
         earliestTime = targetTimestamp;
-        earliestItem = { type: 'reminder', reminder: r };
       }
     }
   }
@@ -243,33 +243,36 @@ export async function refreshNextReminderTimer() {
       targetTimestamp = targetDate.getTime();
     }
 
-    const taskTag = `task:${t.id}`;
-    if (t.dueDate === todayStr && targetTimestamp <= now.getTime() && (now.getTime() - targetTimestamp) <= 120000) {
-      if (!recentlyFiredIds.has(taskTag)) {
-        recentlyFiredIds.add(taskTag);
-        fireTaskReminder(t);
+    const taskScheduleKey = `task:${t.id}:${t.dueDate}:${t.dueTime || 'default'}`;
+
+    if (t.dueDate === todayStr && targetTimestamp <= now.getTime()) {
+      if (!recentlyFiredIds.has(taskScheduleKey)) {
+        recentlyFiredIds.add(taskScheduleKey);
+        itemsToFireNow.push({ type: 'task', task: t });
       }
     } else if (targetTimestamp > now.getTime()) {
       if (earliestTime === null || targetTimestamp < earliestTime) {
         earliestTime = targetTimestamp;
-        earliestItem = { type: 'task', task: t };
       }
     }
   }
 
-  if (earliestTime !== null && earliestItem !== null) {
-    const delay = Math.max(0, earliestTime - now.getTime());
-    // Max safe setTimeout is ~24.8 days (2^31 - 1 ms). If further, cap to 24 hours
+  // Fire all items due right now
+  for (const item of itemsToFireNow) {
+    if (item.type === 'reminder') {
+      await fireReminder(item.reminder);
+    } else {
+      await fireTaskReminder(item.task);
+    }
+  }
+
+  // Schedule timer for earliest upcoming event
+  if (earliestTime !== null) {
+    const delay = Math.max(50, earliestTime - now.getTime());
     const cappedDelay = Math.min(delay, 86400000);
 
     nextTimerTimestamp = earliestTime;
-    const itemToFire = earliestItem;
     activeTimer = setTimeout(async () => {
-      if (itemToFire.type === 'reminder') {
-        await fireReminder(itemToFire.reminder);
-      } else {
-        await fireTaskReminder(itemToFire.task);
-      }
       refreshNextReminderTimer();
     }, cappedDelay);
   }
@@ -305,7 +308,7 @@ export async function dispatchTestNotification(): Promise<{ success: boolean; me
 
   await dispatchNativeNotification(
     'test_notification_' + Date.now(),
-    'Life OS Alert Active',
+    'Saral Alert Active',
     'Local notifications and reminders are working properly.',
     { type: 'test' }
   );
@@ -386,7 +389,11 @@ export async function cancelTaskNotification(taskId: string) {
       }
     } catch {}
   }
-  recentlyFiredIds.delete(`task:${taskId}`);
+  for (const key of recentlyFiredIds) {
+    if (key.includes(taskId)) {
+      recentlyFiredIds.delete(key);
+    }
+  }
   refreshNextReminderTimer();
 }
 
@@ -400,6 +407,7 @@ export async function checkUpcomingTasksAndNotify(forceNotification: boolean = f
 }> {
   const now = new Date();
   const todayStr = getTodayDateString();
+  const currentHM = now.toTimeString().slice(0, 5);
 
   const activeTasks = await db.tasks
     .filter(t => !t.deletedAt && t.status !== 'completed' && t.status !== 'archived')
@@ -411,11 +419,13 @@ export async function checkUpcomingTasksAndNotify(forceNotification: boolean = f
 
   let notifiedCount = 0;
 
-  // 1. If any task is due today and hasn't fired yet:
+  // 1. Fire tasks that are currently due (time is up today)
   for (const t of todayTasks) {
-    const tag = `task:${t.id}`;
-    if (!recentlyFiredIds.has(tag)) {
-      recentlyFiredIds.add(tag);
+    const isDueNow = !t.dueTime || t.dueTime <= currentHM;
+    const taskScheduleKey = `task:${t.id}:${t.dueDate}:${t.dueTime || 'default'}`;
+
+    if (isDueNow && !recentlyFiredIds.has(taskScheduleKey)) {
+      recentlyFiredIds.add(taskScheduleKey);
       await fireTaskReminder(t);
       notifiedCount++;
     }
@@ -547,47 +557,64 @@ export async function checkMissedReminders(): Promise<ReminderItem[]> {
 export async function handleNotificationAction(action: string, entityId: string) {
   if (!entityId) return;
 
+  const normalizedAction = (action === 'snooze' || action === 'snooze_10m') ? 'snooze_10m' : action;
+  const cleanId = entityId.replace(/^task:/, '');
+
   // Check if target entity is a task
-  const task = await db.tasks.get(entityId);
+  const task = await db.tasks.get(cleanId);
   if (task) {
-    if (action === 'complete') {
+    if (normalizedAction === 'complete') {
       const nowIso = new Date().toISOString();
-      await db.tasks.update(entityId, {
+      await db.tasks.update(cleanId, {
         status: 'completed',
         completedAt: nowIso,
         updatedAt: nowIso
       });
-      cancelTaskNotification(entityId);
-    } else if (action === 'snooze_10m') {
-      recentlyFiredIds.delete(`task:${entityId}`);
+      cancelTaskNotification(cleanId);
+      eventBus.emit('TASK_MUTATED', { type: 'TASK_MUTATED', entityId: cleanId, action: 'complete' });
+    } else if (normalizedAction === 'snooze_10m') {
+      for (const key of recentlyFiredIds) {
+        if (key.includes(cleanId)) recentlyFiredIds.delete(key);
+      }
       const tenMinsLater = new Date(Date.now() + 10 * 60000);
       const newTime = tenMinsLater.toTimeString().slice(0, 5);
-      await db.tasks.update(entityId, {
+      const newDate = tenMinsLater.toISOString().split('T')[0];
+      await db.tasks.update(cleanId, {
+        dueDate: newDate,
         dueTime: newTime,
         updatedAt: new Date().toISOString()
       });
+      eventBus.emit('TASK_MUTATED', { type: 'TASK_MUTATED', entityId: cleanId, action: 'snooze' });
       refreshNextReminderTimer();
     }
     return;
   }
 
   // Otherwise handle as reminder
-  if (action === 'complete') {
-    await db.reminders.update(entityId, { status: 'dismissed', updatedAt: new Date().toISOString() });
-    cancelReminder(entityId);
-  } else if (action === 'snooze_10m') {
-    recentlyFiredIds.delete(entityId);
-    const tenMinsLater = new Date(Date.now() + 10 * 60000);
-    const newDate = tenMinsLater.toISOString().split('T')[0];
-    const newTime = tenMinsLater.toTimeString().slice(0, 5);
-    await db.reminders.update(entityId, {
-      status: 'snoozed',
-      date: newDate,
-      time: newTime,
-      snoozedUntil: tenMinsLater.toISOString(),
-      updatedAt: new Date().toISOString()
-    });
-    refreshNextReminderTimer();
+  const reminder = await db.reminders.get(cleanId);
+  if (reminder) {
+    if (normalizedAction === 'complete') {
+      await db.reminders.update(cleanId, { status: 'dismissed', updatedAt: new Date().toISOString() });
+      cancelReminder(cleanId);
+      eventBus.emit('REMINDER_MUTATED', { type: 'REMINDER_MUTATED', entityId: cleanId, action: 'complete' });
+    } else if (normalizedAction === 'snooze_10m') {
+      for (const key of recentlyFiredIds) {
+        if (key.includes(cleanId)) recentlyFiredIds.delete(key);
+      }
+      const tenMinsLater = new Date(Date.now() + 10 * 60000);
+      const newDate = tenMinsLater.toISOString().split('T')[0];
+      const newTime = tenMinsLater.toTimeString().slice(0, 5);
+      await db.reminders.update(cleanId, {
+        status: 'snoozed',
+        date: newDate,
+        time: newTime,
+        snoozedUntil: tenMinsLater.toISOString(),
+        snoozeCount: (reminder.snoozeCount || 0) + 1,
+        updatedAt: new Date().toISOString()
+      });
+      eventBus.emit('REMINDER_MUTATED', { type: 'REMINDER_MUTATED', entityId: cleanId, action: 'snooze' });
+      refreshNextReminderTimer();
+    }
   }
 }
 

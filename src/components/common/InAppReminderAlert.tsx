@@ -44,29 +44,45 @@ export const InAppReminderAlert: React.FC = () => {
   };
 
   useEffect(() => {
-    // Check on mount if any reminder is currently due/overdue today so it stays visible
+    // Check on mount if any reminder or task is currently due/overdue today so it stays visible
     const checkDueOnMount = async () => {
       try {
         const now = new Date();
         const todayStr = getTodayDateString();
         const currentHM = now.toTimeString().slice(0, 5);
 
-        const due = await db.reminders
+        const dueReminder = await db.reminders
           .where('date')
           .equals(todayStr)
           .filter(r => !r.deletedAt && (r.status === 'active' || r.status === 'snoozed') && !!r.time && r.time <= currentHM)
           .first();
 
-        if (due) {
+        if (dueReminder) {
           handleNewAlert({
-            id: due.id,
-            title: due.title,
-            time: due.time,
-            date: due.date
+            id: dueReminder.id,
+            title: dueReminder.title,
+            time: dueReminder.time,
+            date: dueReminder.date,
+            type: 'reminder'
+          });
+          return;
+        }
+
+        const dueTask = await db.tasks
+          .filter(t => !t.deletedAt && t.status !== 'completed' && t.status !== 'archived' && t.dueDate === todayStr && (!t.dueTime || t.dueTime <= currentHM))
+          .first();
+
+        if (dueTask) {
+          handleNewAlert({
+            id: dueTask.id,
+            title: dueTask.title,
+            time: dueTask.dueTime || 'Due today',
+            date: dueTask.dueDate,
+            type: 'task'
           });
         }
       } catch (err) {
-        console.warn('Initial due reminder check error:', err);
+        console.warn('Initial due check error:', err);
       }
     };
 
@@ -111,7 +127,7 @@ export const InAppReminderAlert: React.FC = () => {
     setIsRinging(false);
     try {
       await handleNotificationAction('complete', currentAlert.id);
-      showToast('Reminder completed', { type: 'success' });
+      showToast(currentAlert.type === 'task' ? 'Task completed' : 'Reminder completed', { type: 'success' });
       setCurrentAlert(null);
     } catch {
       setCurrentAlert(null);

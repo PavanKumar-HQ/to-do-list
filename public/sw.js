@@ -1,5 +1,5 @@
-// Service Worker for Kanso PWA - Offline First
-const CACHE_NAME = 'kanso-cache-v8';
+// Service Worker for Saral Life OS - Offline First
+const CACHE_NAME = 'saral-cache-v9';
 
 self.addEventListener('install', (event) => {
   // In development, skip caching
@@ -105,37 +105,128 @@ self.addEventListener('fetch', (event) => {
   }
 });
 
-// Native Notification Click & Action Handling (Section 37, 44)
+/**
+ * Perform direct IndexedDB snooze or complete action inside Service Worker
+ */
+async function performDirectDbAction(action, entityId, entityType) {
+  if (!entityId || !self.indexedDB) return;
+
+  return new Promise((resolve) => {
+    try {
+      const request = indexedDB.open('PersonalLifeOS_DB');
+      request.onerror = () => resolve(false);
+      request.onsuccess = () => {
+        const db = request.result;
+        const nowIso = new Date().toISOString();
+        const tenMinsLater = new Date(Date.now() + 10 * 60000);
+        const newTime = tenMinsLater.toTimeString().slice(0, 5);
+        const newDate = tenMinsLater.toISOString().split('T')[0];
+
+        // Determine if task or reminder
+        const isTask = entityType === 'task' || entityId.startsWith('task:');
+        const cleanId = entityId.replace(/^task:/, '');
+
+        if (isTask && db.objectStoreNames.contains('tasks')) {
+          const tx = db.transaction(['tasks'], 'readwrite');
+          const store = tx.objectStore('tasks');
+          const getReq = store.get(cleanId);
+          getReq.onsuccess = () => {
+            const task = getReq.result;
+            if (task) {
+              if (action === 'complete') {
+                task.status = 'completed';
+                task.completedAt = nowIso;
+                task.updatedAt = nowIso;
+              } else if (action === 'snooze' || action === 'snooze_10m') {
+                task.dueTime = newTime;
+                task.dueDate = newDate;
+                task.updatedAt = nowIso;
+              }
+              store.put(task);
+            }
+            resolve(true);
+          };
+          getReq.onerror = () => resolve(false);
+        } else if (db.objectStoreNames.contains('reminders')) {
+          const tx = db.transaction(['reminders'], 'readwrite');
+          const store = tx.objectStore('reminders');
+          const getReq = store.get(cleanId);
+          getReq.onsuccess = () => {
+            const reminder = getReq.result;
+            if (reminder) {
+              if (action === 'complete') {
+                reminder.status = 'dismissed';
+                reminder.updatedAt = nowIso;
+              } else if (action === 'snooze' || action === 'snooze_10m') {
+                reminder.status = 'snoozed';
+                reminder.date = newDate;
+                reminder.time = newTime;
+                reminder.snoozedUntil = tenMinsLater.toISOString();
+                reminder.snoozeCount = (reminder.snoozeCount || 0) + 1;
+                reminder.updatedAt = nowIso;
+              }
+              store.put(reminder);
+            }
+            resolve(true);
+          };
+          getReq.onerror = () => resolve(false);
+        } else {
+          resolve(false);
+        }
+      };
+    } catch {
+      resolve(false);
+    }
+  });
+}
+
+// Native Notification Click & Action Handling
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
   const action = event.action;
-  const reminderId = event.notification.data?.reminderId;
+  const data = event.notification.data || {};
+  const entityId = data.reminderId || data.taskId || data.id;
+  const entityType = data.type || (data.taskId ? 'task' : 'reminder');
+  const normalizedAction = action === 'snooze' ? 'snooze_10m' : action;
+
+  // Background action execution
+  const bgActionPromise = (normalizedAction === 'complete' || normalizedAction === 'snooze_10m')
+    ? performDirectDbAction(normalizedAction, entityId, entityType)
+    : Promise.resolve();
 
   event.waitUntil(
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      // If a window is already open, focus it and post message
-      for (const client of clientList) {
-        if (client.url && 'focus' in client) {
-          client.postMessage({
-            type: 'NOTIFICATION_ACTION',
-            action,
-            reminderId
-          });
-          return client.focus();
+    bgActionPromise.then(() => {
+      return self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+        // If a window is already open, focus it and post notification action message
+        for (const client of clientList) {
+          if (client.url && 'focus' in client) {
+            client.postMessage({
+              type: 'NOTIFICATION_ACTION',
+              action: normalizedAction || 'open',
+              reminderId: entityId,
+              data
+            });
+            return client.focus();
+          }
         }
-      }
-      // Otherwise open a new window
-      if (self.clients.openWindow) {
-        return self.clients.openWindow('/');
-      }
+
+        // If user explicitly clicked the notification body (not a quick action like snooze or complete),
+        // open the app window using the relative scope, NEVER root '/' (which breaks on GitHub Pages / subpaths)
+        if (!action || action === 'open') {
+          const appScopeUrl = new URL(self.registration.scope || './', self.location.origin).href;
+          if (self.clients.openWindow) {
+            return self.clients.openWindow(appScopeUrl);
+          }
+        }
+      });
     })
   );
 });
 
 // Mobile Push Notification Event Handler
 self.addEventListener('push', (event) => {
-  let data = { title: 'Kanso Reminder', body: 'You have a scheduled reminder.' };
+  let data = { title: 'Saral Reminder', body: 'You have a scheduled reminder.' };
   if (event.data) {
     try {
       data = event.data.json();
@@ -146,16 +237,16 @@ self.addEventListener('push', (event) => {
 
   const options = {
     body: data.body || 'Scheduled reminder alert',
-    icon: '/icon-512.svg',
-    badge: '/icon-512.svg',
+    icon: './icon-512.svg',
+    badge: './icon-512.svg',
     vibrate: [200, 100, 200, 100, 200],
-    tag: data.tag || 'life-os-reminder',
+    tag: data.tag || 'saral-reminder',
     data: data.data || {},
     actions: [
       { action: 'complete', title: 'Complete' },
-      { action: 'snooze', title: 'Snooze 10m' }
+      { action: 'snooze_10m', title: 'Snooze 10m' }
     ]
   };
 
-  event.waitUntil(self.registration.showNotification(data.title, options));
+  event.waitUntil(self.registration.showNotification(data.title || 'Saral Reminder', options));
 });
