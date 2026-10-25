@@ -1,5 +1,5 @@
 // Service Worker for Saral Life OS - Offline First
-const CACHE_NAME = 'saral-cache-v9';
+const CACHE_NAME = 'saral-cache-v10';
 
 self.addEventListener('install', (event) => {
   // In development, skip caching
@@ -12,6 +12,8 @@ self.addEventListener('install', (event) => {
     scope,
     new URL('index.html', scope).toString(),
     new URL('manifest.json', scope).toString(),
+    new URL('icon-192.webp', scope).toString(),
+    new URL('icon-512.webp', scope).toString(),
     new URL('icon-192.png', scope).toString(),
     new URL('icon-512.png', scope).toString(),
     new URL('icon-512.svg', scope).toString()
