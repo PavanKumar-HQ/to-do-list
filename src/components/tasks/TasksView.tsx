@@ -21,8 +21,8 @@ import {
 import { db, generateId, logAudit } from '../../db/db';
 import { getTodayDateString, getRelativeDateLabel, calculateNextOccurrence } from '../../utils/dates';
 import { useToast } from '../common/ToastContext';
-import { ContextModal } from '../common/ContextModal';
-import { checkUpcomingTasksAndNotify } from '../../services/notificationService';
+import { checkUpcomingTasksAndNotify, cancelTaskNotification } from '../../services/notificationService';
+import { eventBus } from '../../services/eventBus';
 import { TaskRepository } from '../../repositories';
 import type { TaskItem, TaskStatus, Priority, RecurrenceType, Subtask, EntityType } from '../../types';
 
@@ -90,6 +90,8 @@ export const TasksView: React.FC<{ onOpenQuickAdd: (type: any) => void }> = ({ o
       await db.tasks.add(nextTask);
       await logAudit('complete', 'task', task.id, `Completed recurring task and scheduled next for ${nextDate}`);
 
+      cancelTaskNotification(task.id);
+      eventBus.emit('TASK_MUTATED', { type: 'TASK_MUTATED', action: 'complete', entityId: task.id });
       showToast(`Recurring task completed. Next scheduled for ${nextDate}`);
       return;
     }
@@ -109,6 +111,8 @@ export const TasksView: React.FC<{ onOpenQuickAdd: (type: any) => void }> = ({ o
     );
 
     if (isNowCompleted) {
+      cancelTaskNotification(task.id);
+      eventBus.emit('TASK_MUTATED', { type: 'TASK_MUTATED', action: 'complete', entityId: task.id });
       showToast('Task marked as completed', {
         actionLabel: 'Undo',
         onAction: async () => {
@@ -118,8 +122,11 @@ export const TasksView: React.FC<{ onOpenQuickAdd: (type: any) => void }> = ({ o
             updatedAt: new Date().toISOString()
           });
           await logAudit('update', 'task', task.id, `Undid task completion: ${task.title}`);
+          eventBus.emit('TASK_MUTATED', { type: 'TASK_MUTATED', action: 'update', entityId: task.id });
         }
       });
+    } else {
+      eventBus.emit('TASK_MUTATED', { type: 'TASK_MUTATED', action: 'update', entityId: task.id });
     }
   };
 
