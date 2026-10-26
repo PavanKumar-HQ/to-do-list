@@ -894,7 +894,7 @@ export const SettingsView: React.FC = () => {
                 style={{ gap: '6px', textDecoration: 'none' }}
               >
                 <Smartphone size={14} />
-                <span>Download Android APK (8.3 MB)</span>
+                <span>Download Android APK (16 MB)</span>
               </a>
 
               <a

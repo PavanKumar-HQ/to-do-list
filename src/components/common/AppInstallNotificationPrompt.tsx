@@ -3,6 +3,7 @@ import { Download, Bell, X, Sparkles, Share2, Monitor, Smartphone, ExternalLink,
 import { requestNotificationPermission, dispatchNativeNotification } from '../../services/notificationService';
 import { triggerHaptic } from '../../utils/haptics';
 import { getApkDownloadUrl, getGitHubRawApkUrl } from '../../utils/downloadUrls';
+import { Capacitor } from '@capacitor/core';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -10,7 +11,9 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 export const AppInstallNotificationPrompt: React.FC = () => {
+  const isNativeApp = Capacitor.isNativePlatform();
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [isStandalonePwa, setIsStandalonePwa] = useState<boolean>(false);
   const [isInstalled, setIsInstalled] = useState<boolean>(false);
   const [notificationStatus, setNotificationStatus] = useState<string>('default');
   const [showApkInstructions, setShowApkInstructions] = useState<boolean>(false);
@@ -40,7 +43,8 @@ export const AppInstallNotificationPrompt: React.FC = () => {
     const isStandaloneMode =
       window.matchMedia('(display-mode: standalone)').matches ||
       (window.navigator as any).standalone === true;
-    setIsInstalled(isStandaloneMode);
+    setIsStandalonePwa(isStandaloneMode);
+    setIsInstalled(isStandaloneMode || isNativeApp);
 
     // Detect platform & browser
     const ua = window.navigator.userAgent.toLowerCase();
@@ -48,6 +52,10 @@ export const AppInstallNotificationPrompt: React.FC = () => {
     const isMacDevice = /macintosh|mac os x/.test(ua) && !isIOSDevice;
     const isAndroidDevice = /android/.test(ua);
     const isWindowsDevice = /windows/.test(ua);
+
+    if (isAndroidDevice) {
+      setShowApkInstructions(true);
+    }
 
     let detectedBrowser: 'brave' | 'chrome' | 'safari' | 'edge' | 'firefox' | 'other' = 'other';
     if ((navigator as any).brave && typeof (navigator as any).brave.isBrave === 'function') {
@@ -160,8 +168,31 @@ export const AppInstallNotificationPrompt: React.FC = () => {
     localStorage.setItem('kanso_prompt_dismissed_v1', 'true');
   };
 
+  if (isNativeApp) {
+    return null;
+  }
+
+  const isAndroidNonNative = deviceInfo.isAndroid && !isNativeApp;
   const needsNotification = notificationStatus === 'default';
-  const needsInstall = !isInstalled;
+  const needsInstall = isAndroidNonNative ? true : !isInstalled;
+
+  const bannerTitle = isAndroidNonNative
+    ? isStandalonePwa
+      ? 'Switch to Native Android App (.apk)'
+      : 'Download Native Android App (.apk)'
+    : needsInstall && needsNotification
+    ? 'Download App & Enable Notifications'
+    : needsInstall
+    ? 'Download or Install Saral App'
+    : 'Turn On Reminder Notifications';
+
+  const bannerDesc = isAndroidNonNative
+    ? isStandalonePwa
+      ? 'You are running the browser PWA shortcut. Install the official Android APK (16 MB) for hardware back navigation & native alarms.'
+      : 'Install the pure native Android app (.apk) directly on your phone with zero browser frame.'
+    : needsInstall
+    ? 'Choose between the native Android APK package or instant Home Screen PWA.'
+    : 'Get timely alerts on this device even when the app is in the background.';
 
   return (
     <>
@@ -189,27 +220,25 @@ export const AppInstallNotificationPrompt: React.FC = () => {
                   width: '28px',
                   height: '28px',
                   borderRadius: '8px',
-                  background: 'var(--accent-light, rgba(13, 148, 136, 0.12))',
+                  background: isAndroidNonNative ? 'rgba(16, 185, 129, 0.15)' : 'var(--accent-light, rgba(13, 148, 136, 0.12))',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   flexShrink: 0
                 }}
               >
-                <Sparkles size={16} color="var(--accent, #0d9488)" />
+                {isAndroidNonNative ? (
+                  <Smartphone size={16} color="var(--success, #10b981)" />
+                ) : (
+                  <Sparkles size={16} color="var(--accent, #0d9488)" />
+                )}
               </div>
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 <span style={{ fontSize: '13px', fontWeight: 600, letterSpacing: '-0.01em', color: 'var(--text-primary, #171717)' }}>
-                  {needsInstall && needsNotification
-                    ? 'Download App & Enable Notifications'
-                    : needsInstall
-                    ? 'Download or Install Saral App'
-                    : 'Turn On Reminder Notifications'}
+                  {bannerTitle}
                 </span>
                 <span style={{ fontSize: '11.5px', color: 'var(--text-secondary, #525252)' }}>
-                  {needsInstall
-                    ? 'Choose between the native Android APK package or instant Home Screen PWA.'
-                    : 'Get timely alerts on this device even when the app is in the background.'}
+                  {bannerDesc}
                 </span>
               </div>
             </div>
@@ -232,7 +261,49 @@ export const AppInstallNotificationPrompt: React.FC = () => {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', paddingTop: '2px' }}>
-            {needsInstall && (
+            {isAndroidNonNative ? (
+              <>
+                <a
+                  href={getApkDownloadUrl()}
+                  download="saral-life-os.apk"
+                  className="btn btn-primary btn-sm"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '7px 16px',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    borderRadius: '8px',
+                    textDecoration: 'none',
+                    background: 'var(--accent, #0d9488)',
+                    color: '#ffffff',
+                    boxShadow: '0 2px 6px rgba(13, 148, 136, 0.35)'
+                  }}
+                  onClick={() => {
+                    triggerHaptic('medium');
+                    setShowInstallModal(true);
+                    setShowApkInstructions(true);
+                  }}
+                >
+                  <Download size={14} />
+                  <span>Download Android APK (16 MB)</span>
+                </a>
+
+                <button
+                  onClick={handleInstallClick}
+                  className="btn-ghost"
+                  style={{
+                    fontSize: '11.5px',
+                    color: 'var(--text-secondary, #525252)',
+                    textDecoration: 'underline',
+                    padding: '4px 6px'
+                  }}
+                >
+                  Install guide & mirrors
+                </button>
+              </>
+            ) : needsInstall ? (
               <button
                 onClick={handleInstallClick}
                 className="btn btn-sm"
@@ -254,7 +325,7 @@ export const AppInstallNotificationPrompt: React.FC = () => {
                 <Download size={14} />
                 <span>Download / Install Options</span>
               </button>
-            )}
+            ) : null}
 
             {needsNotification && (
               <button
@@ -398,7 +469,7 @@ export const AppInstallNotificationPrompt: React.FC = () => {
                       Android Native App (.apk)
                     </div>
                     <div style={{ fontSize: '11.5px', color: 'var(--text-secondary, #525252)' }}>
-                      Standalone Android package • 8.3 MB
+                      Standalone Android package • 16 MB
                     </div>
                   </div>
                 </div>
@@ -440,7 +511,7 @@ export const AppInstallNotificationPrompt: React.FC = () => {
                   onClick={() => triggerHaptic('medium')}
                 >
                   <Download size={14} />
-                  <span>Download APK (8.3 MB)</span>
+                  <span>Download APK (16 MB)</span>
                 </a>
 
                 <a
@@ -508,10 +579,11 @@ export const AppInstallNotificationPrompt: React.FC = () => {
                     Android Installation Steps:
                   </div>
                   <ol style={{ margin: 0, paddingLeft: '18px' }}>
-                    <li>Tap <strong>Download APK</strong> above.</li>
+                    <li>Tap <strong>Download APK (16 MB)</strong> above.</li>
                     <li>When the download completes, tap the notification or open your device's <strong>Files / Downloads</strong> app.</li>
                     <li>Tap <strong>saral-life-os.apk</strong>. If Android prompts <em>"For your security, your phone is not allowed to install unknown apps"</em>, tap <strong>Settings</strong> and switch <strong>"Allow from this source"</strong> to ON.</li>
                     <li>Tap <strong>Install</strong> to complete setup.</li>
+                    <li>Launch <strong>Saral</strong> from your app drawer. You can remove the old browser PWA shortcut from your home screen.</li>
                   </ol>
                 </div>
               )}
