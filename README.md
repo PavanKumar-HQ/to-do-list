@@ -2,23 +2,42 @@
 
 <div align="center">
 
+[![Download Android APK](https://img.shields.io/badge/Download_Android_APK-v1.0.0_(Latest)-10b981?style=for-the-badge&logo=android&logoColor=white)](https://github.com/PavanKumar-HQ/to-do-list/releases/latest/download/saral-life-os.apk)
+[![Live Web App](https://img.shields.io/badge/Live_Web_App-GitHub_Pages-6366f1?style=for-the-badge&logo=githubpages&logoColor=white)](https://pavankumar-hq.github.io/to-do-list/)
+[![GitHub Release](https://img.shields.io/badge/Release-v1.0.0-blue?style=for-the-badge&logo=github&logoColor=white)](https://github.com/PavanKumar-HQ/to-do-list/releases/tag/v1.0.0)
+
+<br/>
+
+### 📲 Scan with your Phone Camera to Install
+<img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=https://github.com/PavanKumar-HQ/to-do-list/releases/latest/download/saral-life-os.apk" alt="Scan to download APK" width="160" height="160" />
+
+<br/>
+
+**[👉 Tap here to Download `saral-life-os.apk` directly on Android](https://github.com/PavanKumar-HQ/to-do-list/releases/latest/download/saral-life-os.apk)**
+
+<br/>
+
 ![React](https://img.shields.io/badge/React-19.x-61DAFB?logo=react&logoColor=black&style=for-the-badge)
+![Capacitor](https://img.shields.io/badge/Capacitor-Android_Native-3880FF?logo=capacitor&logoColor=white&style=for-the-badge)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript&logoColor=white&style=for-the-badge)
-![Vite](https://img.shields.io/badge/Vite-6.x-646CFF?logo=vite&logoColor=white&style=for-the-badge)
 ![Dexie.js](https://img.shields.io/badge/IndexedDB-Dexie.js%20v4-8B5CF6?logo=database&logoColor=white&style=for-the-badge)
-![PWA](https://img.shields.io/badge/PWA-Offline%20First-5A0FC8?logo=pwa&logoColor=white&style=for-the-badge)
-![Lucide Icons](https://img.shields.io/badge/Lucide-Vector%20Icons-F56565?logo=feather&logoColor=white&style=for-the-badge)
-![Web Audio](https://img.shields.io/badge/Web%20Audio-Synthesizer%20%26%20Alarms-10B981?logo=audio&logoColor=white&style=for-the-badge)
-![Web Push](https://img.shields.io/badge/Web%20Push-Actions%20%26%20Vibration-0284C7?logo=bell&logoColor=white&style=for-the-badge)
-![Tests](https://img.shields.io/badge/Tests-238%20Passed-success?style=for-the-badge)
 ![Privacy](https://img.shields.io/badge/Privacy-100%25%20Local--First-14B8A6?logo=shield&logoColor=white&style=for-the-badge)
 
 <p align="center">
   <b>A private, zero-telemetry, local-first operating system designed for human focus and life mastery.</b><br>
-  Built with React 19, TypeScript, Dexie.js (IndexedDB), Web Audio synthesis, and Liquid Glass aesthetics.
+  Built with React 19, Capacitor (Native Android), TypeScript, Dexie.js (IndexedDB), and Liquid Glass aesthetics.
 </p>
 
 </div>
+
+---
+
+## 📱 Android App Installation (1 Minute)
+
+1. **Download APK**: Tap [saral-life-os.apk](https://github.com/PavanKumar-HQ/to-do-list/releases/latest/download/saral-life-os.apk) on your Android phone or scan the QR code above.
+2. **Open**: When downloaded, tap **Open** in your browser or from your phone's notification bar.
+3. **Allow**: If Android prompts *"Install unknown apps"*, tap **Settings** and enable **"Allow from this source"**.
+4. **Install**: Tap **Install**. Saral will now be available in your app drawer as a true native Android app!
 
 ---
 
