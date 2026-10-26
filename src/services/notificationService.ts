@@ -174,9 +174,59 @@ export async function dispatchNativeNotification(
   }
 }
 
+export interface NagRecord {
+  count: number;
+  lastNotifiedAt: number;
+}
+
+const inMemoryNagTracker: Record<string, NagRecord> = {};
+const NAG_STORAGE_KEY = 'saral_nag_tracker_v1';
+export const DEFAULT_REPEAT_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
+export const MAX_REPEAT_COUNT = 3;
+
+function getNagTracker(): Record<string, NagRecord> {
+  try {
+    if (typeof localStorage !== 'undefined') {
+      const raw = localStorage.getItem(NAG_STORAGE_KEY);
+      if (raw) return JSON.parse(raw);
+    }
+  } catch {}
+  return inMemoryNagTracker;
+}
+
+export function saveNagRecord(id: string, record: NagRecord) {
+  inMemoryNagTracker[id] = record;
+  try {
+    if (typeof localStorage !== 'undefined') {
+      const tracker = getNagTracker();
+      tracker[id] = record;
+      localStorage.setItem(NAG_STORAGE_KEY, JSON.stringify(tracker));
+    }
+  } catch {}
+}
+
+export function clearNagRecord(id: string) {
+  delete inMemoryNagTracker[id];
+  try {
+    if (typeof localStorage !== 'undefined') {
+      const tracker = getNagTracker();
+      if (tracker[id]) {
+        delete tracker[id];
+        localStorage.setItem(NAG_STORAGE_KEY, JSON.stringify(tracker));
+      }
+    }
+  } catch {}
+}
+
+export function getNagRecord(id: string): NagRecord | null {
+  const tracker = getNagTracker();
+  return tracker[id] || inMemoryNagTracker[id] || null;
+}
+
 /**
  * Event-Driven Reminder & Task Scheduler (NO continuous 1-second polling loop!)
  * Finds the single earliest upcoming active reminder or task and sets one timeout.
+ * Implements Smart Capped Repeat: re-notifies every 10m up to 3 times, then stays sticky.
  */
 export async function refreshNextReminderTimer() {
   if (activeTimer) {
@@ -201,7 +251,17 @@ export async function refreshNextReminderTimer() {
     .toArray();
 
   let earliestTime: number | null = null;
-  const itemsToFireNow: Array<{ type: 'reminder'; reminder: ReminderItem } | { type: 'task'; task: TaskItem }> = [];
+  const itemsToFireNow: Array<{
+    type: 'reminder';
+    reminder: ReminderItem;
+    attempt: number;
+    maxAttempts: number;
+  } | {
+    type: 'task';
+    task: TaskItem;
+    attempt: number;
+    maxAttempts: number;
+  }> = [];
 
   // Evaluate reminders
   for (const r of activeReminders) {
@@ -217,12 +277,24 @@ export async function refreshNextReminderTimer() {
       targetTimestamp = targetDate.getTime();
     }
 
-    const reminderScheduleKey = `reminder:${r.id}:${r.date}:${r.time || 'default'}:${r.snoozedUntil || 'direct'}`;
-
     if (targetTimestamp <= now.getTime()) {
-      if (!recentlyFiredIds.has(reminderScheduleKey)) {
-        recentlyFiredIds.add(reminderScheduleKey);
-        itemsToFireNow.push({ type: 'reminder', reminder: r });
+      const nag = getNagRecord(r.id);
+      if (!nag) {
+        // Initial notification
+        saveNagRecord(r.id, { count: 1, lastNotifiedAt: now.getTime() });
+        itemsToFireNow.push({ type: 'reminder', reminder: r, attempt: 1, maxAttempts: MAX_REPEAT_COUNT });
+      } else if (nag.count < MAX_REPEAT_COUNT) {
+        const timeSince = now.getTime() - nag.lastNotifiedAt;
+        if (timeSince >= DEFAULT_REPEAT_INTERVAL_MS) {
+          const nextCount = nag.count + 1;
+          saveNagRecord(r.id, { count: nextCount, lastNotifiedAt: now.getTime() });
+          itemsToFireNow.push({ type: 'reminder', reminder: r, attempt: nextCount, maxAttempts: MAX_REPEAT_COUNT });
+        } else {
+          const nextNagTime = nag.lastNotifiedAt + DEFAULT_REPEAT_INTERVAL_MS;
+          if (earliestTime === null || nextNagTime < earliestTime) {
+            earliestTime = nextNagTime;
+          }
+        }
       }
     } else {
       if (earliestTime === null || targetTimestamp < earliestTime) {
@@ -243,12 +315,24 @@ export async function refreshNextReminderTimer() {
       targetTimestamp = targetDate.getTime();
     }
 
-    const taskScheduleKey = `task:${t.id}:${t.dueDate}:${t.dueTime || 'default'}`;
-
     if (t.dueDate === todayStr && targetTimestamp <= now.getTime()) {
-      if (!recentlyFiredIds.has(taskScheduleKey)) {
-        recentlyFiredIds.add(taskScheduleKey);
-        itemsToFireNow.push({ type: 'task', task: t });
+      const nag = getNagRecord(t.id);
+      if (!nag) {
+        // Initial notification
+        saveNagRecord(t.id, { count: 1, lastNotifiedAt: now.getTime() });
+        itemsToFireNow.push({ type: 'task', task: t, attempt: 1, maxAttempts: MAX_REPEAT_COUNT });
+      } else if (nag.count < MAX_REPEAT_COUNT) {
+        const timeSince = now.getTime() - nag.lastNotifiedAt;
+        if (timeSince >= DEFAULT_REPEAT_INTERVAL_MS) {
+          const nextCount = nag.count + 1;
+          saveNagRecord(t.id, { count: nextCount, lastNotifiedAt: now.getTime() });
+          itemsToFireNow.push({ type: 'task', task: t, attempt: nextCount, maxAttempts: MAX_REPEAT_COUNT });
+        } else {
+          const nextNagTime = nag.lastNotifiedAt + DEFAULT_REPEAT_INTERVAL_MS;
+          if (earliestTime === null || nextNagTime < earliestTime) {
+            earliestTime = nextNagTime;
+          }
+        }
       }
     } else if (targetTimestamp > now.getTime()) {
       if (earliestTime === null || targetTimestamp < earliestTime) {
@@ -260,9 +344,9 @@ export async function refreshNextReminderTimer() {
   // Fire all items due right now
   for (const item of itemsToFireNow) {
     if (item.type === 'reminder') {
-      await fireReminder(item.reminder);
+      await fireReminder(item.reminder, item.attempt, item.maxAttempts);
     } else {
-      await fireTaskReminder(item.task);
+      await fireTaskReminder(item.task, item.attempt, item.maxAttempts);
     }
   }
 
@@ -316,7 +400,7 @@ export async function dispatchTestNotification(): Promise<{ success: boolean; me
   return { success: true, message: 'Test notification sent and alarm sound played.' };
 }
 
-async function fireReminder(reminder: ReminderItem) {
+async function fireReminder(reminder: ReminderItem, attempt: number = 1, maxAttempts: number = MAX_REPEAT_COUNT) {
   recentlyFiredIds.add(reminder.id);
 
   // If in background, play chime or test alarm sound so user is alerted even if screen is away
@@ -324,7 +408,7 @@ async function fireReminder(reminder: ReminderItem) {
     testAlarmSound().catch(() => playGentleChime());
   }
 
-  // Emit in-app alert for immediate on-screen presentation (which handles foreground alarm ringing)
+  // Emit in-app alert for immediate on-screen presentation
   eventBus.emit('IN_APP_ALERT', {
     type: 'IN_APP_ALERT',
     entityId: reminder.id,
@@ -332,15 +416,22 @@ async function fireReminder(reminder: ReminderItem) {
       id: reminder.id,
       title: reminder.title,
       time: reminder.time,
-      date: reminder.date
+      date: reminder.date,
+      type: 'reminder',
+      attempt,
+      maxAttempts
     }
   });
 
+  const prefix = attempt > 1 
+    ? (attempt >= maxAttempts ? 'Final Reminder (3/3): ' : `Reminder (${attempt}/${maxAttempts}): `) 
+    : 'Alarm: ';
+
   await dispatchNativeNotification(
     `reminder:${reminder.id}`,
-    `Alarm: ${reminder.title}`,
-    `Due at ${reminder.time || 'now'}`,
-    { reminderId: reminder.id }
+    `${prefix}${reminder.title}`,
+    `Due at ${reminder.time || 'now'} • Tap to complete or snooze`,
+    { reminderId: reminder.id, attempt }
   );
 
   eventBus.emit('REMINDER_DUE', {
@@ -350,7 +441,7 @@ async function fireReminder(reminder: ReminderItem) {
   });
 }
 
-export async function fireTaskReminder(task: TaskItem) {
+export async function fireTaskReminder(task: TaskItem, attempt: number = 1, maxAttempts: number = MAX_REPEAT_COUNT) {
   const tag = `task:${task.id}`;
   recentlyFiredIds.add(tag);
 
@@ -363,16 +454,22 @@ export async function fireTaskReminder(task: TaskItem) {
       title: task.title,
       time: task.dueTime || 'Due today',
       date: task.dueDate,
-      type: 'task'
+      type: 'task',
+      attempt,
+      maxAttempts
     }
   });
 
   const dueLabel = task.dueTime ? `Due at ${task.dueTime}` : 'Due today';
+  const prefix = attempt > 1 
+    ? (attempt >= maxAttempts ? 'Final Reminder (3/3): ' : `Reminder (${attempt}/${maxAttempts}): `) 
+    : 'Upcoming Task: ';
+
   await dispatchNativeNotification(
     tag,
-    `Upcoming Task: ${task.title}`,
-    `${dueLabel} • Priority: ${task.priority.toUpperCase()}`,
-    { taskId: task.id, type: 'task' }
+    `${prefix}${task.title}`,
+    `${dueLabel} • Priority: ${task.priority.toUpperCase()} • Tap to complete or snooze`,
+    { taskId: task.id, type: 'task', attempt }
   );
 }
 
@@ -380,6 +477,7 @@ export async function fireTaskReminder(task: TaskItem) {
  * Cancel a task notification and close native notification tag
  */
 export async function cancelTaskNotification(taskId: string) {
+  clearNagRecord(taskId);
   if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
     try {
       const reg = await navigator.serviceWorker.getRegistration();
@@ -506,6 +604,7 @@ export async function scheduleReminder(reminder: ReminderItem) {
  * Cancel a reminder and close native notification tag
  */
 export async function cancelReminder(reminderId: string) {
+  clearNagRecord(reminderId);
   if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
     try {
       const reg = await navigator.serviceWorker.getRegistration();
@@ -570,9 +669,11 @@ export async function handleNotificationAction(action: string, entityId: string)
         completedAt: nowIso,
         updatedAt: nowIso
       });
+      clearNagRecord(cleanId);
       cancelTaskNotification(cleanId);
       eventBus.emit('TASK_MUTATED', { type: 'TASK_MUTATED', entityId: cleanId, action: 'complete' });
     } else if (normalizedAction === 'snooze_10m') {
+      clearNagRecord(cleanId);
       for (const key of recentlyFiredIds) {
         if (key.includes(cleanId)) recentlyFiredIds.delete(key);
       }
@@ -595,9 +696,11 @@ export async function handleNotificationAction(action: string, entityId: string)
   if (reminder) {
     if (normalizedAction === 'complete') {
       await db.reminders.update(cleanId, { status: 'dismissed', updatedAt: new Date().toISOString() });
+      clearNagRecord(cleanId);
       cancelReminder(cleanId);
       eventBus.emit('REMINDER_MUTATED', { type: 'REMINDER_MUTATED', entityId: cleanId, action: 'complete' });
     } else if (normalizedAction === 'snooze_10m') {
+      clearNagRecord(cleanId);
       for (const key of recentlyFiredIds) {
         if (key.includes(cleanId)) recentlyFiredIds.delete(key);
       }

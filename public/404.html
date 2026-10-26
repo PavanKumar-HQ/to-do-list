@@ -8,7 +8,9 @@
       // Single Page App fallback for GitHub Pages
       var path = window.location.pathname;
       var repoBase = '/to-do-list/';
-      if (path.startsWith(repoBase)) {
+      if (path.endsWith('.apk')) {
+        window.location.replace(repoBase + 'saral-life-os.apk');
+      } else if (path.startsWith(repoBase)) {
         window.location.replace(repoBase);
       } else {
         window.location.replace('./');

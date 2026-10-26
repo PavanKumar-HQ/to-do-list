@@ -13,6 +13,8 @@ interface ActiveAlert {
   time?: string;
   date?: string;
   type?: 'reminder' | 'task';
+  attempt?: number;
+  maxAttempts?: number;
 }
 
 export const InAppReminderAlert: React.FC = () => {
@@ -30,7 +32,9 @@ export const InAppReminderAlert: React.FC = () => {
         title: data.title,
         time: data.time,
         date: data.date,
-        type: isTask ? 'task' : 'reminder'
+        type: isTask ? 'task' : 'reminder',
+        attempt: data.attempt,
+        maxAttempts: data.maxAttempts
       });
 
       // Sound is strictly for reminders/alarms. Tasks use quiet floating notification!
@@ -260,6 +264,20 @@ export const InAppReminderAlert: React.FC = () => {
                   }}
                 >
                   {currentAlert.time}
+                </span>
+              )}
+              {currentAlert.attempt && currentAlert.attempt > 1 && (
+                <span
+                  style={{
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    padding: '2px 8px',
+                    borderRadius: '6px',
+                    background: currentAlert.attempt >= (currentAlert.maxAttempts || 3) ? 'rgba(239, 68, 68, 0.15)' : 'rgba(245, 158, 11, 0.15)',
+                    color: currentAlert.attempt >= (currentAlert.maxAttempts || 3) ? 'var(--danger, #ef4444)' : 'var(--warning, #f59e0b)'
+                  }}
+                >
+                  {currentAlert.attempt >= (currentAlert.maxAttempts || 3) ? 'Final Alert (3/3)' : `Repeat (${currentAlert.attempt}/3)`}
                 </span>
               )}
             </div>

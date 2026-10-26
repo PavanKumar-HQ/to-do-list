@@ -25,7 +25,9 @@ import {
   Info,
   Smartphone,
   Check,
-  Edit2
+  Edit2,
+  ExternalLink,
+  Clock
 } from 'lucide-react';
 import { db, checkAndRepairDatabaseIntegrity, type IntegrityReport } from '../../db/db';
 import {
@@ -38,6 +40,7 @@ import { requestNotificationPermission, dispatchTestNotification, playGentleChim
 import { COMMON_CURRENCIES } from '../../utils/currency';
 import { useToast } from '../common/ToastContext';
 import { SettingsService, SettingsServiceError } from '../../services/settingsService';
+import { getApkDownloadUrl, getGitHubRawApkUrl } from '../../utils/downloadUrls';
 import { AnimalAvatar, ANIMAL_AVATARS, getAnimalAvatar } from '../../utils/avatars';
 import { formatDisplayDate } from '../../utils/dates';
 import { ACCENT_PALETTE, resolveAccent, applyAccentToDocument } from '../../utils/theme';
@@ -820,6 +823,31 @@ export const SettingsView: React.FC = () => {
             </button>
           </div>
 
+          {/* Smart Capped Repeat Card */}
+          <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--border-subtle)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Clock size={16} color="var(--accent)" />
+                <span style={{ fontSize: '13.5px', fontWeight: 600 }}>Smart Capped Repeat</span>
+              </div>
+              <span
+                style={{
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  padding: '2px 8px',
+                  borderRadius: '12px',
+                  background: 'rgba(16, 185, 129, 0.15)',
+                  color: 'var(--success)'
+                }}
+              >
+                Active
+              </span>
+            </div>
+            <p style={{ fontSize: '12.5px', color: 'var(--text-secondary)', lineHeight: '1.5', margin: 0 }}>
+              If a task or reminder is not marked complete or snoozed, Saral automatically re-alerts every 10 minutes up to 3 times (1 initial + 2 repeats). Afterwards, it remains safely pinned in your notification tray without battery drain.
+            </p>
+          </div>
+
           {/* Install / Download App Card */}
           <div className="card" style={{ padding: '20px', borderRadius: '20px', background: 'var(--bg-surface-elevated)', marginTop: '16px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
@@ -848,30 +876,38 @@ export const SettingsView: React.FC = () => {
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
               <button
                 onClick={() => {
-                  const prompt = (window as any).__saralInstallPrompt || (window as any).__kansoInstallPrompt;
-                  if (prompt) {
-                    prompt.prompt();
-                  } else {
-                    localStorage.removeItem('saral_prompt_dismissed_v1');
-                    localStorage.removeItem('kanso_prompt_dismissed_v1');
-                    window.dispatchEvent(new CustomEvent('saral:open-install-guide'));
-                  }
+                  localStorage.removeItem('saral_prompt_dismissed_v1');
+                  localStorage.removeItem('kanso_prompt_dismissed_v1');
+                  window.dispatchEvent(new CustomEvent('saral:open-install-guide'));
                 }}
                 className="btn btn-primary btn-sm"
                 style={{ gap: '6px' }}
               >
                 <Download size={14} />
-                <span>Install to Home Screen / Desktop</span>
+                <span>Download & Install Options</span>
               </button>
 
               <a
-                href="./saral-life-os.apk"
+                href={getApkDownloadUrl()}
                 download="saral-life-os.apk"
                 className="btn btn-secondary btn-sm"
                 style={{ gap: '6px', textDecoration: 'none' }}
               >
                 <Smartphone size={14} />
-                <span>Download Android APK (.apk)</span>
+                <span>Download Android APK (8.3 MB)</span>
+              </a>
+
+              <a
+                href={getGitHubRawApkUrl()}
+                download="saral-life-os.apk"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-secondary btn-sm"
+                style={{ gap: '6px', textDecoration: 'none' }}
+                title="Direct APK download from GitHub CDN mirror"
+              >
+                <ExternalLink size={13} />
+                <span>GitHub Mirror</span>
               </a>
             </div>
           </div>

@@ -20,6 +20,7 @@ import {
   FolderSearch,
   Share2
 } from 'lucide-react';
+import { triggerHaptic } from '../../utils/haptics';
 
 interface MoreSheetModalProps {
   isOpen: boolean;
@@ -125,6 +126,7 @@ export const MoreSheetModal: React.FC<MoreSheetModalProps> = ({
                     <button
                       key={item.id}
                       onClick={() => {
+                        triggerHaptic('selection');
                         onSelectScreen(item.id);
                         onClose();
                       }}

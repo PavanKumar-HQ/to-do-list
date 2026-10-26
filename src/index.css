@@ -184,12 +184,28 @@ html, body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: clip;
+  overscroll-behavior-y: none;
+  -webkit-touch-callout: none;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 #root {
   min-height: 100%;
   display: flex;
   flex-direction: column;
+}
+
+/* Allow text selection specifically for editable inputs, notes, and reading areas */
+input,
+textarea,
+select,
+[contenteditable="true"],
+.selectable-text,
+.note-content,
+.journal-content {
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 /* Button & Touch Target Primitives */
@@ -200,6 +216,15 @@ button {
   background: none;
   cursor: pointer;
   touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mobile-nav-item:active {
+  transform: scale(0.92);
+}
+
+.mobile-menu-btn:active {
+  transform: scale(0.90);
 }
 
 input, textarea, select {
@@ -582,9 +607,9 @@ input:focus, textarea:focus, select:focus {
   background: var(--bg-surface) !important;
   width: 100%;
   max-width: 560px;
-  border-radius: 16px 16px 0 0;
+  border-radius: 20px 20px 0 0;
   border-top: 1px solid var(--border-subtle);
-  padding: 18px 20px;
+  padding: 16px 20px max(24px, calc(env(safe-area-inset-bottom, 0px) + 16px));
   box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.5);
   max-height: 88vh;
   display: flex;

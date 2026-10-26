@@ -56,6 +56,13 @@ import { checkForAppUpdateOnBoot, registerServiceWorkerUpdateListener, APP_VERSI
 import { eventBus } from './services/eventBus';
 import { useLiveQuery } from 'dexie-react-hooks';
 import type { EntityType } from './types';
+import {
+  initializeNativeApp,
+  updateNativeStatusBar,
+  registerBackButtonHandler,
+  unregisterBackButtonHandler
+} from './services/nativeAppService';
+import { triggerHaptic } from './utils/haptics';
 
 export function AppContent() {
   const { showToast } = useToast();
@@ -114,9 +121,13 @@ export function AppContent() {
       });
     });
 
-    // Force light theme
+    // Force light theme default unless user settings override
     document.documentElement.setAttribute('data-theme', 'light');
     localStorage.setItem('theme', 'light');
+
+    // Initialize Native Android App bridge (status bar, splash screen, hardware back listener)
+    initializeNativeApp(false);
+
     const bootTimer = setTimeout(() => {
       setIsBooting(false);
     }, 200);
@@ -127,11 +138,70 @@ export function AppContent() {
     const activeTheme = settings?.theme === 'dark' ? 'dark' : 'light';
     setTheme(activeTheme);
     document.documentElement.setAttribute('data-theme', activeTheme);
+    updateNativeStatusBar(activeTheme === 'dark');
   }, [settings?.theme]);
 
   useEffect(() => {
     applyAccentToDocument(settings?.accentColor);
   }, [settings?.accentColor]);
+
+  // Android Native Hardware / Gesture Back Button handling
+  useEffect(() => {
+    registerBackButtonHandler({
+      hasOpenModal: () =>
+        Boolean(
+          isQuickAddOpen ||
+          isSearchOpen ||
+          isVoiceOpen ||
+          isMoreSheetOpen ||
+          isInviteOpen ||
+          recipientInviteToken
+        ),
+      closeActiveModal: () => {
+        if (recipientInviteToken) {
+          setRecipientInviteToken(null);
+          return true;
+        }
+        if (isSearchOpen) {
+          setIsSearchOpen(false);
+          return true;
+        }
+        if (isQuickAddOpen) {
+          setIsQuickAddOpen(false);
+          return true;
+        }
+        if (isVoiceOpen) {
+          setIsVoiceOpen(false);
+          return true;
+        }
+        if (isInviteOpen) {
+          setIsInviteOpen(false);
+          return true;
+        }
+        if (isMoreSheetOpen) {
+          setIsMoreSheetOpen(false);
+          return true;
+        }
+        return false;
+      },
+      canNavigateBack: () => currentScreen !== 'home',
+      navigateBack: () => {
+        setCurrentScreen('home');
+      }
+    });
+
+    return () => {
+      unregisterBackButtonHandler();
+    };
+  }, [
+    isQuickAddOpen,
+    isSearchOpen,
+    isVoiceOpen,
+    isMoreSheetOpen,
+    isInviteOpen,
+    recipientInviteToken,
+    currentScreen
+  ]);
 
   // Detect and process invite tokens from URL hash (#invite=...) or query params (?invite=...)
   useEffect(() => {
@@ -350,7 +420,10 @@ export function AppContent() {
 
         {/* Persistent Floating Quick Add Button - Directly opens Task Creation */}
         <button
-          onClick={() => openQuickAddWithType('task')}
+          onClick={() => {
+            triggerHaptic('medium');
+            openQuickAddWithType('task');
+          }}
           className="fab-quick-add"
           aria-label="Create new task"
           title="Create New Task (+)"

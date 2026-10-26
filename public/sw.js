@@ -1,5 +1,5 @@
 // Service Worker for Saral Life OS - Offline First
-const CACHE_NAME = 'saral-cache-v10';
+const CACHE_NAME = 'saral-cache-v11';
 
 self.addEventListener('install', (event) => {
   // In development, skip caching
@@ -62,6 +62,11 @@ self.addEventListener('fetch', (event) => {
 
   // Never intercept Vite internal modules or node_modules
   if (url.pathname.startsWith('/@') || url.pathname.startsWith('/node_modules') || url.pathname.includes('?v=')) {
+    return;
+  }
+
+  // Never intercept APK files or large binary downloads - allow native streaming download directly
+  if (url.pathname.endsWith('.apk') || url.pathname.includes('saral-life-os.apk')) {
     return;
   }
 

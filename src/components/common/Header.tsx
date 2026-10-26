@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Search, Mic, WifiOff, ShieldAlert, Settings, Sun, Moon, Menu, ChevronDown } from 'lucide-react';
 import { db } from '../../db/db';
 import { useLiveQuery } from 'dexie-react-hooks';
+import { triggerHaptic } from '../../utils/haptics';
 
 interface HeaderProps {
   currentScreen: string;
@@ -73,8 +74,10 @@ export const Header: React.FC<HeaderProps> = ({
     <header
       className="app-header"
       style={{
-        height: 'var(--header-height)',
-        background: 'var(--bg-surface)',
+        height: 'calc(var(--header-height) + env(safe-area-inset-top, 0px))',
+        background: 'var(--glass-surface)',
+        backdropFilter: 'var(--glass-blur)',
+        WebkitBackdropFilter: 'var(--glass-blur)',
         borderBottom: '1px solid var(--border-subtle)',
         position: 'sticky',
         top: 0,
@@ -83,18 +86,25 @@ export const Header: React.FC<HeaderProps> = ({
         alignItems: 'center',
         justifyContent: 'space-between',
         padding: '0 16px',
-        paddingTop: 'env(safe-area-inset-top, 0px)'
+        paddingTop: 'env(safe-area-inset-top, 0px)',
+        paddingLeft: 'max(16px, env(safe-area-inset-left, 16px))',
+        paddingRight: 'max(16px, env(safe-area-inset-right, 16px))',
+        userSelect: 'none',
+        WebkitTapHighlightColor: 'transparent'
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         {onOpenMenu && (
           <button
-            onClick={onOpenMenu}
+            onClick={() => {
+              triggerHaptic('light');
+              onOpenMenu();
+            }}
             className="btn-ghost mobile-menu-btn"
             style={{
-              width: '32px',
-              height: '32px',
-              borderRadius: '6px',
+              width: '34px',
+              height: '34px',
+              borderRadius: '8px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -132,7 +142,10 @@ export const Header: React.FC<HeaderProps> = ({
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
         <button
-          onClick={onOpenVoice}
+          onClick={() => {
+            triggerHaptic('light');
+            onOpenVoice();
+          }}
           className="btn-ghost"
           style={{ width: '38px', height: '38px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           aria-label="Record voice note"
@@ -142,7 +155,10 @@ export const Header: React.FC<HeaderProps> = ({
         </button>
 
         <button
-          onClick={onOpenSearch}
+          onClick={() => {
+            triggerHaptic('light');
+            onOpenSearch();
+          }}
           className="btn-ghost"
           style={{ width: '38px', height: '38px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           aria-label="Global search"
@@ -152,7 +168,10 @@ export const Header: React.FC<HeaderProps> = ({
         </button>
 
         <button
-          onClick={onOpenSettings}
+          onClick={() => {
+            triggerHaptic('light');
+            onOpenSettings();
+          }}
           className="btn-ghost"
           style={{ width: '38px', height: '38px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           aria-label="Settings"

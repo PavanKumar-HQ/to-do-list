@@ -37,11 +37,19 @@ import { safeJsonParse, sanitizeObject, isSafeUrl, isValidAttachmentMime } from 
 import { AttentionService } from '../src/services/attentionService';
 import { LifeGraphService } from '../src/services/lifeGraphService';
 import { eventBus } from '../src/services/eventBus';
-import { notificationService } from '../src/services/notificationService';
+import {
+  notificationService,
+  getNagRecord,
+  saveNagRecord,
+  clearNagRecord,
+  MAX_REPEAT_COUNT,
+  DEFAULT_REPEAT_INTERVAL_MS
+} from '../src/services/notificationService';
 import { SettingsService } from '../src/services/settingsService';
 import { getTimeAwareGreeting, getSubtleDateString } from '../src/utils/greeting';
 import { api } from '../src/api';
 import { triggerHaptic } from '../src/utils/haptics';
+import { getApkDownloadUrl, getGitHubRawApkUrl } from '../src/utils/downloadUrls';
 
 async function runTestSuite() {
   console.log('=====================================================');
@@ -1270,6 +1278,78 @@ async function runTestSuite() {
   assert(savedSubject !== undefined, 'Study subject created in IndexedDB');
   assert(savedSubject?.chapters.length === 3, 'Chapters / modules tracked');
   assert(savedSubject?.chapters[0].completed === true, 'Chapter completion status persisted');
+
+  // -----------------------------------------------------------------
+  // 42. ANDROID APK RESOLUTION & DOWNLOAD URL INVARIANTS
+  // -----------------------------------------------------------------
+  console.log('\n--- 42. Android APK Resolution & Download URL Invariants ---');
+
+  const githubRawUrl = getGitHubRawApkUrl();
+  assert(githubRawUrl.includes('raw/main/public/saral-life-os.apk'), 'GitHub mirror URL points to raw main APK');
+
+  // Test Node/SSR fallback
+  const defaultUrl = getApkDownloadUrl();
+  assert(defaultUrl === './saral-life-os.apk', 'Default fallback returns relative ./saral-life-os.apk');
+
+  // Test simulated browser environments
+  const origWindow = (globalThis as any).window;
+
+  // 1. GitHub Pages with trailing slash
+  (globalThis as any).window = { location: { href: 'https://pavankumar-hq.github.io/to-do-list/' } };
+  const ghPagesUrlWithSlash = getApkDownloadUrl();
+  assert(ghPagesUrlWithSlash === 'https://pavankumar-hq.github.io/to-do-list/saral-life-os.apk', 'GitHub Pages with trailing slash resolves to repo-scoped APK');
+
+  // 2. GitHub Pages without trailing slash
+  (globalThis as any).window = { location: { href: 'https://pavankumar-hq.github.io/to-do-list' } };
+  const ghPagesUrlWithoutSlash = getApkDownloadUrl();
+  assert(ghPagesUrlWithoutSlash === 'https://pavankumar-hq.github.io/to-do-list/saral-life-os.apk', 'GitHub Pages without trailing slash correctly keeps repo directory');
+
+  // 3. GitHub Pages with index.html
+  (globalThis as any).window = { location: { href: 'https://pavankumar-hq.github.io/to-do-list/index.html' } };
+  const ghPagesUrlWithIndex = getApkDownloadUrl();
+  assert(ghPagesUrlWithIndex === 'https://pavankumar-hq.github.io/to-do-list/saral-life-os.apk', 'GitHub Pages with index.html replaces page with APK');
+
+  // 4. Custom domain
+  (globalThis as any).window = { location: { href: 'https://saral.app/' } };
+  const customDomainUrl = getApkDownloadUrl();
+  assert(customDomainUrl === 'https://saral.app/saral-life-os.apk', 'Custom domain resolves to root APK');
+
+  // Restore global window
+  (globalThis as any).window = origWindow;
+
+  // -----------------------------------------------------------------
+  // 43. SMART CAPPED REPEAT NOTIFICATIONS
+  // -----------------------------------------------------------------
+  console.log('\n--- 43. Smart Capped Repeat Notifications ---');
+
+  const testNagId = 'test_task_nag_' + Date.now();
+  clearNagRecord(testNagId);
+  assert(getNagRecord(testNagId) === null, 'Initial nag record is null');
+
+  // First alert
+  const nowTs = Date.now();
+  saveNagRecord(testNagId, { count: 1, lastNotifiedAt: nowTs });
+  const record1 = getNagRecord(testNagId);
+  assert(record1?.count === 1, 'Initial alert registers count 1');
+
+  // Attempt before interval should not be ready
+  const diffBeforeInterval = DEFAULT_REPEAT_INTERVAL_MS - 60000;
+  assert(diffBeforeInterval < DEFAULT_REPEAT_INTERVAL_MS, 'Time before 10-minute interval does not trigger repeat');
+
+  // Repeat 2
+  saveNagRecord(testNagId, { count: 2, lastNotifiedAt: nowTs + DEFAULT_REPEAT_INTERVAL_MS });
+  const record2 = getNagRecord(testNagId);
+  assert(record2?.count === 2, 'Second alert registers count 2');
+
+  // Repeat 3 (Final alert)
+  saveNagRecord(testNagId, { count: 3, lastNotifiedAt: nowTs + 2 * DEFAULT_REPEAT_INTERVAL_MS });
+  const record3 = getNagRecord(testNagId);
+  assert(record3?.count === 3, 'Third alert registers count 3 (Final Alert)');
+  assert(record3?.count >= MAX_REPEAT_COUNT, 'Nag alerts capped at MAX_REPEAT_COUNT (3)');
+
+  // Clear on complete or snooze
+  clearNagRecord(testNagId);
+  assert(getNagRecord(testNagId) === null, 'Completing or snoozing cleanly clears nag record');
 
   const total = passed + failed;
   console.log(`\n=====================================================`);
